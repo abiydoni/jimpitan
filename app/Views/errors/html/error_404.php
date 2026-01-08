@@ -77,7 +77,7 @@
         
         <!-- 404 Illustration -->
         <div class="mb-8 relative">
-            <div class="text-[180px] sm:text-[220px] font-black gradient-text leading-none float-animation select-none">
+            <div class="text-[120px] sm:text-[160px] md:text-[200px] font-black gradient-text leading-none float-animation select-none">
                 404
             </div>
             
@@ -115,24 +115,6 @@
                 </span>
                 <div class="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
             </a>
-            
-            <button onclick="history.back()" class="px-8 py-4 glass text-slate-700 dark:text-slate-200 rounded-2xl font-bold text-lg hover:scale-105 transition-all flex items-center justify-center gap-2">
-                <i class="fas fa-arrow-left"></i>
-                Halaman Sebelumnya
-            </button>
-        </div>
-
-        <!-- Additional Help -->
-        <div class="mt-10 text-slate-500 dark:text-slate-400 text-sm animate__animated animate__fadeIn animate__delay-3s">
-            <p class="mb-2">Butuh bantuan? Hubungi administrator atau coba:</p>
-            <div class="flex flex-wrap justify-center gap-4 mt-4">
-                <a href="/" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                    <i class="fas fa-home mr-1"></i> Beranda
-                </a>
-                <a href="/login" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                    <i class="fas fa-sign-in-alt mr-1"></i> Login
-                </a>
-            </div>
         </div>
     </div>
 
