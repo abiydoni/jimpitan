@@ -598,27 +598,7 @@
         if (openMenu) openMenu.onclick = () => mobileMenu.classList.add('active');
         if (closeMenu) closeMenu.onclick = () => mobileMenu.classList.remove('active');
 
-        // Scan QR Button Alert
-        function handleScanQR() {
-            const userRole = '<?= session()->get('role') ?>';
-            if (userRole === 'warga') {
-                Swal.fire({
-                    title: 'Akses Dibatasi',
-                    text: 'Role warga tidak diizinkan untuk melakukan pemindaian.',
-                    icon: 'error',
-                    confirmButtonColor: '#f43f5e',
-                });
-                return;
-            }
 
-            Swal.fire({
-                title: 'Scan QR Code',
-                text: 'Fitur pemindai kamera sedang disiapkan.',
-                icon: 'info',
-                confirmButtonColor: '#6366f1',
-                confirmButtonText: 'Oke'
-            });
-        }
 
         // Test SweetAlert2
         const testAlertBtn = document.getElementById('testAlert');
@@ -661,9 +641,9 @@
         if ($showQR): 
         ?>
         <div class="relative w-16">
-            <button onclick="handleScanQR()" class="scan-button">
+            <a href="<?= base_url('/scan') ?>" class="scan-button">
                 <i class="fas fa-qrcode"></i>
-            </button>
+            </a>
         </div>
         <?php endif; ?>
 
