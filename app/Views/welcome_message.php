@@ -168,6 +168,35 @@
         @media (max-width: 768px) {
             body { padding-bottom: 8rem; }
         }
+        @keyframes blob {
+            0% { transform: translate(0px, 0px) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+            100% { transform: translate(0px, 0px) scale(1); }
+        }
+        @keyframes wave {
+            0% { transform: rotate(0deg); }
+            10% { transform: rotate(14deg); }
+            20% { transform: rotate(-8deg); }
+            30% { transform: rotate(14deg); }
+            40% { transform: rotate(-4deg); }
+            50% { transform: rotate(10deg); }
+            60% { transform: rotate(0deg); }
+            100% { transform: rotate(0deg); }
+        }
+        .animate-blob {
+            animation: blob 7s infinite;
+        }
+        .animate-wave {
+            animation: wave 2s infinite;
+            transform-origin: 70% 70%;
+        }
+        .animation-delay-2000 {
+            animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+            animation-delay: 4s;
+        }
     </style>
     <script>
         if (localStorage.getItem('theme') === 'dark') {
@@ -291,9 +320,120 @@
                     });
                 </script>
             <?php endif; ?>
-            <h2 class="text-xl sm:text-3xl font-bold text-slate-800 dark:text-white mb-1 sm:mb-2">Selamat Datang, <?= session()->get('name') ?> 👋</h2>
-            <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-base">Kelola jimpitan warga <?= $profil['alamat'] ?? '' ?> dengan lebih mudah dan transparan.</p>
+            <!-- Modern Hero Section -->
+            <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 p-6 sm:p-8 shadow-xl shadow-indigo-500/20 mb-6 z-0">
+                
+                <!-- Animated Background Blobs -->
+                <div class="absolute top-0 right-0 -mt-10 -mr-10 w-48 h-48 bg-white/10 rounded-full blur-2xl animate-blob"></div>
+                <div class="absolute bottom-0 left-0 -mb-10 -ml-10 w-48 h-48 bg-fuchsia-500/20 rounded-full blur-2xl animate-blob animation-delay-2000"></div>
+                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-indigo-500/20 rounded-full blur-2xl animate-blob animation-delay-4000"></div>
+
+                <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                    <div class="space-y-2">
+                        <div class="animate__animated animate__fadeInLeft">
+                            <h2 class="text-xl sm:text-2xl font-bold text-white leading-tight">
+                                Halo, <?= session()->get('name') ?> <span class="animate-wave inline-block">👋</span>
+                            </h2>
+                            <p class="text-indigo-100 text-xs sm:text-sm max-w-md">
+                                Selamat datang kembali di aplikasi jimpitan.
+                            </p>
+                        </div>
+                        
+                        <div class="animate__animated animate__fadeInUp animate__delay-1s">
+                            <p class="text-indigo-200 text-[10px] font-bold uppercase tracking-widest mb-0.5">Total Tagihan Anda</p>
+                            <div class="flex items-center gap-2">
+                                <span class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                                    Rp <?= number_format($bill ?? 0, 0, ',', '.') ?>
+                                </span>
+                                <?php if (($bill ?? 0) > 0): ?>
+                                    <span class="px-2 py-0.5 rounded-full bg-rose-500/80 text-white text-[9px] font-bold border border-rose-400/50">BELUM LUNAS</span>
+                                <?php else: ?>
+                                    <span class="px-2 py-0.5 rounded-full bg-emerald-500/80 text-white text-[9px] font-bold border border-emerald-400/50">LUNAS</span>
+                                <?php endif; ?>
+                                <button onclick="openBillModal()" class="w-6 h-6 rounded-full bg-white/20 hover:bg-white text-white hover:text-indigo-600 flex items-center justify-center transition-colors border border-white/10 ml-1" title="Lihat Rincian">
+                                    <i class="fas fa-chevron-right text-[10px]"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        <!-- Bill Details Modal -->
+        <div id="billModal" class="modal fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <div class="modal-content w-full max-w-lg glass p-0 rounded-2xl shadow-2xl relative overflow-hidden bg-white dark:bg-slate-900">
+                <!-- Header -->
+                <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-indigo-600/5">
+                    <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center">
+                        <i class="fas fa-receipt mr-2 text-indigo-500"></i> Rincian Tagihan
+                    </h3>
+                    <button onclick="closeModal('billModal')" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-rose-500 flex items-center justify-center transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <!-- Body -->
+                <div class="p-5 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                    
+                    <!-- Section: Kewajiban -->
+                    <div class="mb-6">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Kewajiban (Tahun Lalu & Sekarang)</h4>
+                        <div class="space-y-2">
+                            <?php if (!empty($billDetails)): ?>
+                                <?php foreach ($billDetails as $item): ?>
+                                    <div class="flex justify-between items-center py-2 border-b border-slate-50 dark:border-slate-800/50 last:border-0">
+                                        <span class="text-sm text-slate-600 dark:text-slate-300"><?= $item['item'] ?></span>
+                                        <span class="text-sm font-semibold text-slate-800 dark:text-white">Rp <?= number_format($item['amount'], 0, ',', '.') ?></span>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <p class="text-sm text-slate-400 italic">Tidak ada data tarif aktif.</p>
+                            <?php endif; ?>
+                            
+                            <div class="flex justify-between items-center pt-2 mt-2 border-t border-slate-100 dark:border-slate-800 font-bold">
+                                <span class="text-sm text-slate-800 dark:text-slate-200">Total Kewajiban</span>
+                                <span class="text-sm text-indigo-600 dark:text-indigo-400">Rp <?= number_format($totalObligation ?? 0, 0, ',', '.') ?></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Pembayaran -->
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Riwayat Pembayaran (2 Thn Terakhir)</h4>
+                        <div class="space-y-2">
+                             <?php if (!empty($userPayments)): ?>
+                                <?php foreach ($userPayments as $p): ?>
+                                    <div class="flex justify-between items-center py-2 border-b border-slate-50 dark:border-slate-800/50 last:border-0">
+                                        <div>
+                                            <p class="text-xs text-slate-500"><?= date('d M Y', strtotime($p['tgl_bayar'])) ?></p>
+                                            <p class="text-sm text-slate-600 dark:text-slate-300"><?= $p['keterangan'] ?: 'Pembayaran Iuran' ?></p>
+                                        </div>
+                                        <span class="text-sm font-semibold text-green-600">Rp <?= number_format($p['jml_bayar'], 0, ',', '.') ?></span>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <p class="text-sm text-slate-400 italic">Belum ada pembayaran tercatat untuk periode ini.</p>
+                            <?php endif; ?>
+
+                            <div class="flex justify-between items-center pt-2 mt-2 border-t border-slate-100 dark:border-slate-800 font-bold">
+                                <span class="text-sm text-slate-800 dark:text-slate-200">Total Dibayar</span>
+                                <span class="text-sm text-green-600">Rp <?= number_format($totalPaid ?? 0, 0, ',', '.') ?></span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Footer: Grand Total -->
+                <div class="p-5 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800">
+                    <div class="flex justify-between items-center">
+                        <span class="text-base font-bold text-slate-700 dark:text-slate-300">Sisa Tagihan</span>
+                        <span class="text-xl font-extrabold <?= ($bill ?? 0) > 0 ? 'text-rose-600' : 'text-green-600' ?>">Rp <?= number_format($bill ?? 0, 0, ',', '.') ?></span>
+                    </div>
+                </div>
+            </div>
         </div>
+
 
         <!-- Menu Grid (Mobile Style) -->
         <div class="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-12 gap-2 sm:gap-2 animate__animated animate__fadeInUp">
@@ -413,6 +553,10 @@
             document.getElementById('passwordModal').classList.add('active');
             if (userDropdown) userDropdown.classList.remove('active');
             if (typeof mobileMenu !== 'undefined' && mobileMenu.classList.contains('active')) mobileMenu.classList.remove('active');
+        }
+
+        function openBillModal() {
+            document.getElementById('billModal').classList.add('active');
         }
 
         function closeModal(id) {

@@ -1,9 +1,13 @@
 <?php
 $db = \Config\Database::connect();
-echo "USERS TABLE:\n";
-$usersFields = $db->query("DESCRIBE users")->getResultArray();
-print_r($usersFields);
+echo "TB_TARIF TABLE:\n";
+$fields = $db->query("DESCRIBE tb_tarif")->getResultArray();
+foreach ($fields as $field) {
+    echo $field['Field'] . " - " . $field['Type'] . "\n";
+}
 
-echo "\nTB_ROLE TABLE:\n";
-$roleFields = $db->query("DESCRIBE tb_role")->getResultArray();
-print_r($roleFields);
+echo "\nTB_IURAN TABLE:\n";
+$fields = $db->query("DESCRIBE tb_iuran")->getResultArray();
+foreach ($fields as $field) {
+    echo $field['Field'] . " - " . $field['Type'] . "\n";
+}

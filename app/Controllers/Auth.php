@@ -12,7 +12,11 @@ class Auth extends BaseController
         if (session()->get('isLoggedIn')) {
             return redirect()->to('/');
         }
-        return view('auth/login');
+        
+        $db = \Config\Database::connect();
+        $profil = $db->table('tb_profil')->get()->getRowArray() ?? [];
+        
+        return view('auth/login', ['profil' => $profil]);
     }
 
     public function login()
@@ -37,6 +41,16 @@ class Auth extends BaseController
                     'isLoggedIn' => TRUE
                 ];
                 $session->set($ses_data);
+
+                // Remember Me Logic
+                if ($this->request->getVar('remember_me')) {
+                    $token = bin2hex(random_bytes(32));
+                    $model->update($data['id_code'], ['remember_token' => $token]);
+                    
+                    // Set cookie for 30 days
+                    setcookie('remember_token', $data['id_code'] . ':' . $token, time() + (86400 * 30), "/");
+                }
+
                 return redirect()->to('/');
             }else{
                 $session->setFlashdata('msg', 'Password salah.');
@@ -51,6 +65,19 @@ class Auth extends BaseController
     public function logout()
     {
         $session = session();
+        
+        // Remove remember token from DB
+        if (session()->get('id_code')) {
+            $model = new UserModel();
+            $model->update(session()->get('id_code'), ['remember_token' => null]);
+        }
+        
+        // Delete cookie
+        if (isset($_COOKIE['remember_token'])) {
+            setcookie('remember_token', '', time() - 3600, "/");
+            unset($_COOKIE['remember_token']);
+        }
+
         $session->destroy();
         return redirect()->to('/login');
     }

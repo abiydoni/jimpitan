@@ -113,10 +113,10 @@
 
                 <div class="flex items-center justify-between px-1">
                     <label class="flex items-center text-xs text-slate-500 dark:text-slate-400 cursor-pointer group">
-                        <input type="checkbox" class="w-4 h-4 text-indigo-600 border-slate-300 dark:border-slate-600 rounded focus:ring-indigo-500 transition-all mr-2 group-hover:border-indigo-400">
+                        <input type="checkbox" name="remember_me" class="w-4 h-4 text-indigo-600 border-slate-300 dark:border-slate-600 rounded focus:ring-indigo-500 transition-all mr-2 group-hover:border-indigo-400">
                         Ingat Saya
                     </label>
-                    <a href="#" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">Lupa Password?</a>
+                    <a href="javascript:void(0)" onclick="forgotPassword()" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">Lupa Password?</a>
                 </div>
 
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-bold py-3.5 rounded-xl shadow-lg shadow-indigo-200 transition-all duration-200 flex items-center justify-center space-x-2">
@@ -153,6 +153,39 @@
             const isDark = html.classList.contains('dark');
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
         };
+
+        function forgotPassword() {
+            const cp = "<?= $profil['cp'] ?? 'Admin' ?>";
+            const hp = "<?= $profil['hp'] ?? '' ?>";
+            
+            Swal.fire({
+                title: 'Lupa Password?',
+                text: `Silakan hubungi ${cp} di nomor WA ${hp} untuk reset password.`,
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonColor: '#25D366', // WhatsApp color
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: '<i class="fab fa-whatsapp"></i> Hubungi via WA',
+                cancelButtonText: 'Tutup'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (!hp) {
+                        Swal.fire('Error', 'Nomor HP Admin tidak tersedia.', 'error');
+                        return;
+                    }
+                    
+                    // Format HP for WhatsApp (ensure starts with 62)
+                    let formattedHp = hp.replace(/\D/g, ''); // User only digits
+                    if (formattedHp.startsWith('0')) {
+                        formattedHp = '62' + formattedHp.substring(1);
+                    } else if (!formattedHp.startsWith('62')) {
+                        formattedHp = '62' + formattedHp; // Assume local if no country code? Or just append. Best guess.
+                    }
+                    
+                    window.open(`https://wa.me/${formattedHp}?text=Halo ${cp}, saya lupa password aplikasi Jimpitan. Mohon bantuannya.`, '_blank');
+                }
+            });
+        }
     </script>
 </body>
 </html>

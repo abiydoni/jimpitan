@@ -35,9 +35,109 @@ class Home extends BaseController
                     ->get()
                     ->getResultArray();
 
+        // Bill Calculation Logic
+        $currentYear = date('Y');
+        $lastYear = $currentYear - 1;
+        $currentMonth = date('n');
+
+        // Fetch user payments
+        $totalPaid = 0;
+        $userPayments = [];
+        if (session()->get('id_code')) {
+            $userPayments = $db->table('tb_iuran')
+                ->where('nikk', session()->get('id_code'))
+                ->whereIn('tahun', [$lastYear, $currentYear])
+                ->where('tahun >=', 2026) // Billing starts from 2026
+                ->get()
+                ->getResultArray();
+            
+            foreach ($userPayments as $p) {
+                $totalPaid += $p['jml_bayar'];
+            }
+        }
+
+        // Fetch active tariffs
+        $tariffs = $db->table('tb_tarif')
+            ->where('status', 1)
+            ->get()
+            ->getResultArray();
+
+        $totalObligation = 0;
+        $billDetails = []; 
+
+        foreach ($tariffs as $t) {
+            $nominal = $t['tarif'];
+            $method = $t['metode'];
+            $name = $t['nama_tarif'];
+            
+            if ($method == 0) continue; 
+
+            if ($method == 1) { // Bulanan
+                // Last Year
+                if ($lastYear >= 2026) {
+                    $amountLastYear = $nominal * 12;
+                    $totalObligation += $amountLastYear;
+                    $billDetails[] = [
+                        'item' => "$name $lastYear (12 Bulan)",
+                        'amount' => $amountLastYear
+                    ];
+                }
+                
+                // This Year (Full 12 months as per request)
+                if ($currentYear >= 2026) {
+                    $amountThisYear = $nominal * 12;
+                    $totalObligation += $amountThisYear;
+                    $billDetails[] = [
+                        'item' => "$name $currentYear (12 Bulan)",
+                        'amount' => $amountThisYear
+                    ];
+                }
+
+            } elseif ($method == 2) { // Tahunan
+                // Last Year
+                if ($lastYear >= 2026) {
+                    $totalObligation += $nominal;
+                    $billDetails[] = [
+                        'item' => "$name $lastYear",
+                        'amount' => $nominal
+                    ];
+                }
+                
+                // This Year
+                if ($currentYear >= 2026) {
+                    $totalObligation += $nominal;
+                    $billDetails[] = [
+                        'item' => "$name $currentYear",
+                        'amount' => $nominal
+                    ];
+                }
+
+            } elseif ($method == 3) { // Satu Kali
+                 // Assumption: 'Satu Kali' also respects the start year rule?
+                 // If it's a one-time thing, maybe we just show it for the current year.
+                 // Simplification: Showing it if current year >= 2026.
+                 if ($currentYear >= 2026) {
+                     $totalObligation += $nominal;
+                     $billDetails[] = [
+                        'item' => "$name",
+                        'amount' => $nominal
+                    ];
+                 }
+            }
+        }
+
+        $bill = $totalObligation - $totalPaid;
+        // Ensure bill is not negative (if paid more than obligation) - optionally could show minus as credit
+        if ($bill < 0) $bill = 0; 
+
         return view('welcome_message', [
             'profil' => $profil,
-            'menus'  => $menus
+            'menus'  => $menus,
+            'bill'   => $bill,
+            'billDetails' => $billDetails,
+            'userPayments' => $userPayments,
+            'totalObligation' => $totalObligation,
+            'totalPaid' => $totalPaid
         ]);
     }
 
@@ -131,6 +231,11 @@ class Home extends BaseController
         
         $myWeight = $weights[$myRole] ?? 0;
         $targetWeight = $weights[$targetRole] ?? 0;
+
+        // Special rule for s_admin: can manage peers (other s_admins)
+        if ($myRole === 's_admin') {
+            return $myWeight >= $targetWeight;
+        }
 
         return $myWeight > $targetWeight;
     }
@@ -236,6 +341,10 @@ class Home extends BaseController
         }
 
         $id = $this->request->getPost('id_code');
+        if ($id == session()->get('id_code')) {
+             return $this->response->setJSON(['status' => 'error', 'message' => 'Anda tidak bisa menghapus akun sendiri']);
+        }
+
         $model = new \App\Models\UserModel();
         $existingUser = $model->find($id);
 
