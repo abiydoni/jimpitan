@@ -30,3 +30,19 @@ $routes->post('/users/delete', 'Home::deleteUser', ['filter' => 'authFilter']);
 // Scan QR Jimpitan
 $routes->get('/scan', 'Scan::index', ['filter' => 'authFilter']);
 $routes->post('/scan/store', 'Scan::store', ['filter' => 'authFilter']);
+$routes->get('/scan/getRecentScans', 'Scan::getRecentScans', ['filter' => 'authFilter']);
+
+// Data KK Management
+$routes->get('/kk', 'KK::index', ['filter' => 'authFilter']);
+$routes->get('/kk/search', 'KK::searchWarga', ['filter' => 'authFilter']);
+$routes->post('/kk/store', 'KK::store', ['filter' => 'authFilter']);
+$routes->post('/kk/update', 'KK::update', ['filter' => 'authFilter']);
+$routes->post('/kk/delete', 'KK::delete', ['filter' => 'authFilter']);
+// Data Warga Module
+$routes->get('warga', 'Warga::index', ['filter' => 'authFilter']);
+$routes->post('warga/store', 'Warga::store', ['filter' => 'authFilter']);
+$routes->post('warga/update', 'Warga::update', ['filter' => 'authFilter']);
+$routes->post('warga/delete/(:num)', 'Warga::delete/$1', ['filter' => 'authFilter']);
+
+// Temporary Debug
+$routes->get('debug-warga', 'DebugWarga::index');

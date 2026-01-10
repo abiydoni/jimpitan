@@ -172,6 +172,23 @@ class Home extends BaseController
         ]);
     }
 
+    public function getUsersForJadwal()
+    {
+        $role = session()->get('role');
+        if ($role !== 's_admin' && $role !== 'admin') {
+            return $this->response->setJSON([]);
+        }
+
+        $db = \Config\Database::connect();
+        $users = $db->table('users')
+                    ->select('id_code as id, name, shift')
+                    ->orderBy('name', 'ASC')
+                    ->get()
+                    ->getResultArray();
+
+        return $this->response->setJSON($users);
+    }
+
     public function updateJadwal()
     {
         $role = session()->get('role');
