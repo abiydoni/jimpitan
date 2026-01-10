@@ -17,6 +17,7 @@ $routes->post('/auth/updatePassword', 'Auth::updatePassword', ['filter' => 'auth
 
 // Guard Schedule
 $routes->get('/jadwal_jaga', 'Home::jadwal_jaga', ['filter' => 'authFilter']);
+$routes->get('/detail_jadwal', 'Home::jadwal_jaga', ['filter' => 'authFilter']);
 $routes->post('/jadwal/update', 'Home::updateJadwal', ['filter' => 'authFilter']);
 $routes->get('/jadwal/get_users', 'Home::getUsersForJadwal', ['filter' => 'authFilter']);
 

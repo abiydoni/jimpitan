@@ -83,7 +83,7 @@
     </div>
 
     <!-- Audio Effect -->
-    <audio id="beepSound" src="<?= base_url('assets/beep.mp3') ?>"></audio> 
+    <!-- Audio Effect (Handled by JS) --> 
     <!-- Create a simple beep using JS if file incorrect, but prefer valid asset path. For now assume system sound or JS beep -->
 
     <script>
@@ -94,7 +94,7 @@
             if (isProcessing) return;
             isProcessing = true;
             
-            beep.play();
+            playBeep();
 
             // Send to server
             fetch('<?= base_url('scan/store') ?>', {
@@ -165,27 +165,125 @@
             });
         }
 
+        // 1. Check if Library Loaded
+        if (typeof Html5QrcodeScanner === 'undefined') {
+            document.getElementById('reader').innerHTML = '<div class="p-4 text-red-500 font-bold">Error: Library Scanner gagal dimuat. Periksa koneksi internet.</div>';
+        }
+
+        // Dynamic QR Box Logic to prevent crashing on small screens
+        function getQrBoxSize() {
+            const width = window.innerWidth;
+            // Use 70% of width, but max 250px
+            const size = Math.min(250, width * 0.7); 
+            return { width: size, height: size };
+        }
+
         let html5QrcodeScanner = new Html5QrcodeScanner(
             "reader",
             { 
                 fps: 10, 
-                qrbox: {width: 250, height: 250},
+                qrbox: getQrBoxSize,
                 rememberLastUsedCamera: true
             },
             /* verbose= */ false);
 
-        // Render with specific error handling
-        html5QrcodeScanner.render(onScanSuccess, (errorMessage) => {
-            // parse error, ignore standard scanning errors
-            // Only alert if it's a permission error (usually happens during start, but scanner handles it differently)
-        });
+        // 2. Render with safety checks
+        try {
+            html5QrcodeScanner.render(onScanSuccess, (errorMessage) => {
+                // Ignore parsing errors, they happen every frame no QR is detecting
+            });
+        } catch (e) {
+            console.error("Scanner Render Error:", e);
+            document.getElementById('reader').innerHTML = `<div class="p-4 text-red-500">Error Kamera: ${e.message}</div>`;
+        }
 
-        // Hook into internal failure if possible, or just rely on the scanner's own UI for permission
-        // Html5QrcodeScanner automatically shows "Request Camera Permissions" button. 
-        // If it fails, it usually shows text. We can try to catch global errors.
+        // 3. Audio Play Safety
+        async function playBeep() {
+            try {
+                await beep.play();
+            } catch (err) {
+                console.log("Audio play blocked (Autoplay policy):", err);
+            }
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            if (isProcessing) return;
+            isProcessing = true;
+            
+            playBeep(); // Safe play
+
+            // Send to server
+            fetch('<?= base_url('scan/store') ?>', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ code_id: decodedText })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    Swal.fire({
+                        title: 'Berhasil Masuk!',
+                        html: `${data.data.nama}<br><b class="text-xl text-indigo-600">Rp ${new Intl.NumberFormat('id-ID').format(data.data.nominal)}</b><br><span class="text-sm text-slate-500">Data tersimpan</span>`,
+                        icon: 'success',
+                        timer: 3000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        isProcessing = false;
+                        addHistoryItem(data.data);
+                    });
+                } else if (data.status === 'deleted') {
+                    Swal.fire({
+                        title: 'Data Dibatalkan!',
+                        html: `${data.data.nama}<br><span class="text-sm text-red-500">Jimpitan hari ini dihapus (Scan Ganda)</span>`,
+                        icon: 'warning',
+                        timer: 3000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        isProcessing = false;
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Gagal',
+                        text: data.message,
+                        icon: 'error'
+                    }).then(() => {
+                        isProcessing = false;
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('Error', 'Terjadi kesalahan sistem.', 'error');
+                isProcessing = false;
+            });
+        }
+
+        // 3. Global Error Handler for Permissions
         window.addEventListener('unhandledrejection', function(event) {
-            if (event.reason && event.reason.toString().includes('NotAllowedError')) {
-                Swal.fire('Izin Kamera Ditolak', 'Mohon izinkan akses kamera di pengaturan browser Anda.', 'error');
+            // Chrome/Edge often throw NotAllowedError as unhandled rejection
+            if (event.reason && (
+                event.reason.toString().includes('NotAllowedError') || 
+                event.reason.toString().includes('NotFoundError') ||
+                event.reason.toString().includes('NotReadableError')
+            )) {
+                Swal.fire({
+                    title: 'Akses Kamera Bermasalah',
+                    html: `
+                        <div class="text-left text-sm">
+                            <p class="mb-2 font-bold text-rose-600">${event.reason.message || 'Izin ditolak'}</p>
+                            <p class="mb-1">Kemungkinan penyebab:</p>
+                            <ul class="list-disc pl-5 mb-2">
+                                <li>Anda memblokir izin kamera.</li>
+                                <li>Web dibuka via <b>HTTP</b> (bukan Localhost/HTTPS).</li>
+                                <li>Kamera sedang dipakai aplikasi lain.</li>
+                            </ul>
+                        </div>
+                    `,
+                    icon: 'warning'
+                });
             }
         });
 
