@@ -224,6 +224,16 @@
 
         // Separated process function to handle recursive delete confirmation
         function processScan(codeId, confirmDelete = false) {
+             // IMMEDIATE FEEDBACK: Show Loading
+             Swal.fire({
+                title: 'Memproses...',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                background: '#fff',
+                customClass: { popup: 'rounded-2xl' },
+                didOpen: () => { Swal.showLoading(); }
+             });
+
              const payload = { code_id: codeId };
              if (confirmDelete) payload.confirm_delete = true;
 

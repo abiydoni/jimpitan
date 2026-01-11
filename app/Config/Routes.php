@@ -44,5 +44,15 @@ $routes->post('warga/store', 'Warga::store', ['filter' => 'authFilter']);
 $routes->post('warga/update', 'Warga::update', ['filter' => 'authFilter']);
 $routes->post('warga/delete/(:num)', 'Warga::delete/$1', ['filter' => 'authFilter']);
 
+// Payment Module
+$routes->get('/payment', 'Payment::index', ['filter' => 'authFilter']);
+$routes->get('/payment/warga/(:segment)', 'Payment::warga/$1', ['filter' => 'authFilter']);
+$routes->get('/payment/detail/(:segment)/(:segment)', 'Payment::detail/$1/$2', ['filter' => 'authFilter']);
+$routes->post('/payment/process', 'Payment::process', ['filter' => 'authFilter']);
+$routes->post('/payment/delete', 'Payment::delete', ['filter' => 'authFilter']);
+$routes->get('/payment/history-global/(:segment)', 'Payment::get_global_history/$1', ['filter' => 'authFilter']);
+$routes->get('/payment/summary-global', 'Payment::get_global_summary', ['filter' => 'authFilter']);
+$routes->get('/payment/history-personal/(:segment)/(:segment)', 'Payment::get_personal_history/$1/$2', ['filter' => 'authFilter']);
+
 // Temporary Debug
 $routes->get('debug-warga', 'DebugWarga::index');
