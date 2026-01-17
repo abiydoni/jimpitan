@@ -146,9 +146,6 @@ class Chat extends BaseController
         
         $updates = [
             'total_unread' => $this->chatModel->getUnreadCount($currentUserId),
-            'unread_messages' => $this->chatModel->getRecentConversations($currentUserId), // Reusing key 'unread_messages' or change to 'recent_chats'? 
-            // Let's keep key 'unread_messages' to minimize frontend change if structure is compatible, 
-            // BUT semantically it's wrong. Let's call it 'recent_chats' and update frontend.
             'recent_chats' => $this->chatModel->getRecentConversations($currentUserId),
             'messages' => []
         ];

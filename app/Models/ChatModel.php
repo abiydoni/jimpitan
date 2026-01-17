@@ -49,7 +49,16 @@ class ChatModel extends Model
                             reply_user.name as reply_sender')
                     ->join('chats as reply', 'reply.id = chats.reply_to_id', 'left')
                     ->join('users as reply_user', 'reply_user.id_code = reply.sender_id', 'left')
-                    ->where("(chats.sender_id = '$user1' AND chats.receiver_id = '$user2') OR (chats.sender_id = '$user2' AND chats.receiver_id = '$user1')")
+                    ->groupStart()
+                        ->groupStart()
+                            ->where('chats.sender_id', $user1)
+                            ->where('chats.receiver_id', $user2)
+                        ->groupEnd()
+                        ->orGroupStart()
+                            ->where('chats.sender_id', $user2)
+                            ->where('chats.receiver_id', $user1)
+                        ->groupEnd()
+                    ->groupEnd()
                     ->orderBy('chats.created_at', 'DESC') // Changed to DESC for limit
                     ->findAll(100); // Limit to 100
 
