@@ -71,8 +71,8 @@ class Warga extends BaseController
             $newName = $img->getRandomName();
             $img->move(FCPATH . 'img/warga', $newName);
             
-            // GD Resize removed for stability
-            // $data['foto'] = $newName;
+            // Robust Compression
+            $this->_compressImage($newName);
 
             $data['foto'] = $newName;
         }
@@ -112,7 +112,8 @@ class Warga extends BaseController
                 $newName = $img->getRandomName();
                 $img->move(FCPATH . 'img/warga', $newName);
 
-                // GD Resize removed for stability
+                // Robust Compression
+                $this->_compressImage($newName);
 
                 $data['foto'] = $newName;
 
@@ -148,11 +149,26 @@ class Warga extends BaseController
             @unlink(FCPATH . 'img/warga/' . $warga['foto']);
         }
 
-        if ($this->wargaModel->delete($id)) {
+            if ($this->wargaModel->delete($id)) {
             log_activity('DELETE_WARGA', 'Deleted warga ID: ' . $id . ' Name: ' . ($warga['nama'] ?? 'Unknown'));
             return $this->response->setJSON(['status' => 'success', 'message' => 'Data warga berhasil dihapus']);
         } else {
             return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal menghapus data']);
+        }
+    }
+
+    private function _compressImage($fileName)
+    {
+        if (!extension_loaded('gd')) return;
+
+        try {
+            $path = FCPATH . 'img/warga/' . $fileName;
+            \Config\Services::image()
+                ->withFile($path)
+                ->resize(800, 800, true, 'auto')
+                ->save($path, 80);
+        } catch (\Exception $e) {
+            // Fail silently, keeping original file
         }
     }
 }

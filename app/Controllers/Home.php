@@ -639,6 +639,10 @@ class Home extends BaseController
             // Move file
             try {
                 $file->move(FCPATH . 'img/warga', $newName);
+                
+                // Robust Compression
+                $this->_compressImage($newName);
+
             } catch (\Exception $e) {
                 return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal menyimpan file ke server.']);
             }
@@ -684,5 +688,20 @@ class Home extends BaseController
         }
 
         return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal mengupload foto']);
+    }
+
+    private function _compressImage($fileName)
+    {
+        if (!extension_loaded('gd')) return;
+
+        try {
+            $path = FCPATH . 'img/warga/' . $fileName;
+            \Config\Services::image()
+                ->withFile($path)
+                ->resize(800, 800, true, 'auto')
+                ->save($path, 80);
+        } catch (\Exception $e) {
+            // Fail silently, keeping original file
+        }
     }
 }
