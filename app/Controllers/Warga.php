@@ -67,6 +67,7 @@ class Warga extends BaseController
         // Handle specific unique check manually if needed or catch exception
         // Handle File Upload
         $img = $this->request->getFile('foto');
+        
         if ($img && $img->isValid() && !$img->hasMoved()) {
             $newName = $img->getRandomName();
             $img->move(FCPATH . 'img/warga', $newName);
@@ -75,6 +76,9 @@ class Warga extends BaseController
             $this->_compressImage($newName);
 
             $data['foto'] = $newName;
+        } elseif ($img && $img->getError() != 4) {
+             // Error present (and not just "no file")
+             return $this->response->setJSON(['status' => 'error', 'message' => 'Upload Gagal: ' . $img->getErrorString() . ' (Cek ukuran file)']);
         }
 
         try {
@@ -106,27 +110,44 @@ class Warga extends BaseController
         unset($data['id_warga']);
 
         try {
-            // Handle File Upload
-            $img = $this->request->getFile('foto');
-            if ($img && $img->isValid() && !$img->hasMoved()) {
-                $newName = $img->getRandomName();
-                $img->move(FCPATH . 'img/warga', $newName);
-
-                // Robust Compression
-                $this->_compressImage($newName);
-
-                $data['foto'] = $newName;
-
-                // Delete old photo
-                $oldData = $this->wargaModel->find($id);
-                if($oldData && !empty($oldData['foto']) && file_exists(FCPATH . 'img/warga/' . $oldData['foto'])) {
-                    @unlink(FCPATH . 'img/warga/' . $oldData['foto']);
+                // Handle File Upload
+                $img = $this->request->getFile('foto');
+                
+                // Check if user uploaded a file
+                if ($img->isValid() && !$img->hasMoved()) {
+                    $newName = $img->getRandomName();
+                    $img->move(FCPATH . 'img/warga', $newName);
+    
+                    // Robust Compression
+                    $this->_compressImage($newName);
+    
+                    $data['foto'] = $newName;
+    
+                    // Delete old photo
+                    $oldData = $this->wargaModel->find($id);
+                    if($oldData && !empty($oldData['foto']) && file_exists(FCPATH . 'img/warga/' . $oldData['foto'])) {
+                        @unlink(FCPATH . 'img/warga/' . $oldData['foto']);
+                    }
+                } elseif ($img->getError() != 4) { 
+                    // Error 4 means "No file was uploaded" (User didn't want to change photo) - Ignore
+                    // Any other error means the upload FAILED (e.g. Size Exceeded)
+                    return $this->response->setJSON(['status' => 'error', 'message' => 'Upload Gagal: ' . $img->getErrorString() . ' (Cek ukuran file)']);
+                } else {
+                    // No file uploaded, keep old
+                    unset($data['foto']);
                 }
-            } else {
-                unset($data['foto']);
-            }
 
             $this->wargaModel->update($id, $data);
+            
+            // Sync Session if Admin updates their own data
+            $session = session();
+            // Check if name matches (Simple check) or strict ID check if possible
+            // Since we don't have user_id link in warga table easily, we use name match like in Home.php
+            $updatedWarga = $this->wargaModel->find($id);
+            if ($updatedWarga && $updatedWarga['nama'] === $session->get('name') && isset($data['foto'])) {
+                $session->set('foto', $data['foto']);
+            }
+
             log_activity('UPDATE_WARGA', 'Updated warga ID: ' . $id);
             return $this->response->setJSON(['status' => 'success', 'message' => 'Data warga berhasil diperbarui']);
         } catch (\Exception $e) {
