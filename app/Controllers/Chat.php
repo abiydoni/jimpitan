@@ -42,12 +42,18 @@ class Chat extends BaseController
         $currentUserId = session()->get('id_code');
         $users = $this->userModel->where('id_code !=', $currentUserId)->findAll();
         
-        // Add unread count for each user
+        // Get last activity times
+        $activityTimes = $this->chatModel->getLastActivityTimes($currentUserId);
+        
+        // Add unread count and last activity for each user
         foreach ($users as &$user) {
             $user['unread_count'] = $this->chatModel->where('sender_id', $user['id_code'])
                                                     ->where('receiver_id', $currentUserId)
                                                     ->where('is_read', 0)
                                                     ->countAllResults();
+            
+            // Activity time
+            $user['last_activity'] = $activityTimes[$user['id_code']] ?? '0000-00-00 00:00:00';
         }
 
         // Add Group Chat Option
@@ -57,10 +63,20 @@ class Chat extends BaseController
             'user_name' => 'Grup',
             'role' => 'group',
             'foto' => 'group_icon.png', // We handle this in frontend or use default
-            'unread_count' => 0 // Future work
+            'unread_count' => 0, // Future work
+            'last_activity' => $activityTimes['GROUP_ALL'] ?? '0000-00-00 00:00:00'
         ];
         
-        array_unshift($users, $groupChat);
+        // Add group to array
+        $users[] = $groupChat;
+        
+        // Sort by last_activity DESC
+        usort($users, function ($a, $b) {
+            return strcmp($b['last_activity'], $a['last_activity']);
+        });
+
+        // Re-index array (optional but safer for JSON)
+        $users = array_values($users);
 
         return $this->response->setJSON($users);
     }

@@ -120,8 +120,9 @@ class ChatModel extends Model
                          
         $chats = [];
         $recordedPartners = [];
-        $db = \Config\Database::connect();
+        $partnerIdsToFetch = [];
         
+        // First pass: identify unique conversations
         foreach ($messages as $msg) {
             $isGroup = $msg['receiver_id'] === 'GROUP_ALL';
             
@@ -135,27 +136,103 @@ class ChatModel extends Model
             if (in_array($partnerId, $recordedPartners)) continue;
             
             $recordedPartners[] = $partnerId;
-            
-            if ($isGroup) {
-                $msg['partner_name'] = 'Forum Warga'; // Default Name
-                $msg['partner_id'] = 'GROUP_ALL';
-                $msg['unread_count'] = 0; 
-            } else {
-                $partner = $db->table('users')->select('name')->where('id_code', $partnerId)->get()->getRowArray();
-                $msg['partner_name'] = $partner ? $partner['name'] : 'Unknown';
-                $msg['partner_id'] = $partnerId;
-                
-                $msg['unread_count'] = $this->where('sender_id', $partnerId)
-                                            ->where('receiver_id', $userId)
-                                            ->where('is_read', 0)
-                                            ->countAllResults();
+            if (!$isGroup) {
+                $partnerIdsToFetch[] = $partnerId;
             }
             
-            $chats[] = $msg;
+            // Initialize basic data
+            $msg['partner_id'] = $partnerId;
+            $msg['unread_count'] = 0; // Default
+            $msg['partner_name'] = 'Unknown'; // Default
+            
+            $chats[$partnerId] = $msg;
             
             if (count($chats) >= $limit) break;
         }
+
+        // Batch Fetch User Names
+        $userMap = [];
+        if (!empty($partnerIdsToFetch)) {
+            $db = \Config\Database::connect();
+            $users = $db->table('users')
+                        ->select('id_code, name')
+                        ->whereIn('id_code', $partnerIdsToFetch)
+                        ->get()
+                        ->getResultArray();
+            
+            foreach ($users as $u) {
+                $userMap[$u['id_code']] = $u['name'];
+            }
+        }
+
+        // Batch Fetch Unread Counts
+        $unreadMap = [];
+        if (!empty($partnerIdsToFetch)) {
+            $unreads = $this->select('sender_id, COUNT(*) as cnt')
+                            ->where('receiver_id', $userId)
+                            ->where('is_read', 0)
+                            ->whereIn('sender_id', $partnerIdsToFetch)
+                            ->groupBy('sender_id')
+                            ->findAll();
+                            
+            foreach ($unreads as $u) {
+                $unreadMap[$u['sender_id']] = $u['cnt'];
+            }
+        }
+
+        // Final Assembly
+        // We use array_values to reset keys and ensure order from first pass is preserved (which was by date)
+        $finalChats = [];
+        foreach ($recordedPartners as $pid) {
+            if (!isset($chats[$pid])) continue;
+            
+            $c = $chats[$pid];
+            
+            if ($pid === 'GROUP_ALL') {
+                $c['partner_name'] = 'Forum Warga';
+                $c['unread_count'] = 0;
+            } else {
+                $c['partner_name'] = $userMap[$pid] ?? 'Unknown';
+                $c['unread_count'] = $unreadMap[$pid] ?? 0;
+            }
+            
+            $finalChats[] = $c;
+        }
         
-        return $chats;
+        return $finalChats;
+    }
+    public function getLastActivityTimes($userId)
+    {
+         $db = \Config\Database::connect();
+         
+         // Query to find latest interaction between user and others
+         $sql = "
+            SELECT partner_id, MAX(created_at) as last_activity 
+            FROM (
+                SELECT receiver_id as partner_id, created_at FROM chats WHERE sender_id = ? AND receiver_id != 'GROUP_ALL'
+                UNION ALL
+                SELECT sender_id as partner_id, created_at FROM chats WHERE receiver_id = ?
+            ) as combined
+            GROUP BY partner_id
+         ";
+         
+         $query = $db->query($sql, [$userId, $userId]);
+         $individual = $query->getResultArray();
+         
+         $result = [];
+         foreach ($individual as $row) {
+             $result[$row['partner_id']] = $row['last_activity'];
+         }
+
+         // Group chat activity
+         $groupLast = $this->where('receiver_id', 'GROUP_ALL')
+                           ->orderBy('created_at', 'DESC')
+                           ->first();
+                           
+         if ($groupLast) {
+            $result['GROUP_ALL'] = $groupLast['created_at'];
+         }
+
+         return $result;
     }
 }
