@@ -1,0 +1,7 @@
+{
+  "name": "jimpitan",
+  "version": "1.0.0",
+  "scripts": {
+    "serve": "php spark serve"
+  }
+}
