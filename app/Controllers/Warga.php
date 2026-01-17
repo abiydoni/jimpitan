@@ -71,17 +71,8 @@ class Warga extends BaseController
             $newName = $img->getRandomName();
             $img->move(FCPATH . 'img/warga', $newName);
             
-            // Auto Compress (Resize to 600px width, 80% quality) ONLY if GD is loaded
-            if (extension_loaded('gd')) {
-                try {
-                    \Config\Services::image()
-                        ->withFile(FCPATH . 'img/warga/' . $newName)
-                        ->resize(600, 600, true, 'width')
-                        ->save(FCPATH . 'img/warga/' . $newName, 80);
-                } catch (\Exception $e) {
-                    // Ignore resize error, keep original file
-                }
-            }
+            // GD Resize removed for stability
+            // $data['foto'] = $newName;
 
             $data['foto'] = $newName;
         }
@@ -121,17 +112,7 @@ class Warga extends BaseController
                 $newName = $img->getRandomName();
                 $img->move(FCPATH . 'img/warga', $newName);
 
-                // Auto Compress (Resize to 600px width, 80% quality) ONLY if GD is loaded
-                if (extension_loaded('gd')) {
-                    try {
-                        \Config\Services::image()
-                            ->withFile(FCPATH . 'img/warga/' . $newName)
-                            ->resize(600, 600, true, 'width')
-                            ->save(FCPATH . 'img/warga/' . $newName, 80);
-                    } catch (\Exception $e) {
-                        // Ignore resize error, keep original
-                    }
-                }
+                // GD Resize removed for stability
 
                 $data['foto'] = $newName;
 
