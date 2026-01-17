@@ -302,7 +302,9 @@
             
             const div = document.createElement('div');
             div.id = `msg-${msg.id}`;
-            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-4 animate__animated animate__fadeInUp animate__faster group items-end gap-2`;
+            // PERFORMANCE FIX: Only animate if it's a NEW message (not history load)
+            const animationClass = scroll ? 'animate__animated animate__fadeInUp animate__faster' : '';
+            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-4 ${animationClass} group items-end gap-2`;
             
             const time = new Date(msg.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
             

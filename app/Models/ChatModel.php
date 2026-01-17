@@ -44,19 +44,21 @@ class ChatModel extends Model
 
     public function getConversation($user1, $user2)
     {
-        return $this->select('chats.*, 
+        $result = $this->select('chats.*, 
                             reply.message as reply_message, 
                             reply_user.name as reply_sender')
                     ->join('chats as reply', 'reply.id = chats.reply_to_id', 'left')
                     ->join('users as reply_user', 'reply_user.id_code = reply.sender_id', 'left')
                     ->where("(chats.sender_id = '$user1' AND chats.receiver_id = '$user2') OR (chats.sender_id = '$user2' AND chats.receiver_id = '$user1')")
-                    ->orderBy('chats.created_at', 'ASC')
-                    ->findAll();
+                    ->orderBy('chats.created_at', 'DESC') // Changed to DESC for limit
+                    ->findAll(100); // Limit to 100
+
+        return array_reverse($result); // Reverse back to ASC for display
     }
     
     public function getGroupMessages()
     {
-        return $this->select('chats.*, 
+        $result = $this->select('chats.*, 
                             users.name as sender_name,
                             reply.message as reply_message, 
                             reply_user.name as reply_sender')
@@ -64,8 +66,10 @@ class ChatModel extends Model
                     ->join('chats as reply', 'reply.id = chats.reply_to_id', 'left')
                     ->join('users as reply_user', 'reply_user.id_code = reply.sender_id', 'left')
                     ->where('chats.receiver_id', 'GROUP_ALL')
-                    ->orderBy('chats.created_at', 'ASC')
-                    ->findAll();
+                    ->orderBy('chats.created_at', 'DESC') // Changed to DESC for limit
+                    ->findAll(100); // Limit to 100
+
+        return array_reverse($result); // Reverse back to ASC for display
     }
     
     public function markAsRead($sender_id, $receiver_id)
