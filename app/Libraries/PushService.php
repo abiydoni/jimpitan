@@ -28,12 +28,15 @@ class PushService
             $rootPath = rtrim($rootPath, '/\\') . DIRECTORY_SEPARATOR;
 
             // Ensure OPENSSL_CONF is set
-            $opensslConfigPath = $rootPath . 'openssl.cnf';
-            
-            if (file_exists($opensslConfigPath)) {
-                putenv("OPENSSL_CONF=" . $opensslConfigPath);
-            } else {
-                $this->logger->error("PushService: openssl.cnf NOT FOUND at " . $opensslConfigPath);
+            // ONLY apply this fix on Windows (XAMPP/Localhost)
+            // On Linux servers (Production), this often breaks the native OpenSSL config.
+            if (DIRECTORY_SEPARATOR === '\\') {
+                $opensslConfigPath = $rootPath . 'openssl.cnf';
+                if (file_exists($opensslConfigPath)) {
+                    putenv("OPENSSL_CONF=" . $opensslConfigPath);
+                } else {
+                    $this->logger->warning("PushService: openssl.cnf not found on Windows at " . $opensslConfigPath);
+                }
             }
 
             $db = \Config\Database::connect();
