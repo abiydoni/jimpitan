@@ -144,10 +144,6 @@ class Chat extends BaseController
             // Get ID if needed, but we just trigger push
             $newMsgId = $this->chatModel->getInsertID();
             
-            // Mark as notified immediately since we are sending it now
-            // Update the record: notification_sent = 1
-            $this->chatModel->update($newMsgId, ['notification_sent' => 1]);
-
             log_message('error', 'DEBUG: Insert success. Triggering Push...');
             
             // Trigger Push Notification via Service
@@ -172,9 +168,21 @@ class Chat extends BaseController
                      $redirectUrl = '/chat?user_id=GROUP_ALL';
                 }
                 
-                $pushService->sendNotification($receiverId, $message, $senderName, $redirectUrl);
+                $success = $pushService->sendNotification($receiverId, $message, $senderName, $redirectUrl);
+                
+                if ($success) {
+                     $this->chatModel->update($newMsgId, ['notification_sent' => 1]);
+                     log_message('info', "Push Success for Msg ID $newMsgId");
+                } else {
+                     log_message('error', "Push Failed for Msg ID $newMsgId. Will be picked up by Cron.");
+                     // Leave notification_sent = 0 so Cron Job picks it up!
+                     $this->chatModel->update($newMsgId, ['notification_sent' => 0]); 
+                }
+
             } catch (\Exception $e) {
                 log_message('error', 'DEBUG: PushService threw Exception: ' . $e->getMessage());
+                // Ensure it's 0 so Cron picks it up
+                $this->chatModel->update($newMsgId, ['notification_sent' => 0]); 
             }
         } else {
              log_message('error', 'DEBUG: Insert failed.');
