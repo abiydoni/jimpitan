@@ -23,12 +23,15 @@ class PushService
                 return false;
             }
 
+            // Determine Root Path safely
+            $rootPath = defined('ROOTPATH') ? ROOTPATH : FCPATH . '../';
+            $rootPath = rtrim($rootPath, '/\\') . DIRECTORY_SEPARATOR;
+
             // Ensure OPENSSL_CONF is set
-            $opensslConfigPath = FCPATH . '../openssl.cnf';
-            $realPath = realpath($opensslConfigPath);
+            $opensslConfigPath = $rootPath . 'openssl.cnf';
             
-            if ($realPath && file_exists($realPath)) {
-                putenv("OPENSSL_CONF=" . $realPath);
+            if (file_exists($opensslConfigPath)) {
+                putenv("OPENSSL_CONF=" . $opensslConfigPath);
             }
 
             $db = \Config\Database::connect();
@@ -40,25 +43,25 @@ class PushService
             if (empty($subscriptions)) return false;
 
             // Load VAPID Keys
-            $envPath = FCPATH . '../.env';
-            $publicKey = '';
-            $privateKey = '';
+            $publicKey = getenv('VAPID_PUBLIC_KEY');
+            $privateKey = getenv('VAPID_PRIVATE_KEY');
             
-            if (file_exists($envPath)) {
-                $envContent = file_get_contents($envPath);
-                if (preg_match('/^VAPID_PUBLIC_KEY=(.*)$/m', $envContent, $matches)) {
-                    $publicKey = trim($matches[1], "\"' \t\n\r\0\x0B");
-                }
-                if (preg_match('/^VAPID_PRIVATE_KEY=(.*)$/m', $envContent, $matches)) {
-                    $privateKey = trim($matches[1], "\"' \t\n\r\0\x0B");
-                }
+            // If getenv failed (sometimes in CLI or if not loaded yet), try parsing .env manually
+            if (empty($publicKey) || empty($privateKey)) {
+                 $envPath = $rootPath . '.env';
+                 if (file_exists($envPath)) {
+                    $envContent = file_get_contents($envPath);
+                    if (empty($publicKey) && preg_match('/^VAPID_PUBLIC_KEY=(.*)$/m', $envContent, $matches)) {
+                        $publicKey = trim($matches[1], "\"' \t\n\r\0\x0B");
+                    }
+                    if (empty($privateKey) && preg_match('/^VAPID_PRIVATE_KEY=(.*)$/m', $envContent, $matches)) {
+                        $privateKey = trim($matches[1], "\"' \t\n\r\0\x0B");
+                    }
+                 }
             }
-            
-            if (empty($publicKey)) $publicKey = getenv('VAPID_PUBLIC_KEY');
-            if (empty($privateKey)) $privateKey = getenv('VAPID_PRIVATE_KEY');
 
-            $privateKey = trim($privateKey, "\"' \t\n\r\0\x0B");
-            $publicKey  = trim($publicKey, "\"' \t\n\r\0\x0B");
+            $privateKey = trim((string)$privateKey, "\"' \t\n\r\0\x0B");
+            $publicKey  = trim((string)$publicKey, "\"' \t\n\r\0\x0B");
 
             // Format Key
             if (strpos($privateKey, '\n') !== false) {

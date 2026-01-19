@@ -22,8 +22,8 @@ class SendChatNotifications extends BaseCommand
         // 1. Get messages not notified
         $builder = $db->table('chats');
         $builder->where('notification_sent', 0);
-        // Only verify messages from last 24 hours to prevent spamming old stuff upon migration
-        $builder->where('created_at >=', date('Y-m-d H:i:s', strtotime('-1 day')));
+        // Only verify messages from last 30 days (extended for debugging)
+        $builder->where('created_at >=', date('Y-m-d H:i:s', strtotime('-30 days')));
         
         // Exclude messages where I am the sender? No, we don't know who "I" am in CLI.
         // But usually we don't notify the sender. The receiver_id is who gets notified.
@@ -51,13 +51,9 @@ class SendChatNotifications extends BaseCommand
                 $user = $db->table('users')->select('name')->where('id_code', $senderId)->get()->getRowArray();
                 if ($user) {
                     $senderName = $user['name'];
-                    $url = '/chat?user_id=' . $senderId;
-                } else {
-                    // Check if group?
-                    // If sender is group.. but sender is usually a user.
-                    // If message is in group chat (receiver_id = GROUP_ALL)
-                    // Then we need to notify ALL users except sender.
-                }
+                } 
+                // Always set URL to specific chat if we have an ID
+                $url = '/chat?user_id=' . $senderId;
             }
             
             // Logic for Group Chat

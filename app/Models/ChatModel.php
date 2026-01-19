@@ -12,7 +12,7 @@ class ChatModel extends Model
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = ['sender_id', 'receiver_id', 'message', 'is_read', 'reply_to_id', 'created_at', 'updated_at'];
+    protected $allowedFields    = ['sender_id', 'receiver_id', 'message', 'is_read', 'reply_to_id', 'created_at', 'updated_at', 'notification_sent'];
 
     // Dates
     protected $useTimestamps = true;

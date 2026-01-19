@@ -154,7 +154,25 @@ class Chat extends BaseController
             try {
                 $pushService = new \App\Libraries\PushService();
                 $senderName = session()->get('name');
-                $pushService->sendNotification($receiverId, $message, $senderName);
+                
+                // Determine URL based on Receiver
+                // If receiver is a User, they need to click and go to ?user_id=SENDER
+                // If receiver is GROUP, they go to ?user_id=GROUP_ALL
+                
+                // Currently Chat::sendMessage handles ONE receiver. 
+                // If receiver_id == 'GROUP_ALL', we should probably handle it specially, 
+                // but PushService expects a single User ID for lookup usually.
+                // However, let's just pass the correct URL for Personal Chat for now.
+                
+                $redirectUrl = '/chat';
+                if ($receiverId !== 'GROUP_ALL') {
+                     $currentUserId = session()->get('id_code'); // The sender
+                     $redirectUrl = '/chat?user_id=' . $currentUserId;
+                } else {
+                     $redirectUrl = '/chat?user_id=GROUP_ALL';
+                }
+                
+                $pushService->sendNotification($receiverId, $message, $senderName, $redirectUrl);
             } catch (\Exception $e) {
                 log_message('error', 'DEBUG: PushService threw Exception: ' . $e->getMessage());
             }

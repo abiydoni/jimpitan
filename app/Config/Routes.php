@@ -132,3 +132,6 @@ $routes->get('/chat/poll', 'Chat::pollUpdates', ['filter' => 'authFilter']);
 
 // Push Notifications
 $routes->post('/push/subscribe', 'PushSubscription::subscribe', ['filter' => 'authFilter']);
+
+// Temporary Debug
+$routes->get('/test-push', 'TestPush::index', ['filter' => 'authFilter']);
