@@ -29,6 +29,7 @@ class Chat extends BaseController
             'title' => 'Ruang Pesan',
             'user_id' => session()->get('id_code'),
             'user_name' => session()->get('name'),
+            'user_foto' => session()->get('foto'),
             'vapid_public_key' => getenv('VAPID_PUBLIC_KEY')
         ];
         return view('chat/index', $data);

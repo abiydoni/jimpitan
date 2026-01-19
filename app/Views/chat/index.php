@@ -61,8 +61,24 @@
         <!-- Sidebar (User List) -->
         <div id="sidebar" class="w-full md:w-1/3 lg:w-1/4 bg-white dark:bg-gray-800 md:rounded-2xl shadow-lg flex flex-col h-full z-10 transition-transform duration-300 absolute md:relative top-0 left-0">
             <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                <h2 class="font-bold text-xl text-indigo-600 dark:text-indigo-400">Pesan</h2>
-                <div id="connectionStatus" class="w-3 h-3 rounded-full bg-green-500" title="Terhubung"></div>
+                <div class="flex items-center gap-3">
+                    <a href="<?= base_url('/') ?>" class="mr-1 w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center text-gray-500 dark:text-gray-400 transition-colors" title="Kembali ke Menu Utama">
+                        <i class="fas fa-arrow-left text-sm"></i>
+                    </a>
+                    <?php if(!empty($user_foto)): ?>
+                        <img src="<?= base_url('img/warga/' . $user_foto) ?>" class="w-10 h-10 rounded-full object-cover border-2 border-indigo-100 dark:border-gray-600">
+                    <?php else: ?>
+                        <div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-800 text-indigo-600 dark:text-indigo-300 flex items-center justify-center font-bold">
+                            <?= strtoupper(substr($user_name, 0, 1)) ?>
+                        </div>
+                    <?php endif; ?>
+                    <div>
+                         <h2 class="font-bold text-lg text-gray-800 dark:text-gray-100 leading-tight"><?= esc($user_name) ?></h2>
+                         <p class="text-[10px] text-green-500 font-semibold">Online</p>
+                    </div>
+                </div>
+                <!-- Connection Status Dot -->
+                <div id="connectionStatus" class="w-3 h-3 rounded-full bg-green-500 shadow-sm border border-white dark:border-gray-800" title="Terhubung"></div>
             </div>
             
             <!-- Search -->
