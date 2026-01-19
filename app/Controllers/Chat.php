@@ -57,6 +57,15 @@ class Chat extends BaseController
             $user['last_activity'] = $activityTimes[$user['id_code']] ?? '0000-00-00 00:00:00';
         }
 
+        // Group Chat Unread Logic
+        $db = \Config\Database::connect();
+        $groupRead = $db->table('chat_groups_read')->where('user_id', $currentUserId)->get()->getRowArray();
+        $lastReadId = $groupRead ? $groupRead['last_read_message_id'] : 0;
+        
+        $groupUnread = $this->chatModel->where('receiver_id', 'GROUP_ALL')
+                                       ->where('id >', $lastReadId)
+                                       ->countAllResults();
+
         // Add Group Chat Option
         $groupChat = [
             'id_code' => 'GROUP_ALL',
@@ -64,7 +73,7 @@ class Chat extends BaseController
             'user_name' => 'Grup',
             'role' => 'group',
             'foto' => 'group_icon.png', // We handle this in frontend or use default
-            'unread_count' => 0, // Future work
+            'unread_count' => $groupUnread,
             'last_activity' => $activityTimes['GROUP_ALL'] ?? '0000-00-00 00:00:00'
         ];
         
@@ -101,6 +110,20 @@ class Chat extends BaseController
             $messages = $this->chatModel->getConversation($currentUserId, $otherUserId);
         } else {
             $messages = $this->chatModel->getGroupMessages();
+            
+            // Mark Group as Read (Upsert)
+            if (!empty($messages)) {
+                $db = \Config\Database::connect();
+                // We assume successful load means user sees LATEST messages. 
+                // So we set last_read to the absolute max ID in the group channel.
+                $maxGroupMsg = $this->chatModel->selectMax('id')->where('receiver_id', 'GROUP_ALL')->first();
+                $maxId = $maxGroupMsg ? $maxGroupMsg['id'] : 0;
+                
+                if ($maxId > 0) {
+                     $sql = "INSERT INTO chat_groups_read (user_id, last_read_message_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE last_read_message_id = GREATEST(last_read_message_id, VALUES(last_read_message_id))";
+                     $db->query($sql, [$currentUserId, $maxId]);
+                }
+            }
         }
         
         return $this->response->setJSON($messages);
