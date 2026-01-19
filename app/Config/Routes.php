@@ -135,3 +135,4 @@ $routes->post('/push/subscribe', 'PushSubscription::subscribe', ['filter' => 'au
 
 // Temporary Debug
 $routes->get('/test-push', 'TestPush::index', ['filter' => 'authFilter']);
+$routes->get('/testdebug', 'TestDebug::index');
