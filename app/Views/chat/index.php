@@ -51,13 +51,7 @@
             <div class="p-3 bg-gray-50 dark:bg-gray-700/50">
                 <div class="flex gap-2">
                     <input type="text" id="searchUser" placeholder="Cari warga..." class="flex-1 p-2 rounded-lg bg-white dark:bg-gray-600 border-none focus:ring-2 focus:ring-indigo-500 text-sm shadow-sm">
-                    <button id="btnEnableNotif" onclick="askPermission()" class="hidden w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-800 text-indigo-600 dark:text-indigo-300 flex items-center justify-center hover:bg-indigo-200" title="Aktifkan Notifikasi">
-                        <i class="fas fa-bell"></i>
-                    </button>
-                    <!-- FIX: Manual Reset Button -->
-                    <button onclick="forceResetSubscription()" class="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center hover:bg-red-200" title="Reset Notifikasi (Jika Error)">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
+
                 </div>
             </div>
 
@@ -718,13 +712,8 @@
                try {
                    const sub = await reg.pushManager.getSubscription();
                    if (!sub) {
-                       // Case 1: No subscription. If permission granted, subscribe.
-                       if (Notification.permission === 'granted') {
-                           console.log("Permission granted, no subscription. Subscribing...");
-                           registerServiceWorker();
-                       } else {
-                           document.getElementById('btnEnableNotif').classList.remove('hidden');
-                       }
+                       // Case 1: No subscription. Auto-ask permission on load
+                       askPermission();
                    } else {
                        // Case 2: Subscription exists. Check against current Key.
                        const existingKeyBuffer = sub.options.applicationServerKey;
@@ -736,8 +725,6 @@
                            
                            if (existingKey !== currentKeyClean) {
                                console.log("⚠️ Key Mismatch detected! Rotating subscription...");
-                               console.log("Old:", existingKey);
-                               console.log("New:", currentKeyClean);
                                
                                // Unsubscribe old
                                await sub.unsubscribe();
@@ -748,9 +735,7 @@
                        }
                        
                        // Keys match, just ensure server has it
-                       console.log("Keys match. Syncing with server...");
                        await sendSubscriptionToServer(sub);
-                       document.getElementById('btnEnableNotif').classList.add('hidden');
                    }
                } catch (e) {
                    console.error("Subscription check failed", e);
