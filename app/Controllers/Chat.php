@@ -168,7 +168,38 @@ class Chat extends BaseController
                      $redirectUrl = '/chat?user_id=GROUP_ALL';
                 }
                 
-                $success = $pushService->sendNotification($receiverId, $message, $senderName, $redirectUrl);
+                $success = false;
+
+                if ($receiverId === 'GROUP_ALL') {
+                    // GROUP MSG: Send to ALL users except sender
+                    $db = \Config\Database::connect();
+                    $currentUserId = session()->get('id_code');
+                    $users = $db->table('users')
+                                ->select('id_code')
+                                ->where('id_code !=', $currentUserId)
+                                ->get()->getResultArray();
+                    
+                    $sentCount = 0;
+                    foreach ($users as $u) {
+                        // For group, Title usually indicates it's a group msg
+                        // But here we rely on the Sender Name.
+                        // Let's assume standard behavior.
+                        $isSent = $pushService->sendNotification($u['id_code'], $message, $senderName, $redirectUrl);
+                        if ($isSent) $sentCount++;
+                    }
+                    
+                    // Consider success if at least one person got it? 
+                    // Or just mark as enabled. 
+                    // NOTE: If we mark success=false, Cron will retry loop for ALL users again.
+                    // This might cause spam for those who already got it.
+                    // Ideally Cron should be smart, but for now let's say:
+                    // If we attempted to send to everyone, mark as done.
+                    $success = true; 
+
+                } else {
+                    // PERSONAL MSG
+                    $success = $pushService->sendNotification($receiverId, $message, $senderName, $redirectUrl);
+                }
                 
                 if ($success) {
                      $this->chatModel->update($newMsgId, ['notification_sent' => 1]);
