@@ -43,6 +43,23 @@ class Chat extends BaseController
         $currentUserId = session()->get('id_code');
         $users = $this->userModel->where('id_code !=', $currentUserId)->findAll();
         
+        // Fetch Photos from tb_warga
+        $names = array_column($users, 'name');
+        $photoMap = [];
+        if (!empty($names)) {
+            $db = \Config\Database::connect();
+            $wargas = $db->table('tb_warga')
+                         ->select('nama, foto')
+                         ->whereIn('nama', $names)
+                         ->get()->getResultArray();
+                         
+            foreach ($wargas as $w) {
+                if (!empty($w['foto'])) {
+                    $photoMap[$w['nama']] = $w['foto'];
+                }
+            }
+        }
+        
         // Get last activity times
         $activityTimes = $this->chatModel->getLastActivityTimes($currentUserId);
         
@@ -55,6 +72,9 @@ class Chat extends BaseController
             
             // Activity time
             $user['last_activity'] = $activityTimes[$user['id_code']] ?? '0000-00-00 00:00:00';
+            
+            // Add Photo
+            $user['foto'] = $photoMap[$user['name']] ?? null;
         }
 
         // Group Chat Unread Logic
