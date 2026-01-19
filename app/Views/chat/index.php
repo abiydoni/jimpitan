@@ -188,27 +188,37 @@
             const filtered = users.filter(u => u.name.toLowerCase().includes(search));
 
             filtered.forEach(user => {
-                const initial = user.name.charAt(0).toUpperCase();
+                const isGroup = user.id_code === 'GROUP_ALL';
+                const initial = isGroup ? '<i class="fas fa-users text-sm"></i>' : user.name.charAt(0).toUpperCase();
                 const isActive = user.id_code === activeUserId;
                 const unreadBadge = user.unread_count > 0 
-                    ? `<div class="w-5 h-5 bg-red-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold">${user.unread_count}</div>` 
+                    ? `<div class="w-5 h-5 bg-red-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold shadow-sm ring-2 ring-white dark:ring-gray-800">${user.unread_count}</div>` 
                     : '';
+
+                // Style Differentiation
+                const avatarBg = isGroup 
+                    ? 'bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400' 
+                    : 'bg-indigo-100 dark:bg-indigo-800 text-indigo-600 dark:text-indigo-300';
+                
+                const onlineDot = isGroup
+                    ? '' // No online dot for group
+                    : '<div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>';
 
                 const div = document.createElement('div');
                 div.className = `p-3 rounded-xl cursor-pointer flex items-center gap-3 transition-colors ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`;
                 div.onclick = () => selectUser(user);
+                
                 div.innerHTML = `
-                    <div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-800 text-indigo-600 dark:text-indigo-300 flex items-center justify-center font-bold relative">
+                    <div class="w-10 h-10 rounded-full shrink-0 ${avatarBg} flex items-center justify-center font-bold relative">
                         ${initial}
-                        <!-- Online Status Indicator (Mock) -->
-                        <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
+                        ${onlineDot}
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex justify-between items-center mb-0.5">
-                            <h4 class="font-semibold text-sm truncate text-gray-800 dark:text-gray-100">${user.name}</h4>
-                            <span class="text-[10px] text-gray-400">...</span>
+                            <h4 class="font-semibold text-sm truncate ${isGroup ? 'text-orange-700 dark:text-orange-300' : 'text-gray-800 dark:text-gray-100'}">${user.name}</h4>
+                            <span class="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100">...</span>
                         </div>
-                        <p class="text-xs text-gray-500 truncate">Klik untuk chat</p>
+                        <p class="text-xs text-gray-500 truncate">${isGroup ? 'Ruang diskusi warga' : 'Klik untuk chat'}</p>
                     </div>
                     ${unreadBadge}
                 `;
