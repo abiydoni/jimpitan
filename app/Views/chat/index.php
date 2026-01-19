@@ -17,6 +17,13 @@
                 }
             }
         }
+        
+        // Dark Mode Logic
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
     </script>
     <!-- FontAwesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -27,6 +34,17 @@
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.5); border-radius: 20px; }
+
+        /* Chat Backgrounds */
+        #messagesContainer {
+            background-image: url('<?= base_url('assets/img/light.jpg') ?>');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed; /* Parallax efffect */
+        }
+        .dark #messagesContainer {
+            background-image: url('<?= base_url('assets/img/dark.jpg') ?>');
+        }
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 flex flex-col h-[100dvh] overflow-hidden">
@@ -88,7 +106,7 @@
                 </div>
 
                 <!-- Messages -->
-                <div id="messagesContainer" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 bg-gray-50 dark:bg-gray-900/50 min-h-0">
+                <div id="messagesContainer" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 min-h-0">
                     <!-- Messages will be rendered here -->
                 </div>
 
