@@ -361,12 +361,23 @@ class Chat extends BaseController
         
         $currentUserId = session()->get('id_code');
         $activeChatUser = $this->request->getGet('active_user');
-        
-        $updates = [
-            'total_unread' => $this->chatModel->getUnreadCount($currentUserId),
-            'recent_chats' => $this->chatModel->getRecentConversations($currentUserId),
-            'messages' => []
-        ];
+    
+    // Calculate Group Unread
+    $db = \Config\Database::connect();
+    $groupRead = $db->table('chat_groups_read')->where('user_id', $currentUserId)->get()->getRowArray();
+    $lastReadId = $groupRead ? $groupRead['last_read_message_id'] : 0;
+    
+    $groupUnread = $this->chatModel->where('receiver_id', 'GROUP_ALL')
+                                   ->where('id >', $lastReadId)
+                                   ->countAllResults();
+    
+    $privateUnread = $this->chatModel->getUnreadCount($currentUserId);
+
+    $updates = [
+        'total_unread' => $privateUnread + $groupUnread,
+        'recent_chats' => $this->chatModel->getRecentConversations($currentUserId),
+        'messages' => []
+    ];
         
         if ($activeChatUser) {
              if ($activeChatUser === 'GROUP_ALL') {
