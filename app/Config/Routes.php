@@ -135,3 +135,4 @@ $routes->post('/push/subscribe', 'PushSubscription::subscribe', ['filter' => 'au
 
 // Temporary Debug
 $routes->get('/testcron', 'DebugCron::index');
+$routes->get('/fixdb', 'FixDb::index');
