@@ -28,15 +28,12 @@ class PushService
             $rootPath = rtrim($rootPath, '/\\') . DIRECTORY_SEPARATOR;
 
             // Ensure OPENSSL_CONF is set
-            // ONLY apply this fix on Windows (XAMPP/Localhost)
-            // On Linux servers (Production), this often breaks the native OpenSSL config.
-            if (DIRECTORY_SEPARATOR === '\\') {
-                $opensslConfigPath = $rootPath . 'openssl.cnf';
-                if (file_exists($opensslConfigPath)) {
-                    putenv("OPENSSL_CONF=" . $opensslConfigPath);
-                } else {
-                    $this->logger->warning("PushService: openssl.cnf not found on Windows at " . $opensslConfigPath);
-                }
+            // Ensure OPENSSL_CONF is set
+            // We revert the Windows-only check because some shared hosts might actually need this custom config
+            // if we provided it. If file exists, use it.
+            $opensslConfigPath = $rootPath . 'openssl.cnf';
+            if (file_exists($opensslConfigPath)) {
+                putenv("OPENSSL_CONF=" . $opensslConfigPath);
             }
 
             $db = \Config\Database::connect();
@@ -50,11 +47,17 @@ class PushService
                  return false;
             }
 
-            // Load VAPID Keys
-            $publicKey = getenv('VAPID_PUBLIC_KEY');
-            $privateKey = getenv('VAPID_PRIVATE_KEY');
+            // Load VAPID Keys using env() helper (CI4 standard)
+            $publicKey = env('VAPID_PUBLIC_KEY');
+            $privateKey = env('VAPID_PRIVATE_KEY');
             
-            // If getenv failed (sometimes in CLI or if not loaded yet), try parsing .env manually
+            // Fallback: If env() returned null, try getenv() or manual parse
+            if (empty($publicKey) || empty($privateKey)) {
+                 $publicKey = getenv('VAPID_PUBLIC_KEY');
+                 $privateKey = getenv('VAPID_PRIVATE_KEY');
+            }
+
+            // Last Resort: Manual .env parse
             if (empty($publicKey) || empty($privateKey)) {
                  $envPath = $rootPath . '.env';
                  if (file_exists($envPath)) {
