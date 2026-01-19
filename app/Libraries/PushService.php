@@ -28,12 +28,14 @@ class PushService
             $rootPath = rtrim($rootPath, '/\\') . DIRECTORY_SEPARATOR;
 
             // Ensure OPENSSL_CONF is set
-            // Ensure OPENSSL_CONF is set
-            // We revert the Windows-only check because some shared hosts might actually need this custom config
-            // if we provided it. If file exists, use it.
-            $opensslConfigPath = $rootPath . 'openssl.cnf';
-            if (file_exists($opensslConfigPath)) {
-                putenv("OPENSSL_CONF=" . $opensslConfigPath);
+            // DIAGNOSIS RESULT: Server is Linux and bas native OpenSSL working.
+            // We MUST NOT force openssl.cnf on Linux/Production.
+            // ONLY apply this on Windows (Development).
+            if (DIRECTORY_SEPARATOR === '\\') {
+                $opensslConfigPath = $rootPath . 'openssl.cnf';
+                if (file_exists($opensslConfigPath)) {
+                    putenv("OPENSSL_CONF=" . $opensslConfigPath);
+                }
             }
 
             $db = \Config\Database::connect();
@@ -47,17 +49,18 @@ class PushService
                  return false;
             }
 
-            // Load VAPID Keys using env() helper (CI4 standard)
+            // Load VAPID Keys
+            // Priority 1: Helper env() (CI4 Standard)
             $publicKey = env('VAPID_PUBLIC_KEY');
             $privateKey = env('VAPID_PRIVATE_KEY');
             
-            // Fallback: If env() returned null, try getenv() or manual parse
+            // Priority 2: getenv()
             if (empty($publicKey) || empty($privateKey)) {
                  $publicKey = getenv('VAPID_PUBLIC_KEY');
                  $privateKey = getenv('VAPID_PRIVATE_KEY');
             }
 
-            // Last Resort: Manual .env parse
+            // Priority 3: Manual Parsing (Last Resort)
             if (empty($publicKey) || empty($privateKey)) {
                  $envPath = $rootPath . '.env';
                  if (file_exists($envPath)) {
@@ -74,10 +77,11 @@ class PushService
             }
             
             if (empty($publicKey) || empty($privateKey)) {
-                $this->logger->error("PushService: VAPID Keys makey/privateKey are empty!");
+                $this->logger->error("PushService: VAPID Keys are empty! Check .env file.");
                 return false;
             }
 
+            // Clean keys
             $privateKey = trim((string)$privateKey, "\"' \t\n\r\0\x0B");
             $publicKey  = trim((string)$publicKey, "\"' \t\n\r\0\x0B");
 
