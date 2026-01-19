@@ -106,7 +106,7 @@
                     <form id="messageForm" class="flex gap-2 items-end">
                         <input type="hidden" id="receiverId" name="receiver_id">
                         <div class="flex-1 bg-gray-100 dark:bg-gray-700 rounded-2xl p-2 flex items-center gap-2">
-                            <textarea id="messageInput" rows="1" placeholder="Ketik pesan..." class="w-full bg-transparent border-none focus:ring-0 text-sm resize-none max-h-32 py-2" oninput="autoResize(this)"></textarea>
+                            <textarea id="messageInput" rows="1" placeholder="Ketik pesan..." class="w-full bg-transparent border-none focus:ring-0 outline-none focus:outline-none text-sm resize-none max-h-32 py-2" oninput="autoResize(this)"></textarea>
                         </div>
                         <button type="submit" class="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shadow-lg transition-transform active:scale-95">
                             <i class="fas fa-paper-plane text-sm"></i>
