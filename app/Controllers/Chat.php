@@ -141,12 +141,22 @@ class Chat extends BaseController
         }
 
         if ($this->chatModel->insert($data)) {
+            // Get ID if needed, but we just trigger push
+            $newMsgId = $this->chatModel->getInsertID();
+            
+            // Mark as notified immediately since we are sending it now
+            // Update the record: notification_sent = 1
+            $this->chatModel->update($newMsgId, ['notification_sent' => 1]);
+
             log_message('error', 'DEBUG: Insert success. Triggering Push...');
-            // Trigger Push Notification
+            
+            // Trigger Push Notification via Service
             try {
-                $this->triggerPush($receiverId, $message, session()->get('name'));
+                $pushService = new \App\Libraries\PushService();
+                $senderName = session()->get('name');
+                $pushService->sendNotification($receiverId, $message, $senderName);
             } catch (\Exception $e) {
-                log_message('error', 'DEBUG: triggerPush threw Exception: ' . $e->getMessage());
+                log_message('error', 'DEBUG: PushService threw Exception: ' . $e->getMessage());
             }
         } else {
              log_message('error', 'DEBUG: Insert failed.');
