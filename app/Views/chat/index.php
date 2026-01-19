@@ -670,8 +670,10 @@
                 
                 await sendSubscriptionToServer(subscription);
                 
-                document.getElementById('btnEnableNotif').classList.add('hidden');
-                alert("Notifikasi telah diaktifkan!");
+                const btn = document.getElementById('btnEnableNotif');
+                if(btn) btn.classList.add('hidden');
+                
+                // alert("Notifikasi telah diaktifkan!"); // Optional: less spammy
                 
             } catch (error) {
                 console.error('Service Worker Error', error);
