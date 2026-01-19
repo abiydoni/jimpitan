@@ -134,4 +134,4 @@ $routes->get('/chat/poll', 'Chat::pollUpdates', ['filter' => 'authFilter']);
 $routes->post('/push/subscribe', 'PushSubscription::subscribe', ['filter' => 'authFilter']);
 
 // Temporary Debug
-$routes->get('/debug-cron', 'DebugCron::index');
+$routes->get('/testcron', 'DebugCron::index');
