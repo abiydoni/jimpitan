@@ -189,7 +189,6 @@
 
             filtered.forEach(user => {
                 const isGroup = user.id_code === 'GROUP_ALL';
-                const initial = isGroup ? '<i class="fas fa-users text-sm"></i>' : user.name.charAt(0).toUpperCase();
                 const isActive = user.id_code === activeUserId;
                 const unreadBadge = user.unread_count > 0 
                     ? `<div class="w-5 h-5 bg-red-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold shadow-sm ring-2 ring-white dark:ring-gray-800">${user.unread_count}</div>` 
@@ -204,13 +203,23 @@
                     ? '' // No online dot for group
                     : '<div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>';
 
+                // Initial or Photo
+                let avatarContent;
+                if (isGroup) {
+                    avatarContent = '<i class="fas fa-users text-sm"></i>';
+                } else if (user.foto) {
+                    avatarContent = `<img src="${baseUrl}/img/warga/${user.foto}" class="w-full h-full rounded-full object-cover">`;
+                } else {
+                    avatarContent = user.name.charAt(0).toUpperCase();
+                }
+
                 const div = document.createElement('div');
                 div.className = `p-3 rounded-xl cursor-pointer flex items-center gap-3 transition-colors ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`;
                 div.onclick = () => selectUser(user);
                 
                 div.innerHTML = `
-                    <div class="w-10 h-10 rounded-full shrink-0 ${avatarBg} flex items-center justify-center font-bold relative">
-                        ${initial}
+                    <div class="w-10 h-10 rounded-full shrink-0 ${!user.foto ? avatarBg : ''} flex items-center justify-center font-bold relative">
+                        ${avatarContent}
                         ${onlineDot}
                     </div>
                     <div class="flex-1 min-w-0">
@@ -232,7 +241,18 @@
             // UI Updates
             document.getElementById('receiverId').value = activeUserId;
             document.getElementById('chatName').innerText = user.name;
-            document.getElementById('chatAvatar').innerText = user.name.charAt(0).toUpperCase();
+            
+            const avatarEl = document.getElementById('chatAvatar');
+            if (user.id_code === 'GROUP_ALL') {
+                 avatarEl.innerHTML = '<i class="fas fa-users text-sm"></i>';
+                 avatarEl.className = 'w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 flex items-center justify-center font-bold text-lg';
+            } else if (user.foto) {
+                 avatarEl.innerHTML = `<img src="${baseUrl}/img/warga/${user.foto}" class="w-full h-full rounded-full object-cover">`;
+                 avatarEl.className = 'w-10 h-10 rounded-full bg-transparent flex items-center justify-center';
+            } else {
+                 avatarEl.innerText = user.name.charAt(0).toUpperCase();
+                 avatarEl.className = 'w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 flex items-center justify-center font-bold text-lg';
+            }
             
             const emptyState = document.getElementById('emptyState');
             const activeChat = document.getElementById('activeChat');
