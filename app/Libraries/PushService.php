@@ -32,6 +32,8 @@ class PushService
             
             if (file_exists($opensslConfigPath)) {
                 putenv("OPENSSL_CONF=" . $opensslConfigPath);
+            } else {
+                $this->logger->error("PushService: openssl.cnf NOT FOUND at " . $opensslConfigPath);
             }
 
             $db = \Config\Database::connect();
@@ -40,7 +42,10 @@ class PushService
                                 ->get()
                                 ->getResultArray();
 
-            if (empty($subscriptions)) return false;
+            if (empty($subscriptions)) {
+                 $this->logger->info("PushService: No subscriptions for user " . $receiverId);
+                 return false;
+            }
 
             // Load VAPID Keys
             $publicKey = getenv('VAPID_PUBLIC_KEY');
@@ -57,7 +62,14 @@ class PushService
                     if (empty($privateKey) && preg_match('/^VAPID_PRIVATE_KEY=(.*)$/m', $envContent, $matches)) {
                         $privateKey = trim($matches[1], "\"' \t\n\r\0\x0B");
                     }
+                 } else {
+                     $this->logger->error("PushService: .env NOT FOUND at " . $envPath);
                  }
+            }
+            
+            if (empty($publicKey) || empty($privateKey)) {
+                $this->logger->error("PushService: VAPID Keys makey/privateKey are empty!");
+                return false;
             }
 
             $privateKey = trim((string)$privateKey, "\"' \t\n\r\0\x0B");

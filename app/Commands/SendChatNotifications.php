@@ -14,6 +14,9 @@ class SendChatNotifications extends BaseCommand
 
     public function run(array $params)
     {
+        // Log start execution
+        log_message('info', 'Cron: chat:notify started.');
+
         $db = \Config\Database::connect();
         $logger = \Config\Services::logger();
         
