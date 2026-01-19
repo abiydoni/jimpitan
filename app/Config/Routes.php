@@ -129,3 +129,6 @@ $routes->get('/chat/users', 'Chat::getUsers', ['filter' => 'authFilter']);
 $routes->get('/chat/messages', 'Chat::getMessages', ['filter' => 'authFilter']);
 $routes->post('/chat/send', 'Chat::sendMessage', ['filter' => 'authFilter']);
 $routes->get('/chat/poll', 'Chat::pollUpdates', ['filter' => 'authFilter']);
+
+// Push Notifications
+$routes->post('/push/subscribe', 'PushSubscription::subscribe', ['filter' => 'authFilter']);

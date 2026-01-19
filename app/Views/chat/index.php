@@ -48,8 +48,17 @@
             </div>
             
             <!-- Search -->
-            <div class="p-3">
-                <input type="text" id="searchUser" placeholder="Cari warga..." class="w-full p-2 rounded-lg bg-gray-100 dark:bg-gray-700 border-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            <div class="p-3 bg-gray-50 dark:bg-gray-700/50">
+                <div class="flex gap-2">
+                    <input type="text" id="searchUser" placeholder="Cari warga..." class="flex-1 p-2 rounded-lg bg-white dark:bg-gray-600 border-none focus:ring-2 focus:ring-indigo-500 text-sm shadow-sm">
+                    <button id="btnEnableNotif" onclick="askPermission()" class="hidden w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-800 text-indigo-600 dark:text-indigo-300 flex items-center justify-center hover:bg-indigo-200" title="Aktifkan Notifikasi">
+                        <i class="fas fa-bell"></i>
+                    </button>
+                    <!-- FIX: Manual Reset Button -->
+                    <button onclick="forceResetSubscription()" class="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center hover:bg-red-200" title="Reset Notifikasi (Jika Error)">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
             </div>
 
             <!-- User List -->
@@ -85,7 +94,7 @@
                 </div>
 
                 <!-- Messages -->
-                <div id="messagesContainer" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 bg-gray-50 dark:bg-gray-900/50">
+                <div id="messagesContainer" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 bg-gray-50 dark:bg-gray-900/50 min-h-0">
                     <!-- Messages will be rendered here -->
                 </div>
 
@@ -208,6 +217,7 @@
 
             if(window.innerWidth >= 768) {
                 emptyState.classList.add('hidden');
+                emptyState.classList.remove('md:flex'); // Important: remove desktop flex display
                 activeChat.classList.remove('hidden');
             } else {
                 activeChat.classList.remove('hidden');
@@ -601,6 +611,152 @@
             });
         });
 
+        // --- PUSH NOTIFICATION LOGIC ---
+        const vapidPublicKey = '<?= $vapid_public_key ?>';
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding)
+                .replace(/\-/g, '+')
+                .replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        async function askPermission() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                alert('Browser tidak mendukung Push Notification.');
+                return;
+            }
+            
+            if(!vapidPublicKey) {
+                alert("VAPID Key belum dikonfigurasi di server.");
+                return;
+            }
+
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                registerServiceWorker();
+            } else {
+                alert('Notifikasi diblokir. Silakan izinkan di pengaturan browser.');
+            }
+        }
+
+        async function registerServiceWorker() {
+            try {
+                const registration = await navigator.serviceWorker.register('<?= base_url("sw.js") ?>');
+                console.log('Service Worker Registered');
+                
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+                });
+                
+                await sendSubscriptionToServer(subscription);
+                
+                document.getElementById('btnEnableNotif').classList.add('hidden');
+                alert("Notifikasi telah diaktifkan!");
+                
+            } catch (error) {
+                console.error('Service Worker Error', error);
+                alert("Gagal mengaktifkan notifikasi: " + error.message);
+            }
+        }
+
+        async function sendSubscriptionToServer(subscription) {
+            await fetch('<?= base_url("push/subscribe") ?>', {
+                method: 'POST',
+                body: JSON.stringify(subscription),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+        }
+
+        // Helper to convert ArrayBuffer to Base64 (URL Safe)
+        function arrayBufferToBase64(buffer) {
+            var binary = '';
+            var bytes = new Uint8Array(buffer);
+            var len = bytes.byteLength;
+            for (var i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary)
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
+        }
+
+        async function forceResetSubscription() {
+            if (!confirm('Ini akan mereset koneksi notifikasi Anda. Lanjutkan?')) return;
+            
+            if ('serviceWorker' in navigator) {
+                const reg = await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.getSubscription();
+                if (sub) {
+                    await sub.unsubscribe();
+                    console.log('Old subscription removed.');
+                }
+                // Unregister SW to be safe
+                // await reg.unregister(); 
+                
+                // Re-register
+                await registerServiceWorker();
+                alert('Notifikasi berhasil di-reset! Silakan coba test kirim pesan.');
+            } else {
+                alert('Browser tidak mendukung Service Worker.');
+            }
+        }
+
+        // Check if already subscribed
+        if ('serviceWorker' in navigator && 'PushManager' in window && vapidPublicKey) {
+            navigator.serviceWorker.ready.then(async (reg) => {
+               try {
+                   const sub = await reg.pushManager.getSubscription();
+                   if (!sub) {
+                       // Case 1: No subscription. If permission granted, subscribe.
+                       if (Notification.permission === 'granted') {
+                           console.log("Permission granted, no subscription. Subscribing...");
+                           registerServiceWorker();
+                       } else {
+                           document.getElementById('btnEnableNotif').classList.remove('hidden');
+                       }
+                   } else {
+                       // Case 2: Subscription exists. Check against current Key.
+                       const existingKeyBuffer = sub.options.applicationServerKey;
+                       if (existingKeyBuffer) {
+                           const existingKey = arrayBufferToBase64(existingKeyBuffer);
+                           
+                           // Compare existing key with server key (remove padding '=' for safety comparison)
+                           const currentKeyClean = vapidPublicKey.replace(/=+$/, '');
+                           
+                           if (existingKey !== currentKeyClean) {
+                               console.log("⚠️ Key Mismatch detected! Rotating subscription...");
+                               console.log("Old:", existingKey);
+                               console.log("New:", currentKeyClean);
+                               
+                               // Unsubscribe old
+                               await sub.unsubscribe();
+                               // Subscribe new
+                               registerServiceWorker();
+                               return; 
+                           }
+                       }
+                       
+                       // Keys match, just ensure server has it
+                       console.log("Keys match. Syncing with server...");
+                       await sendSubscriptionToServer(sub);
+                       document.getElementById('btnEnableNotif').classList.add('hidden');
+                   }
+               } catch (e) {
+                   console.error("Subscription check failed", e);
+               }
+            });
+        }
     </script>
 </body>
 </html>

@@ -1,22 +1,19 @@
-const CACHE_NAME = 'jimpitan-v7';
+const CACHE_NAME = 'jimpitan-v8';
 const urlsToCache = [
   './offline.html',
-  // External CDNs removed to prevent CORS issues
 ];
 
 self.addEventListener('install', event => {
-  self.skipWaiting(); // Force activation
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache');
         return cache.addAll(urlsToCache);
       })
   );
 });
 
 self.addEventListener('fetch', event => {
-  // Navigation requests (HTML pages) -> Network First, fall back to cache/offline
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -27,21 +24,13 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Other requests (Images, CSS, JS) -> Cache First, fall back to network
   event.respondWith(
     caches.match(event.request)
       .then(response => {
         if (response) {
           return response;
         }
-        return fetch(event.request).catch(err => {
-            console.log('Fetch failed:', event.request.url);
-            // Optionally could return an offline placeholder image here if request was for an image
-            return new Response('Network error happening', {
-                status: 408,
-                headers: { 'Content-Type': 'text/plain' }
-            }); 
-        });
+        return fetch(event.request);
       })
   );
 });
@@ -58,6 +47,48 @@ self.addEventListener('activate', event => {
         })
       );
     })
-    .then(() => self.clients.claim()) // Claim clients immediately
+    .then(() => self.clients.claim())
+  );
+});
+
+// -- PUSH NOTIFICATION HANDLERS --
+
+self.addEventListener('push', function(event) {
+  if (!(self.Notification && self.Notification.permission === 'granted')) {
+    return;
+  }
+
+  const data = event.data ? event.data.json() : {};
+  console.log('Push Received:', data);
+
+  const title = data.title || 'Pesan Baru';
+  const options = {
+    body: data.body || 'Anda memiliki pesan baru.',
+    icon: './jimpitan1.png',
+    badge: './jimpitan1.png',
+    data: {
+        url: data.url || '/chat'
+    }
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then(windowClients => {
+      // Check if there is already a window open with this URL
+      for (var i = 0; i < windowClients.length; i++) {
+        var client = windowClients[i];
+        if (client.url === event.notification.data.url && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // If not, open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(event.notification.data.url);
+      }
+    })
   );
 });
