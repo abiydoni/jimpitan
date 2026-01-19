@@ -132,3 +132,6 @@ $routes->get('/chat/poll', 'Chat::pollUpdates', ['filter' => 'authFilter']);
 
 // Push Notifications
 $routes->post('/push/subscribe', 'PushSubscription::subscribe', ['filter' => 'authFilter']);
+
+// Database Schema Check
+$routes->get('/checkschema', 'CheckSchema::index');
