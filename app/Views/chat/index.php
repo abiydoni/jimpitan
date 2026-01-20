@@ -106,7 +106,7 @@
                 <!-- Chat Header -->
                 <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between bg-white dark:bg-gray-800 shadow-sm z-30">
                     <div class="flex items-center gap-3">
-                        <button onclick="toggleSidebar()" class="md:hidden text-gray-500 hover:text-indigo-600"><i class="fas fa-arrow-left text-lg"></i></button>
+                        <button onclick="goBack()" class="md:hidden text-gray-500 hover:text-indigo-600"><i class="fas fa-arrow-left text-lg"></i></button>
                         <div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 flex items-center justify-center font-bold text-lg" id="chatAvatar">
                             ?
                         </div>
@@ -247,8 +247,13 @@
             });
         }
 
-        async function selectUser(user) {
+        async function selectUser(user, pushHistory = true) {
             activeUserId = user.id_code;
+            
+            if (pushHistory) {
+                const newUrl = `${baseUrl}/chat?user_id=${user.id_code}`;
+                history.pushState({ userId: user.id_code }, '', newUrl);
+            }
             
             // UI Updates
             document.getElementById('receiverId').value = activeUserId;
@@ -561,13 +566,28 @@
             } catch(e) { alert('Gagal meneruskan pesan.'); }
         }
 
-        function toggleSidebar() {
-             const sidebar = document.getElementById('sidebar');
-             const chatArea = document.getElementById('chatArea');
-            if(isMobile) {
+        function handlePopState(event) {
+            const state = event.state;
+            if (state && state.userId) {
+                const user = allUsers.find(u => u.id_code === state.userId);
+                if (user && user.id_code !== activeUserId) selectUser(user, false);
+            } else {
                 activeUserId = null;
+                const rx = document.getElementById('receiverId');
+                if(rx) rx.value = '';
                 updateMobileView();
             }
+        }
+
+        window.addEventListener('popstate', handlePopState);
+
+        window.goBack = function() {
+             history.back();
+        }
+
+        // Kept for legacy passing if needed, but logic is replaced
+        function toggleSidebar() {
+             goBack();
         }
 
         function updateMobileView() {
@@ -598,7 +618,8 @@
             if (targetUserId) {
                 const targetUser = allUsers.find(u => u.id_code === targetUserId);
                 if (targetUser) {
-                    selectUser(targetUser);
+                    history.replaceState({ userId: targetUser.id_code }, '', window.location.href);
+                    selectUser(targetUser, false);
                 }
             }
             

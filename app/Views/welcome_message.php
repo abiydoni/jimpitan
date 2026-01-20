@@ -19,8 +19,10 @@
         }
     </script>
     <script>
-        if (localStorage.getItem('theme') === 'dark') {
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
         }
     </script>
     <!-- Google Fonts -->
@@ -554,7 +556,7 @@
         const body = document.body;
 
         // Check for saved theme
-        if (localStorage.getItem('theme') === 'dark') {
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             html.classList.add('dark');
             body.classList.add('dark');
         }

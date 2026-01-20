@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Waktu pembuatan: 19 Jan 2026 pada 17.43
+-- Waktu pembuatan: 20 Jan 2026 pada 21.35
 -- Versi server: 10.6.21-MariaDB
 -- Versi PHP: 8.3.19
 
@@ -33,6 +33,7 @@ CREATE TABLE `chats` (
   `receiver_id` varchar(100) NOT NULL,
   `message` mediumtext NOT NULL,
   `is_read` tinyint(1) DEFAULT 0,
+  `notification_sent` tinyint(1) NOT NULL DEFAULT 0,
   `reply_to_id` int(11) UNSIGNED DEFAULT NULL,
   `created_at` datetime DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL
@@ -42,39 +43,119 @@ CREATE TABLE `chats` (
 -- Dumping data untuk tabel `chats`
 --
 
-INSERT INTO `chats` (`id`, `sender_id`, `receiver_id`, `message`, `is_read`, `reply_to_id`, `created_at`, `updated_at`) VALUES
-(1, 'USER037', 'USER000', 'halo', 1, NULL, '2026-01-17 12:58:32', '2026-01-17 14:31:11'),
-(2, 'USER037', 'GROUP_ALL', 'selamat datang di group chat, silahkan untuk berdiskusi', 0, NULL, '2026-01-17 13:22:57', '2026-01-17 13:22:57'),
-(3, 'USER037', 'GROUP_ALL', 'test', 0, NULL, '2026-01-17 13:26:40', '2026-01-17 13:26:40'),
-(4, 'USER000', 'GROUP_ALL', 'terima kasih', 0, NULL, '2026-01-17 14:30:56', '2026-01-17 14:30:56'),
-(5, 'USER000', 'USER037', 'halo juga', 1, NULL, '2026-01-17 14:31:17', '2026-01-17 18:47:19'),
-(6, 'USER037', 'GROUP_ALL', 'sama sama', 0, 4, '2026-01-17 14:50:11', '2026-01-17 14:50:11'),
-(7, 'USER037', 'GROUP_ALL', 'terima kasih', 0, NULL, '2026-01-17 14:53:04', '2026-01-17 14:53:04'),
-(8, 'USER037', 'GROUP_ALL', '*siap*', 0, NULL, '2026-01-17 14:53:51', '2026-01-17 14:53:51'),
-(9, 'USER037', 'USER000', 'selamat datang di group chat, silahkan untuk berdiskusi', 1, NULL, '2026-01-17 15:03:32', '2026-01-19 14:42:06'),
-(10, 'USER037', 'GROUP_ALL', 'Halo', 0, NULL, '2026-01-17 17:56:49', '2026-01-17 17:56:49'),
-(11, 'USER037', 'USER000', 'Hai', 1, NULL, '2026-01-17 18:47:30', '2026-01-19 14:42:06'),
-(12, 'USER037', 'GROUP_ALL', 'Jadwal jaga hari ini?', 0, NULL, '2026-01-17 19:47:49', '2026-01-17 19:47:49'),
-(16, 'USER037', 'USER039', 'Ronda....', 1, NULL, '2026-01-17 19:50:47', '2026-01-17 21:00:42'),
-(17, 'USER037', 'USER038', 'Ronda', 1, NULL, '2026-01-17 19:51:05', '2026-01-17 21:33:07'),
-(18, 'USER037', 'USER039', 'Halo', 1, NULL, '2026-01-17 21:25:16', '2026-01-17 21:25:50'),
-(19, 'USER039', 'USER037', 'Woke', 1, NULL, '2026-01-17 21:26:02', '2026-01-17 21:26:04'),
-(20, 'USER037', 'USER039', 'hahahahahaha', 0, NULL, '2026-01-18 00:41:21', '2026-01-18 00:41:21'),
-(21, 'USER037', 'GROUP_ALL', 'Selamat pagi semua', 0, NULL, '2026-01-18 15:16:31', '2026-01-18 15:16:31'),
-(60, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, NULL, '2026-01-19 14:00:07', '2026-01-19 14:45:21'),
-(61, 'USER000', 'USER037', 'halo', 1, NULL, '2026-01-19 14:43:24', '2026-01-19 14:45:21'),
-(62, 'USER000', 'USER037', 'apa kabar', 1, NULL, '2026-01-19 14:43:46', '2026-01-19 14:45:21'),
-(63, 'USER000', 'USER037', 'sehat?', 1, NULL, '2026-01-19 14:44:45', '2026-01-19 14:45:21'),
-(64, 'USER000', 'USER037', 'kok ga bisa', 1, NULL, '2026-01-19 14:45:06', '2026-01-19 14:45:21'),
-(65, 'USER037', 'USER000', 'Bisa', 1, NULL, '2026-01-19 14:45:37', '2026-01-19 14:45:37'),
-(66, 'USER037', 'USER000', 'Bisa kan?', 1, NULL, '2026-01-19 14:46:03', '2026-01-19 14:46:40'),
-(67, 'USER000', 'USER037', 'mantap', 1, NULL, '2026-01-19 14:46:50', '2026-01-19 15:13:02'),
-(68, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, NULL, '2026-01-19 15:00:41', '2026-01-19 15:13:02'),
-(69, 'USER037', 'USER000', 'Halo?😃', 1, NULL, '2026-01-19 15:24:34', '2026-01-19 15:24:37'),
-(70, 'USER000', 'USER037', 'halo juga', 1, NULL, '2026-01-19 15:25:31', '2026-01-19 15:25:33'),
-(71, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, NULL, '2026-01-19 16:00:36', '2026-01-19 16:01:02'),
-(72, 'USER037', 'USER038', 'We....😄', 0, NULL, '2026-01-19 16:00:40', '2026-01-19 16:00:40'),
-(73, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 0, NULL, '2026-01-19 17:00:28', '2026-01-19 17:00:28');
+INSERT INTO `chats` (`id`, `sender_id`, `receiver_id`, `message`, `is_read`, `notification_sent`, `reply_to_id`, `created_at`, `updated_at`) VALUES
+(1, 'USER037', 'USER000', 'halo', 1, 1, NULL, '2026-01-17 12:58:32', '2026-01-17 14:31:11'),
+(2, 'USER037', 'GROUP_ALL', 'selamat datang di group chat, silahkan untuk berdiskusi', 0, 1, NULL, '2026-01-17 13:22:57', '2026-01-17 13:22:57'),
+(3, 'USER037', 'GROUP_ALL', 'test', 0, 1, NULL, '2026-01-17 13:26:40', '2026-01-17 13:26:40'),
+(4, 'USER000', 'GROUP_ALL', 'terima kasih', 0, 1, NULL, '2026-01-17 14:30:56', '2026-01-17 14:30:56'),
+(5, 'USER000', 'USER037', 'halo juga', 1, 1, NULL, '2026-01-17 14:31:17', '2026-01-17 18:47:19'),
+(6, 'USER037', 'GROUP_ALL', 'sama sama', 0, 1, 4, '2026-01-17 14:50:11', '2026-01-17 14:50:11'),
+(7, 'USER037', 'GROUP_ALL', 'terima kasih', 0, 1, NULL, '2026-01-17 14:53:04', '2026-01-17 14:53:04'),
+(8, 'USER037', 'GROUP_ALL', '*siap*', 0, 1, NULL, '2026-01-17 14:53:51', '2026-01-17 14:53:51'),
+(9, 'USER037', 'USER000', 'selamat datang di group chat, silahkan untuk berdiskusi', 1, 1, NULL, '2026-01-17 15:03:32', '2026-01-19 14:42:06'),
+(10, 'USER037', 'GROUP_ALL', 'Halo', 0, 1, NULL, '2026-01-17 17:56:49', '2026-01-17 17:56:49'),
+(11, 'USER037', 'USER000', 'Hai', 1, 1, NULL, '2026-01-17 18:47:30', '2026-01-19 14:42:06'),
+(12, 'USER037', 'GROUP_ALL', 'Jadwal jaga hari ini?', 0, 1, NULL, '2026-01-17 19:47:49', '2026-01-17 19:47:49'),
+(16, 'USER037', 'USER039', 'Ronda....', 1, 1, NULL, '2026-01-17 19:50:47', '2026-01-17 21:00:42'),
+(17, 'USER037', 'USER038', 'Ronda', 1, 1, NULL, '2026-01-17 19:51:05', '2026-01-17 21:33:07'),
+(18, 'USER037', 'USER039', 'Halo', 1, 1, NULL, '2026-01-17 21:25:16', '2026-01-17 21:25:50'),
+(19, 'USER039', 'USER037', 'Woke', 1, 1, NULL, '2026-01-17 21:26:02', '2026-01-17 21:26:04'),
+(20, 'USER037', 'USER039', 'hahahahahaha', 0, 1, NULL, '2026-01-18 00:41:21', '2026-01-18 00:41:21'),
+(21, 'USER037', 'GROUP_ALL', 'Selamat pagi semua', 0, 1, NULL, '2026-01-18 15:16:31', '2026-01-18 15:16:31'),
+(60, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-19 14:00:07', '2026-01-19 14:45:21'),
+(61, 'USER000', 'USER037', 'halo', 1, 1, NULL, '2026-01-19 14:43:24', '2026-01-19 14:45:21'),
+(62, 'USER000', 'USER037', 'apa kabar', 1, 1, NULL, '2026-01-19 14:43:46', '2026-01-19 14:45:21'),
+(63, 'USER000', 'USER037', 'sehat?', 1, 1, NULL, '2026-01-19 14:44:45', '2026-01-19 14:45:21'),
+(64, 'USER000', 'USER037', 'kok ga bisa', 1, 1, NULL, '2026-01-19 14:45:06', '2026-01-19 14:45:21'),
+(65, 'USER037', 'USER000', 'Bisa', 1, 1, NULL, '2026-01-19 14:45:37', '2026-01-19 14:45:37'),
+(66, 'USER037', 'USER000', 'Bisa kan?', 1, 1, NULL, '2026-01-19 14:46:03', '2026-01-19 14:46:40'),
+(67, 'USER000', 'USER037', 'mantap', 1, 1, NULL, '2026-01-19 14:46:50', '2026-01-19 15:13:02'),
+(68, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-19 15:00:41', '2026-01-19 15:13:02'),
+(69, 'USER037', 'USER000', 'Halo?😃', 1, 1, NULL, '2026-01-19 15:24:34', '2026-01-19 15:24:37'),
+(70, 'USER000', 'USER037', 'halo juga', 1, 1, NULL, '2026-01-19 15:25:31', '2026-01-19 15:25:33'),
+(71, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-19 16:00:36', '2026-01-19 16:01:02'),
+(72, 'USER037', 'USER038', 'We....😄', 0, 1, NULL, '2026-01-19 16:00:40', '2026-01-19 16:00:40'),
+(73, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-19 17:00:28', '2026-01-19 21:41:53'),
+(74, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-19 18:00:50', '2026-01-19 21:41:53'),
+(75, 'USER000', 'GROUP_ALL', '⏰ *JADWAL JAGA HARI INI*\n━━━━━━━━━━━━━━━━━━━━\n📅 *Senin, 19 Januari 2026*\n\n👥 *Daftar Petugas Jaga:*\n1. Suryantoro\n2. Julian\n3. Agus Sulistyo\n4. Yoses\n5. Jumadi\n6. Indra Sriyanto\n7. Agus Purwanto \n8. Heru Setiawan\n9. yogi\n\n━━━━━━━━━━━━━━━━━━━━\n🌟 *Selamat melaksanakan tugas*\n🏡 RT.07 RW.01\n\n🕸️ *Link Scan:*\nhttps://jimpitan.appsbee.my.id\n\n⚠️ *PENTING - WAJIB SCAN QR*\nDihimbau kepada petugas jimpitan:\n• *WAJIB SCAN QR CODE*\n• Jumlah uang yang disetor *HARUS SAMA* dengan jumlah yang di *SCAN*\n• _Tidak boleh lebih dan tidak boleh kurang_\n\n━━━━━━━━━━━━━━━━━━━━\n_Pesan Otomatis dari System_', 0, 1, NULL, '2026-01-19 18:00:51', '2026-01-19 18:00:51'),
+(76, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-19 18:05:47', '2026-01-19 21:41:53'),
+(77, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-19 19:00:29', '2026-01-19 21:41:53'),
+(78, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-19 20:00:04', '2026-01-19 21:41:53'),
+(79, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-19 21:00:42', '2026-01-19 21:41:53'),
+(80, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-19 21:40:28', '2026-01-19 21:41:53'),
+(81, 'USER000', 'USER037', 'halo', 1, 1, NULL, '2026-01-19 21:46:43', '2026-01-19 22:57:01'),
+(82, 'USER000', 'USER037', 'coba', 1, 1, NULL, '2026-01-19 21:50:46', '2026-01-19 22:57:01'),
+(83, 'USER000', 'USER037', 'aaaa', 1, 1, NULL, '2026-01-19 21:53:50', '2026-01-19 22:57:01'),
+(84, 'USER000', 'USER037', 'test', 1, 1, NULL, '2026-01-19 21:58:00', '2026-01-19 22:57:01'),
+(85, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-19 22:00:28', '2026-01-19 22:57:01'),
+(86, 'USER000', 'USER037', 'aaaa', 1, 1, NULL, '2026-01-19 22:08:03', '2026-01-19 22:57:01'),
+(87, 'USER000', 'USER037', 'ga bisa', 1, 1, NULL, '2026-01-19 22:08:18', '2026-01-19 22:57:01'),
+(88, 'USER000', 'USER037', 'fffff', 1, 1, NULL, '2026-01-19 22:25:46', '2026-01-19 22:57:01'),
+(89, 'USER000', 'USER037', 'hhhhh', 1, 1, NULL, '2026-01-19 22:28:36', '2026-01-19 22:57:01'),
+(90, 'USER000', 'USER037', 'dddd', 1, 1, NULL, '2026-01-19 22:53:24', '2026-01-19 22:57:01'),
+(91, 'USER000', 'USER037', 'halo', 1, 1, NULL, '2026-01-19 22:56:41', '2026-01-19 22:57:01'),
+(92, 'USER000', 'USER037', 'sehat', 1, 1, NULL, '2026-01-19 22:56:57', '2026-01-19 22:57:01'),
+(93, 'USER037', 'USER000', 'sehat dong', 1, 1, NULL, '2026-01-19 22:57:13', '2026-01-19 22:57:16'),
+(94, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-19 23:00:04', '2026-01-19 23:00:57'),
+(95, 'USER000', 'USER037', 'lanjut', 1, 1, NULL, '2026-01-19 23:02:42', '2026-01-19 23:02:43'),
+(96, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-19 23:04:59', '2026-01-19 23:05:01'),
+(97, 'USER000', 'GROUP_ALL', 'halo', 0, 1, NULL, '2026-01-19 23:31:42', '2026-01-19 23:31:42'),
+(98, 'USER000', 'USER037', 'halo', 1, 1, NULL, '2026-01-19 23:32:03', '2026-01-19 23:32:05'),
+(99, 'USER000', 'GROUP_ALL', 'selamat', 0, 1, NULL, '2026-01-19 23:37:41', '2026-01-19 23:37:41'),
+(100, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\nTidak ada warga yang berulang tahun hari ini.\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-19 23:42:34', '2026-01-19 23:42:35'),
+(101, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-20 00:00:53', '2026-01-20 00:00:56'),
+(102, 'USER000', 'GROUP_ALL', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 0, 1, NULL, '2026-01-20 00:01:49', '2026-01-20 00:01:49'),
+(103, 'USER000', 'GROUP_ALL', 'halo semua', 0, 1, NULL, '2026-01-20 00:10:07', '2026-01-20 00:10:07'),
+(104, 'USER000', 'GROUP_ALL', 'suka', 0, 1, NULL, '2026-01-20 00:11:59', '2026-01-20 00:12:00'),
+(105, 'USER000', 'USER037', 'halo', 1, 1, NULL, '2026-01-20 00:12:34', '2026-01-20 00:42:54'),
+(106, 'USER000', 'GROUP_ALL', 'test', 0, 1, NULL, '2026-01-20 00:12:43', '2026-01-20 00:12:43'),
+(107, 'USER000', 'GROUP_ALL', 'sampai', 0, 1, NULL, '2026-01-20 00:21:01', '2026-01-20 00:21:02'),
+(108, 'USER000', 'GROUP_ALL', 'selamat istriahat', 0, 1, NULL, '2026-01-20 00:40:08', '2026-01-20 00:40:18'),
+(109, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-20 01:00:34', '2026-01-20 01:01:03'),
+(110, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-20 02:00:51', '2026-01-20 07:29:10'),
+(111, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-20 03:00:27', '2026-01-20 07:29:10'),
+(112, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-20 04:01:01', '2026-01-20 07:29:10'),
+(113, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-20 05:00:29', '2026-01-20 07:29:10'),
+(114, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-20 06:00:09', '2026-01-20 07:29:10'),
+(115, 'USER000', 'GROUP_ALL', '📊 *REPORT JIMPITAN*\n━━━━━━━━━━━━━━━━━━━━\n📅 *Senin, 19 Januari 2026* _(Semalam)_\n\n💰 *Total Jimpitan:* Rp. 0\n\n━━━━━━━━━━━━━━━━━━━━\n📋 *Jimpitan yang Kosong:*\n\n1. *RT0700001* - Adi Hermany\n2. *RT0700002* - Agus Purwanto\n3. *RT0700003* - Agus Sulistyo\n4. *RT0700004* - Agus Puji Raharjo\n5. *RT0700005* - Alfian Syafii\n6. *RT0700006* - Andi Setiyono\n7. *RT0700007* - Andri Purwoko\n8. *RT0700009* - Ari Priyambudi\n9. *RT0700010* - Ari Syafroni\n10. *RT0700011* - Didik Yahyono Purwo\n11. *RT0700012* - Dimas Wisnu Cahyadi\n12. *RT0700013* - Doni Abiyantoro\n13. *RT0700014* - Eny Sri Hartini\n14. *RT0700015* - Supardjo\n15. *RT0700016* - Hermawan Setyo Adi\n16. *RT0700017* - Heru Setiawan\n17. *RT0700018* - Heru Sulistiyono\n18. *RT0700019* - Ignatius Loyola Sutarto\n19. *RT0700020* - Imanuel Susanto\n20. *RT0700021* - Indra Sriyanto\n21. *RT0700022* - Jafar Sodiq\n22. *RT0700023* - Jariyah\n23. *RT0700024* - Johanes Marjuki\n24. *RT0700025* - Jumadi\n25. *RT0700026* - Kadarismanto\n26. *RT0700027* - Marno (Ramini)\n27. *RT0700028* - Marno (Mariyana)\n28. *RT0700029* - Marsudi\n29. *RT0700030* - Mistriyanto\n30. *RT0700032* - Muljadi Hardono\n31. *RT0700033* - Nanang Setyo Wibowo\n32. *RT0700034* - Nari Haryo Sadono\n33. *RT0700035* - Oki Hermawan\n34. *RT0700036* - Ponco Yulianto\n35. *RT0700038* - Ristanto Adi Nugroho\n36. *RT0700039* - Rudiyono\n37. *RT0700040* - Rudjito\n38. *RT0700041* - Sarno\n39. *RT0700042* - Sigit Hermawan\n40. *RT0700043* - Slamet Istianto\n41. *RT0700044* - Sri Rohyati\n42. *RT0700046* - Supriyadi\n43. *RT0700047* - Suryantoro\n44. *RT0700048* - Suyatmi\n45. *RT0700049* - Tatik Rahayu\n46. *RT0700050* - Tomas Kristianto\n47. *RT0700051* - Tri September Rini\n48. *RT0700052* - Tri Warsono\n49. *RT0700053* - Triyono\n50. *RT0700054* - Tukijan Siswo Andoyo\n51. *RT0700055* - Tukirin\n52. *RT0700056* - Wahyu Wijayanto\n53. *RT0700057* - Yonathan Christianto\n54. *RT0700058* - Yoseph Mareta Dwiyono Pamujianto\n55. *RT0700059* - Rivaldo Armando Bekabel\n56. *RT0700060* - Supriyati Yoyok\n57. *RT0700061* - Sunarti\n58. *RT0700063* - Dyah Kusmiyaningrum\n59. *RT0700064* - Tri Hartini Bu Diro\n60. *RT0700065* - Sutiyem\n61. *RT0700066* - Ety Prasetyoningsih\n62. *RT0700067* - Sutini\n\n━━━━━━━━━━━━━━━━━━━━\n👤 Tidak ada data petugas jimpitan.\n━━━━━━━━━━━━━━━━━━━━\nℹ️ *Info Aplikasi:*\nWarga dapat mengakses aplikasi:\nhttps://jimpitan.appsbee.my.id\n👤 Setiap KK memiliki 1 User dan 1 Password\n\n━━━━━━━━━━━━━━━━━━━━\n🌟 *Terima kasih atas perhatiannya*\n📞 Info lebih lanjut hubungi *ADMIN*\n\n_Pesan Otomatis dari System_', 0, 1, NULL, '2026-01-20 06:00:28', '2026-01-20 06:00:28'),
+(116, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-20 07:00:10', '2026-01-20 07:29:10'),
+(117, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-20 08:00:29', '2026-01-20 08:29:49'),
+(118, 'USER000', 'GROUP_ALL', 'selamat pagi', 0, 1, NULL, '2026-01-20 08:22:36', '2026-01-20 08:22:46'),
+(119, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-20 09:00:55', '2026-01-20 11:20:02'),
+(120, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-20 10:00:29', '2026-01-20 11:20:02'),
+(121, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 1, 1, NULL, '2026-01-20 11:00:22', '2026-01-20 11:20:02'),
+(122, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 0, 1, NULL, '2026-01-20 12:00:28', '2026-01-20 12:00:28'),
+(123, 'USER037', 'USER038', 'We', 0, 1, NULL, '2026-01-20 12:49:06', '2026-01-20 12:49:06'),
+(124, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 0, 1, NULL, '2026-01-20 13:00:05', '2026-01-20 13:00:05'),
+(125, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 0, 1, NULL, '2026-01-20 14:00:56', '2026-01-20 14:00:56'),
+(126, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 0, 1, NULL, '2026-01-20 15:00:30', '2026-01-20 15:00:30'),
+(127, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 0, 1, NULL, '2026-01-20 16:00:51', '2026-01-20 16:00:51'),
+(128, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 0, 1, NULL, '2026-01-20 17:00:38', '2026-01-20 17:00:38'),
+(129, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 0, 1, NULL, '2026-01-20 18:00:30', '2026-01-20 18:00:30'),
+(130, 'USER000', 'GROUP_ALL', '⏰ *JADWAL JAGA HARI INI*\n━━━━━━━━━━━━━━━━━━━━\n📅 *Selasa, 20 Januari 2026*\n\n👥 *Daftar Petugas Jaga:*\n1. Nur Cahyo Prihandoko\n2. Yoseph Mareta Dwiyono Pamujianto\n3. Rudjito\n4. Jafar Sodiq\n5. Marno Ayuk\n6. Dimas Wisnu\n7. Sakiman\n8. deva\n\n━━━━━━━━━━━━━━━━━━━━\n🌟 *Selamat melaksanakan tugas*\n🏡 RT.07 RW.01\n\n🕸️ *Link Scan:*\nhttps://jimpitan.appsbee.my.id\n\n⚠️ *PENTING - WAJIB SCAN QR*\nDihimbau kepada petugas jimpitan:\n• *WAJIB SCAN QR CODE*\n• Jumlah uang yang disetor *HARUS SAMA* dengan jumlah yang di *SCAN*\n• _Tidak boleh lebih dan tidak boleh kurang_\n\n━━━━━━━━━━━━━━━━━━━━\n_Pesan Otomatis dari System_', 0, 1, NULL, '2026-01-20 18:00:30', '2026-01-20 18:00:30'),
+(131, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 0, 1, NULL, '2026-01-20 19:00:51', '2026-01-20 19:00:51'),
+(132, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 0, 1, NULL, '2026-01-20 20:00:30', '2026-01-20 20:00:30'),
+(133, 'USER000', 'USER037', '🎉 *SELAMAT ULANG TAHUN!* 🎂\n━━━━━━━━━━━━━━━━━━━━\n\n📅 *Hari ini ada yang berulang tahun:*\n\n1. *ALDHI SULISTIYAN*\n   🎂 Lahir: 20 Januari\n\n━━━━━━━━━━━━━━━━━━━━\n🎈 *Semoga panjang umur, sehat selalu, dan bahagia!* ✨\n\n━━━━━━━━━━━━━━━━━━━━\n💐 *Salam hangat dari RT 07!*\n\n_Pesan Otomatis dari System_', 0, 1, NULL, '2026-01-20 21:00:51', '2026-01-20 21:00:51');
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `chat_groups_read`
+--
+
+CREATE TABLE `chat_groups_read` (
+  `user_id` varchar(50) NOT NULL,
+  `last_read_message_id` int(11) UNSIGNED NOT NULL DEFAULT 0,
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
+
+--
+-- Dumping data untuk tabel `chat_groups_read`
+--
+
+INSERT INTO `chat_groups_read` (`user_id`, `last_read_message_id`, `updated_at`) VALUES
+('USER000', 115, '2026-01-20 08:22:25'),
+('USER037', 130, '2026-01-20 19:25:26');
 
 -- --------------------------------------------------------
 
@@ -238,8 +319,10 @@ CREATE TABLE `push_subscriptions` (
 --
 
 INSERT INTO `push_subscriptions` (`id`, `user_id`, `endpoint`, `p256dh`, `auth`, `created_at`, `updated_at`) VALUES
-(1, 'USER037', 'https://fcm.googleapis.com/fcm/send/cQOnBZoTJo0:APA91bFfN-BPNg1phePUVjX4dhQVRj2D2O8QDo4p3i5sZwEW_Z7JOCezw1wYfJYIidzOYQdLDwQgXz-F1hDRUfyD2etqLA1h90jLrZ6nkmUIRPkdngyt0bocOAX4gKt0XNDszkwCfOTX', 'BJjX46jbyU6nuy3xVb7WgnKQEFc01__zKRwDpxuD7-mXOvqKY7iWh3Yrmme2vU3mPFT4-tJNBilivOXtCcr4kp4', 'TvXGeYzEvX8PXFegR48gmg', '2026-01-19 14:44:28', '2026-01-19 17:29:25'),
-(2, 'USER000', 'https://fcm.googleapis.com/fcm/send/c6c8NjGKqnA:APA91bFjUNJIl4SEGrTE0hyg_530hJOc2bR6uVqAiMU3hiSbT6bRK7fRBpx_4_IOHq8ObUo7o2CqvVKsSdbRMyTfZfkve8iGG7Rxb6yTHyNzkhfQ6k96KOv8adol0b84h762kz-HrZ2G', 'BG8N6-iTaqt01cxNHx39G1_B_KmgIwa9rZnlm2tt40UwseARkuXt7orts1ko5vmhQI61Eei5hETEOsYUd35mwYs', '-_Hc6e1g1L62Tyz1LYUndQ', '2026-01-19 14:45:53', '2026-01-19 15:25:21');
+(1, 'USER037', 'https://fcm.googleapis.com/fcm/send/cQOnBZoTJo0:APA91bFfN-BPNg1phePUVjX4dhQVRj2D2O8QDo4p3i5sZwEW_Z7JOCezw1wYfJYIidzOYQdLDwQgXz-F1hDRUfyD2etqLA1h90jLrZ6nkmUIRPkdngyt0bocOAX4gKt0XNDszkwCfOTX', 'BJjX46jbyU6nuy3xVb7WgnKQEFc01__zKRwDpxuD7-mXOvqKY7iWh3Yrmme2vU3mPFT4-tJNBilivOXtCcr4kp4', 'TvXGeYzEvX8PXFegR48gmg', '2026-01-19 14:44:28', '2026-01-20 12:49:00'),
+(5, 'USER000', 'https://fcm.googleapis.com/fcm/send/cIvzlSabfMQ:APA91bEogepMIqJDIsnsqMvNpjRTampCUYdz8taV6eJ3fxY_z2nl-8UQ62i7DkTM_3P2ll0gXV-K3JjIo-tykKhi-FeBWfBNegraHE2cSyclHqK3TsUoNzMppMIlJbAFX-4nDB_jinDw', 'BC1sC44XWa52BEBUFrQG9zh4YILu7bIwn2RNy8kBZx4qs2uYUyufqY_zJvG6lIvrw6Mb32a75tqn9C9xVE1HwcA', 'cCA5rgoSqIyEz2KhVy9iKw', '2026-01-19 22:52:44', '2026-01-20 08:22:23'),
+(6, 'USER000', 'https://wns2-pn1p.notify.windows.com/w/?token=BQYAAACl9fuuAZCHY7a1CBNELJPJ3RxdgHUm7EOeEUoAjGtz9ymUNxPsgfFq5t2iSL7KiiNsy4ZMI%2fp1ov5MGymjoO82msSm0IQJCTNVkumJwTwrW1v7qvMvXPno0o%2bPLZtpxtrRAvg%2fmUEbm8zt5zs9fEi%2bkxlUSZuwNJXOl0fXZzfcvL%2fB5vOB6%2bytM8nTjc5Z16Hg3t7p0aQd1j1zL4E5X9wgzx%2f4bSYLb4VVipK7DQQ%2f5FisoCpOrfXRNkNBzbK4mW4w9CifSCPntfp0Otl%2bUq7fYz1NZ66xIp%2fXDGUPaxzEW%2bxiKfO6s102eKe8%2f7CTly4ixSiWL2kVhQ4n3%2bLBuTZu', 'BBdlHkbeOEpBul_fwn0BmvvZiALpc7XkbplbgLUiRBA5twnYoXQmBzvF3_3YhMJNOhuyHfjemS4Gb4nqjUO9x68', 'xFljpIWMtpfTqMNxI8hwvQ', '2026-01-19 22:56:34', '2026-01-20 00:38:56'),
+(8, 'USER037', 'https://fcm.googleapis.com/fcm/send/e6cY278D7PA:APA91bGlUMbpIGZhrwy0aOE6rjkaHfDXm1_3SrhHJP1xPMOTmtG44c5egia8GRXEXTyPG311R_uSlbbCQ2ZIHlfjLiVw0GhMUC1r7Il8g2RX6LILveMEjg7jpct9xOZwDrDUz3LlJo5y', 'BP4JQ6CaiIYtVHeNUxzHxfka1xzpD5f6PmshDAImqybFwi8sxSfIdqHl6t7ANUloBTYObvXrHRtGv01TU5a1SfU', 'eGE9GRJ_3w6IAmhFOJGkIg', '2026-01-20 14:50:39', '2026-01-20 19:25:19');
 
 -- --------------------------------------------------------
 
@@ -20497,6 +20580,17 @@ INSERT INTO `tb_logs` (`id`, `user_id`, `username`, `role`, `action`, `descripti
 (389, 0, 'warga', 'warga', 'LOGIN', 'User logged in successfully.', '103.247.122.218', '2026-01-19 14:41:27'),
 (390, 0, 'cahyo', 'pengurus', 'LOGIN', 'User logged in successfully.', '140.213.167.5', '2026-01-19 15:13:15'),
 (391, 0, 'doni', 's_admin', 'LOGIN', 'User logged in successfully.', '103.247.122.218', '2026-01-19 15:39:03');
+INSERT INTO `tb_logs` (`id`, `user_id`, `username`, `role`, `action`, `description`, `ip_address`, `created_at`) VALUES
+(392, 0, 'doni', 's_admin', 'LOGIN', 'User logged in successfully.', '114.10.8.179', '2026-01-19 21:41:37'),
+(393, 0, 'warga', 'warga', 'LOGIN', 'User logged in successfully.', '114.10.8.179', '2026-01-19 21:45:29'),
+(394, 0, 'doni', 's_admin', 'UPDATE_MENU', 'Updated menu: Chat', '114.10.8.179', '2026-01-19 21:46:13'),
+(395, 0, 'doni', 's_admin', 'LOGIN', 'User logged in successfully.', '114.10.8.179', '2026-01-20 00:41:40'),
+(396, 0, 'doni', 's_admin', 'LOGIN', 'User logged in successfully.', '114.10.8.179', '2026-01-20 07:22:34'),
+(397, 0, 'warga', 'warga', 'LOGIN', 'User logged in successfully.', '103.247.122.218', '2026-01-20 08:21:57'),
+(398, 0, 'doni', 's_admin', 'LOGIN', 'User logged in successfully.', '103.247.122.218', '2026-01-20 11:19:41'),
+(399, 0, 'doni', 's_admin', 'LOGIN', 'User logged in successfully.', '103.247.122.218', '2026-01-20 14:47:34'),
+(400, 0, 'doni', 's_admin', 'LOGIN', 'User logged in successfully.', '103.247.122.218', '2026-01-20 14:50:34'),
+(401, 0, 'doni', 's_admin', 'LOGIN', 'User logged in successfully.', '114.10.44.128', '2026-01-20 20:51:20');
 
 -- --------------------------------------------------------
 
@@ -20538,7 +20632,7 @@ INSERT INTO `tb_menu` (`kode`, `nama`, `alamat_url`, `ikon`, `tanggal`, `status`
 (14, 'Jimpitan Manual', 'jimpitan_manual', 'save-outline', '2026-01-11 13:37:23', 1, 's_admin,admin', 0, 1, 1, 0),
 (15, 'Jimpitan Kosong/KK Belum Discan', '/scan/not-scanned', 'alert-circle-outline', '2026-01-17 23:10:01', 1, 's_admin,admin,pengurus,user,warga', 0, 1, 1, 0),
 (16, 'Role', 'role', 'shield-checkmark-outline', '2026-01-16 06:51:09', 1, 's_admin', 1, 1, 1, 0),
-(17, 'Chat', 'chat', 'chatbubble-outline', '2026-01-17 10:56:28', 1, 's_admin,admin,pengurus,user,warga\n', 0, 0, 1, 0),
+(17, 'Chat', 'chat', 'chatbubble-outline', '2026-01-19 14:46:13', 1, 's_admin,admin,pengurus,user,warga', 0, 0, 1, 0),
 (18, 'Data Users', 'users', 'person-circle', '2026-01-11 13:42:17', 1, 's_admin,admin', 0, 0, 0, 0),
 (19, 'Pembebasan Iuran', 'bebas_iuran', 'checkmark-circle-outline', '2026-01-12 06:01:19', 1, 's_admin,admin', 0, 0, 0, 0),
 (20, 'Jurnal Khusus', '/keuangan/jurnal_sub', 'documents-outline', '2026-01-15 11:08:06', 1, 's_admin,admin,pengurus', 0, 0, 0, 0),
@@ -20937,6 +21031,12 @@ ALTER TABLE `chats`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indeks untuk tabel `chat_groups_read`
+--
+ALTER TABLE `chat_groups_read`
+  ADD PRIMARY KEY (`user_id`);
+
+--
 -- Indeks untuk tabel `devices`
 --
 ALTER TABLE `devices`
@@ -21077,7 +21177,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT untuk tabel `chats`
 --
 ALTER TABLE `chats`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=74;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=134;
 
 --
 -- AUTO_INCREMENT untuk tabel `devices`
@@ -21107,7 +21207,7 @@ ALTER TABLE `master_kk`
 -- AUTO_INCREMENT untuk tabel `push_subscriptions`
 --
 ALTER TABLE `push_subscriptions`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT untuk tabel `report`
@@ -21161,7 +21261,7 @@ ALTER TABLE `tb_konfigurasi`
 -- AUTO_INCREMENT untuk tabel `tb_logs`
 --
 ALTER TABLE `tb_logs`
-  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=392;
+  MODIFY `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=402;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_menu`

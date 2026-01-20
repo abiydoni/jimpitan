@@ -68,8 +68,10 @@
 </head>
 <body class="min-h-screen bg-slate-50 dark:bg-dark transition-colors duration-300">
     <script>
-        if (localStorage.getItem('theme') === 'dark') {
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
         }
     </script>
 
