@@ -50,11 +50,7 @@
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 flex flex-col h-[100dvh] overflow-hidden">
 
     <!-- Header Mobile (Visible only on mobile when on user list) -->
-    <div id="mobileHeader" class="bg-indigo-600 text-white p-4 shadow-md md:hidden flex justify-between items-center">
-        <a href="<?= base_url('/') ?>" class="text-white"><i class="fas fa-arrow-left"></i></a>
-        <h1 class="font-bold text-lg">Pesan</h1>
-        <div class="w-6"></div>
-    </div>
+
 
     <div class="flex flex-1 h-full overflow-hidden max-w-7xl mx-auto w-full md:p-4 gap-4 relative">
         
