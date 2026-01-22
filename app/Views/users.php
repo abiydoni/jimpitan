@@ -190,8 +190,17 @@
             </div>
 
             <form id="userForm" class="space-y-2.5">
-                <input type="hidden" name="id_code" id="userId">
-                
+                <div class="mb-2">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5 ml-1">ID Code</label>
+                    <div class="relative">
+                        <input type="text" name="id_code" id="userId" required placeholder="Masukkan ID atau Generate"
+                               class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white pr-12">
+                         <button type="button" onclick="generateId()" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-indigo-100 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-200 dark:hover:bg-slate-600 transition-colors" title="Generate ID Acak">
+                            <i class="fas fa-random"></i>
+                        </button>
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5 ml-1">Username</label>
                     <input type="text" name="user_name" id="username" required 
@@ -277,6 +286,15 @@
 
 
     <script>
+        function generateId() {
+            const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            let result = '';
+            for (let i = 0; i < 8; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            document.getElementById('userId').value = result;
+        }
+
         // Theme Toggle
         const themeToggle = document.getElementById('themeToggle');
         const html = document.documentElement;
@@ -332,11 +350,17 @@
             document.getElementById('modalTitle').innerText = 'Tambah User';
             document.getElementById('pwdLabel').innerText = '(Min. 4 Karakter)';
             document.getElementById('password').required = true;
+            document.getElementById('password').required = true;
             document.getElementById('username').removeAttribute('readonly');
             document.getElementById('username').classList.remove('opacity-60', 'cursor-not-allowed');
+            // ID Code is editable and generated in Add Mode
+            document.getElementById('userId').removeAttribute('readonly');
+            document.getElementById('userId').classList.remove('opacity-60', 'cursor-not-allowed');
+            
             form.reset();
             if(tsNikk) tsNikk.clear(); // Clear TomSelect
-            document.getElementById('userId').value = '';
+            generateId(); // Auto generate on open
+            document.getElementById('tarif').value = 0; // Reset Tarif
             modal.classList.remove('hidden');
         }
 
@@ -346,9 +370,14 @@
             document.getElementById('pwdLabel').innerText = '(Kosongkan jika tidak diubah)';
             document.getElementById('password').required = false;
             
+            
             // Disable username field in edit mode
             document.getElementById('username').setAttribute('readonly', 'readonly');
             document.getElementById('username').classList.add('opacity-60', 'cursor-not-allowed');
+
+            // Disable ID Code field in edit mode (Primary Key)
+            document.getElementById('userId').setAttribute('readonly', 'readonly');
+            document.getElementById('userId').classList.add('opacity-60', 'cursor-not-allowed');
             
             modal.classList.remove('hidden');
 
@@ -398,9 +427,13 @@
             document.getElementById('password').required = true;
             document.getElementById('username').removeAttribute('readonly');
             document.getElementById('username').classList.remove('opacity-60', 'cursor-not-allowed');
+             // ID Code editable
+            document.getElementById('userId').removeAttribute('readonly');
+            document.getElementById('userId').classList.remove('opacity-60', 'cursor-not-allowed');
+
             form.reset();
             if(tsNikk) tsNikk.clear(); // Clear TomSelect
-            document.getElementById('userId').value = '';
+            generateId();
             document.getElementById('tarif').value = 0; // Reset Tarif
             modal.classList.remove('hidden');
         }
@@ -408,6 +441,13 @@
         // CRUD Logic
         form.onsubmit = async (e) => {
             e.preventDefault();
+            
+            // Prevent double submission
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = 'Menyimpan...';
+
             const url = isEdit ? '/users/update' : '/users/store';
             const formData = new FormData(form);
 
@@ -430,9 +470,18 @@
                         title: 'Gagal', 
                         html: errorMessage 
                     });
+                    
+                    // Re-enable button on error
+                    btn.disabled = false;
+                    btn.innerText = originalText;
                 }
             } catch (err) {
+                console.error(err);
                 Swal.fire('Error', 'Sistem bermasalah', 'error');
+                
+                // Re-enable button on error
+                btn.disabled = false;
+                btn.innerText = originalText;
             }
         };
 

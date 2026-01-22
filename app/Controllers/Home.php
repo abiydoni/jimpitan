@@ -436,6 +436,7 @@ class Home extends BaseController
         }
 
         $rules = [
+            'id_code'   => 'required|is_unique[users.id_code]',
             'user_name' => 'required|is_unique[users.user_name]',
             'name'      => 'required',
             'password'  => 'required|min_length[4]',
@@ -448,6 +449,7 @@ class Home extends BaseController
 
         $model = new \App\Models\UserModel();
         $data = [
+            'id_code'   => $this->request->getPost('id_code'),
             'user_name' => $this->request->getPost('user_name'),
             'name'      => $this->request->getPost('name'),
             'password'  => password_hash($this->request->getPost('password'), PASSWORD_DEFAULT),
@@ -456,6 +458,11 @@ class Home extends BaseController
             'nikk'      => $this->request->getPost('nikk') ?: null, // Optional NIKK
             'tarif'     => $this->request->getPost('tarif') ?: 0
         ];
+
+        // Ensure ID is not empty if somehow validation bypassed
+        if(empty($data['id_code'])) {
+             return $this->response->setJSON(['status' => 'error', 'message' => 'ID Code wajib diisi']);
+        }
 
         if ($model->insert($data)) {
             return $this->response->setJSON(['status' => 'success', 'message' => 'User berhasil ditambahkan']);

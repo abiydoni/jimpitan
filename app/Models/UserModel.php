@@ -8,11 +8,11 @@ class UserModel extends Model
 {
     protected $table            = 'users';
     protected $primaryKey       = 'id_code';
-    protected $useAutoIncrement = true;
+    protected $useAutoIncrement = false; // changed to false for manual input
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = ['user_name', 'name', 'password', 'role', 'shift', 'remember_token', 'nikk', 'tarif'];
+    protected $allowedFields    = ['id_code', 'user_name', 'name', 'password', 'role', 'shift', 'remember_token', 'nikk', 'tarif'];
 
     protected bool $allowEmptyInserts = false;
 
