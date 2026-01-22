@@ -195,7 +195,7 @@
                     <div class="relative">
                         <input type="text" name="id_code" id="userId" required placeholder="Masukkan ID atau Generate"
                                class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white pr-12">
-                         <button type="button" onclick="generateId()" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-indigo-100 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-200 dark:hover:bg-slate-600 transition-colors" title="Generate ID Acak">
+                         <button type="button" id="btnGenerateId" onclick="generateId()" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-indigo-100 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-200 dark:hover:bg-slate-600 transition-colors" title="Generate ID Acak">
                             <i class="fas fa-random"></i>
                         </button>
                     </div>
@@ -356,6 +356,7 @@
             // ID Code is editable and generated in Add Mode
             document.getElementById('userId').removeAttribute('readonly');
             document.getElementById('userId').classList.remove('opacity-60', 'cursor-not-allowed');
+            document.getElementById('btnGenerateId').classList.remove('hidden'); // Show generator
             
             form.reset();
             if(tsNikk) tsNikk.clear(); // Clear TomSelect
@@ -378,6 +379,7 @@
             // Disable ID Code field in edit mode (Primary Key)
             document.getElementById('userId').setAttribute('readonly', 'readonly');
             document.getElementById('userId').classList.add('opacity-60', 'cursor-not-allowed');
+            document.getElementById('btnGenerateId').classList.add('hidden'); // Hide generator
             
             modal.classList.remove('hidden');
 
