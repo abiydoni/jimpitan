@@ -264,68 +264,111 @@
             const listContainer = document.getElementById('globalHistoryList');
             const totalEl = document.getElementById('globalHistoryTotal');
             const filterVal = document.getElementById('globalHistoryFilter').value;
-            const year = document.getElementById('globalHistoryYear').value;
             
             listContainer.innerHTML = '';
             
-            // 1. Process Data & Calculate Grand Total
+            // 1. Group Data by Billing Year (Tahun Tagihan)
+            const groupedByYear = {}; // { '2024': [userObj, ...], '2025': ... }
             let grandTotal = 0;
             let hasData = false;
-            let displayIndex = 1;
 
-            globalPayments.forEach(group => {
-                // Filter Transactions inside the group
-                let transactions = group.transactions;
-                
-                if (filterVal !== "") {
-                    transactions = transactions.filter(p => {
-                        const d = new Date(p.tgl_bayar);
-                        return (d.getMonth() + 1) == filterVal;
-                    });
-                }
-                
-                // If group has relevant transactions
-                if (transactions.length > 0) {
-                    hasData = true;
-                    
-                    // Group Total (for those visible transactions)
-                    const groupTotal = transactions.reduce((sum, p) => sum + parseInt(p.jumlah), 0);
-                    grandTotal += groupTotal;
+            globalPayments.forEach(user => {
+                user.transactions.forEach(tx => {
+                    // Apply Month Filter based on Transaction Date
+                    const txDate = new Date(tx.tgl_bayar);
+                    if (filterVal !== "" && (txDate.getMonth() + 1) != filterVal) return;
 
-                    // Yearly Status Badge logic
-                    // Note: is_lunas_tahun is based on YEARLY total, not monthly view.
-                    // So we always show the yearly status badge even if viewing a specific month.
-                    const isLunasYear = group.is_lunas_tahun;
-                    const badge = isLunasYear 
-                        ? `<span class="ml-2 text-[10px] bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 px-1.5 py-0.5 rounded font-bold">Lunas</span>`
-                        : `<span class="ml-2 text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-600 px-1.5 py-0.5 rounded font-bold">Belum Lunas</span>`;
+                    const billYear = tx.tahun;
+                    if (!groupedByYear[billYear]) groupedByYear[billYear] = [];
 
-                    // Render Group Card (Compact Summary)
-                    const card = document.createElement('div');
-                    card.className = 'glass rounded-xl p-2 mb-1 animate__animated animate__fadeIn flex justify-between items-center hover:bg-white dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-indigo-500/20';
-                    
-                    card.innerHTML = `
-                         <div class="flex-1 min-w-0 pr-2">
-                            <h4 class="font-bold text-slate-800 dark:text-white text-sm mb-0 leading-tight">
-                                <span class="text-slate-500 mr-1">${displayIndex}.</span>${group.nama || 'Warga'}
-                            </h4>
-                            <div class="flex items-center gap-2">
-                                ${badge}
-                                <span class="text-[10px] text-slate-400">
-                                    ${new Date(transactions[transactions.length-1].tgl_bayar).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'})}
-                                </span>
-                            </div>
-                        </div>
-                        <div class="text-right shrink-0">
-                             <div class="font-bold text-indigo-600 dark:text-indigo-400 text-sm">Rp ${new Intl.NumberFormat('id-ID').format(group.total_paid_year)}</div>
-                             <div class="text-[10px] text-slate-400">${transactions.length} Tx</div>
-                        </div>
-                    `;
-                    
-                    listContainer.appendChild(card);
-                    displayIndex++;
-                }
+                    // Find existing user entry for this billing year
+                    let userEntry = groupedByYear[billYear].find(u => u.nikk === user.nikk);
+                    if (!userEntry) {
+                        userEntry = {
+                            nikk: user.nikk,
+                            nama: user.nama || 'Warga',
+                            total: 0,
+                            transactions: [],
+                            // Note: 'is_lunas_tahun' from PHP is based on total transaction amount vs target.
+                            // It's ambiguous when splitting by year, so we might rely on the logic that
+                            // if they paid enough for this specific bill year, it's lunas?
+                            // For now, let's just show the amount paid.
+                            original_status: user.is_lunas_tahun,
+                            target_amount: user.target_amount
+                        };
+                        groupedByYear[billYear].push(userEntry);
+                    }
+
+                    userEntry.total += parseInt(tx.jumlah);
+                    userEntry.transactions.push(tx);
+                    grandTotal += parseInt(tx.jumlah);
+                });
             });
+
+            // 2. Sort Years and Render
+            const sortedYears = Object.keys(groupedByYear).sort((a, b) => b - a);
+            
+            if (sortedYears.length > 0) {
+                sortedYears.forEach(year => {
+                    // Render Year Header
+                    const yearHeader = document.createElement('div');
+                    yearHeader.className = 'sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-10 py-2 border-b border-slate-100 dark:border-white/5 mb-2 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider';
+                    yearHeader.textContent = `Tagihan Tahun ${year}`;
+                    listContainer.appendChild(yearHeader);
+
+                    // Render Users for this year
+                    const users = groupedByYear[year];
+                    
+                    // Sort users by latest transaction in this group
+                    users.sort((a, b) => {
+                        const lastA = a.transactions.reduce((max, t) => t.tgl_bayar > max ? t.tgl_bayar : max, '');
+                        const lastB = b.transactions.reduce((max, t) => t.tgl_bayar > max ? t.tgl_bayar : max, '');
+                        return lastB.localeCompare(lastA);
+                    });
+
+                    users.forEach((group, idx) => {
+                        hasData = true;
+                        
+                        // Get latest transaction date for this group
+                        const latestTx = group.transactions.sort((a,b) => b.tgl_bayar.localeCompare(a.tgl_bayar))[0];
+                        const dateStr = new Date(latestTx.tgl_bayar).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'});
+
+                        // Calculate Status Badge
+                        // Check if total paid for this billing year >= target amount from backend
+                        // Use original_target if present (passed from PHP), or fallback
+                        const targetAmount = parseInt(group.target_amount || 0); // Need to ensure this is passed to group object
+                        const isLunas = targetAmount > 0 && group.total >= targetAmount;
+
+                         const badge = isLunas 
+                            ? `<span class="ml-2 text-[10px] bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1"><i class="fas fa-check-circle text-[9px]"></i> Lunas</span>`
+                            : `<span class="ml-2 text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-600 px-1.5 py-0.5 rounded-full font-bold">Belum Lunas</span>`;
+
+
+                        const card = document.createElement('div');
+                        card.className = 'glass rounded-xl p-2 mb-2 animate__animated animate__fadeIn flex justify-between items-center hover:bg-white dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-indigo-500/20';
+                        
+                        card.innerHTML = `
+                             <div class="flex-1 min-w-0 pr-2">
+                                <h4 class="font-bold text-slate-800 dark:text-white text-sm mb-0 leading-tight">
+                                    <span class="text-slate-500 mr-1">${idx + 1}.</span>${group.nama}
+                                </h4>
+                                <div class="flex items-center gap-2 mt-0.5">
+                                    ${badge}
+                                    <span class="text-[10px] text-slate-400 border-l border-slate-300 dark:border-slate-600 pl-2 ml-1">
+                                        ${dateStr}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                 <div class="font-bold text-indigo-600 dark:text-indigo-400 text-sm">Rp ${new Intl.NumberFormat('id-ID').format(group.total)}</div>
+                                 <div class="text-[10px] text-slate-400">${group.transactions.length} Tx</div>
+                            </div>
+                        `;
+                        
+                        listContainer.appendChild(card);
+                    });
+                });
+            }
 
             // Set Grand Total
             totalEl.textContent = `Rp ${new Intl.NumberFormat('id-ID').format(grandTotal)}`;

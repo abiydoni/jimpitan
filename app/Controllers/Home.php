@@ -588,12 +588,24 @@ class Home extends BaseController
                             ->getRowArray();
         }
 
+        // Get Head of Family Data (for photo)
+        $headWarga = null;
+        if ($user && !empty($user['nikk'])) {
+             // Find the head of family
+             $headWarga = $db->table('tb_warga')
+                            ->where('nikk', $user['nikk'])
+                            ->like('hubungan', 'kepala', 'both') // Contains "Kepala"
+                            ->get()
+                            ->getRowArray();
+        }
+
         return view('profile', [
             'profil' => $profil,
             'user' => $user,
             'familyMembers' => $familyMembers,
             'kkData' => $kkData,
-            'userWarga' => $userWarga
+            'userWarga' => $userWarga,
+            'headWarga' => $headWarga // Pass to view
         ]);
     }
     public function updateMemberPhoto()

@@ -109,7 +109,8 @@ class Payment extends BaseController
              return redirect()->to('/payment/warga/' . $kode_tarif)->with('error', 'Data Warga tidak ditemukan');
         }
 
-        $year = date('Y');
+        // Ambil tahun dari parameter GET, default ke tahun sekarang
+        $year = $this->request->getGet('year') ?? date('Y');
         
         $rawPayments = $this->iuranModel
             ->where('kode_tarif', $kode_tarif)
@@ -300,7 +301,7 @@ class Payment extends BaseController
             $builder->join('tb_warga', 'tb_warga.nikk = tb_iuran.nikk AND tb_warga.hubungan = "Kepala Keluarga"', 'left', false);
             
             $builder->where('tb_iuran.kode_tarif', $kode_tarif);
-            $builder->where('tb_iuran.tahun', $year);
+            $builder->where('YEAR(tb_iuran.tgl_bayar)', $year);
             $builder->orderBy('tb_iuran.tgl_bayar', 'DESC');
             
             $payments = $builder->get()->getResultArray();
@@ -326,6 +327,7 @@ class Payment extends BaseController
                         'nikk' => $nikk,
                         'nama' => $p['nama'] ?? 'Warga',
                         'total_paid_year' => $totalPaid,
+                        'target_amount' => $targetAmount, // Pass target amount to frontend
                         'is_lunas_tahun' => $totalPaid >= $targetAmount,
                         'transactions' => []
                     ];

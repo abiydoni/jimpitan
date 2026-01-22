@@ -57,6 +57,9 @@
              <button onclick="openHistoryModal()" class="w-9 h-9 bg-rose-100 dark:bg-rose-900/30 text-rose-600 rounded-xl flex items-center justify-center hover:bg-rose-200 transition-all shadow-sm">
                 <i class="fas fa-history"></i>
              </button>
+             
+
+
              <button id="themeToggle" class="bg-slate-100 dark:bg-slate-800 p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
                 <i class="fas fa-moon dark:hidden"></i>
                 <i class="fas fa-sun hidden dark:block text-amber-400"></i>
@@ -65,8 +68,10 @@
     </nav>
 
     <main class="max-w-4xl mx-auto px-4 py-6">
+        <!-- Year Filter (Moved Below Navbar) -->
+
         <!-- Info Card -->
-        <div class="glass rounded-[2rem] p-6 mb-6 animate__animated animate__fadeInDown border border-white/40 dark:border-white/5 shadow-sm">
+        <div class="glass rounded-[2rem] p-6 mb-6 border border-white/40 dark:border-white/5 shadow-sm">
             <div class="flex items-start justify-between">
                 <div>
                     <h2 class="text-2xl font-bold text-slate-800 dark:text-white -ml-0.5">
@@ -74,17 +79,40 @@
                     </h2>
                     <p class="text-slate-400 font-medium text-sm mt-1">Tagihan / Periode</p>
                 </div>
-                <div class="flex flex-col items-end gap-1">
-                    <span class="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-bold text-slate-500 border border-slate-200 dark:border-white/5">
-                        <?= $warga['nikk'] ?>
-                    </span>
-                    <span class="text-[10px] text-slate-400 font-medium"><?= count($rawPayments ?? []) ?> Transaksi</span>
+                <div class="flex flex-col items-end gap-3">
+                    <!-- Year Filter (Inside Card) -->
+                     <div class="relative group">
+                        <div class="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl blur opacity-20 group-hover:opacity-30 transition-opacity duration-300"></div>
+                        <div class="relative flex items-center bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-white/50 dark:border-white/10 rounded-2xl shadow-sm transition-all duration-300 group-hover:shadow-md group-hover:bg-white dark:group-hover:bg-slate-800">
+                            <div class="pl-3 py-1.5 flex items-center pointer-events-none gap-2 border-r border-slate-200 dark:border-white/10">
+                                <i class="fas fa-calendar-alt text-indigo-500 text-[10px]"></i>
+                                <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">Tahun</span>
+                            </div>
+                            <select onchange="window.location.href='?year='+this.value" class="appearance-none bg-transparent border-none text-slate-700 dark:text-slate-200 py-1.5 pl-2 pr-8 text-xs font-bold focus:ring-0 cursor-pointer outline-none">
+                                <?php 
+                                $currentYear = date('Y');
+                                for($y = $currentYear + 1; $y >= $currentYear - 3; $y--): 
+                                ?>
+                                    <option value="<?= $y ?>" <?= ($year == $y) ? 'selected' : '' ?> class="bg-white dark:bg-slate-800"><?= $y ?></option>
+                                <?php endfor; ?>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400 group-hover:text-indigo-500 transition-colors">
+                                <i class="fas fa-chevron-down text-[10px]"></i>
+                            </div>
+                        </div>
+                     </div>
+
+                    <div class="flex flex-col items-end gap-1">
+                        <span class="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-bold text-slate-500 border border-slate-200 dark:border-white/5">
+                            <?= $warga['nikk'] ?>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Payment List -->
-        <div class="space-y-2 animate__animated animate__fadeInUp">
+        <div class="space-y-2">
             
             <!-- Metode: Bulanan (1) -->
             <?php if($tarif['metode'] == 1): ?>
@@ -199,7 +227,7 @@
     <!-- History Modal -->
     <div id="historyModal" class="fixed inset-0 z-[1100] hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeHistoryModal()"></div>
-        <div class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl p-6 sm:p-8 animate__animated animate__zoomIn animate__faster max-h-[85vh] flex flex-col">
+        <div class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl p-6 sm:p-8 max-h-[85vh] flex flex-col">
             <div class="flex flex-col gap-4 mb-4 shrink-0">
                 <div class="flex justify-between items-center">
                     <h3 id="historyTitle" class="text-xl font-bold text-slate-800 dark:text-white">Riwayat Pembayaran</h3>
@@ -426,7 +454,7 @@
                         const dateStr = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
                         
                         const item = document.createElement('div');
-                        item.className = 'flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5 animate__animated animate__fadeIn';
+                        item.className = 'flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5';
                         item.innerHTML = `
                              <div class="flex-1">
                                 <h4 class="font-bold text-slate-800 dark:text-white line-clamp-1 text-sm">
@@ -475,7 +503,7 @@
 
                         // Group Container (Simplified to Single Card)
                         const groupItem = document.createElement('div');
-                        groupItem.className = 'bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5 animate__animated animate__fadeIn p-3 flex justify-between items-center';
+                        groupItem.className = 'bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5 p-3 flex justify-between items-center';
                         
                         groupItem.innerHTML = `
                             <div class="flex items-center gap-3">

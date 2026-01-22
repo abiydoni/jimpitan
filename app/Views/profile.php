@@ -80,8 +80,8 @@
         <!-- User Card -->
         <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-slate-100 dark:border-slate-700 text-center mb-6 animate__animated animate__fadeInDown">
             <div id="mainAvatarContainer" class="w-24 h-24 mx-auto rounded-full flex items-center justify-center text-4xl font-bold mb-4 shadow-xl overflow-hidden bg-gradient-to-tr from-indigo-500 to-purple-600 text-white relative">
-                <?php if(!empty($userWarga['foto']) && file_exists(FCPATH . 'img/warga/' . $userWarga['foto'])): ?>
-                    <img id="mainAvatarImg" src="/img/warga/<?= $userWarga['foto'] ?>" alt="<?= $user['name'] ?>" class="w-full h-full object-cover">
+                <?php if(!empty($headWarga['foto']) && file_exists(FCPATH . 'img/warga/' . $headWarga['foto'])): ?>
+                    <img id="mainAvatarImg" src="/img/warga/<?= $headWarga['foto'] ?>" alt="<?= $user['name'] ?>" class="w-full h-full object-cover">
                     <span id="mainAvatarInitial" class="hidden"><?= substr($user['name'], 0, 1) ?></span>
                 <?php else: ?>
                     <img id="mainAvatarImg" src="" class="w-full h-full object-cover hidden">
