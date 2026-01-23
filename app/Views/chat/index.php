@@ -120,9 +120,14 @@
                 </div>
 
                 <!-- Messages -->
-                <div id="messagesContainer" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 min-h-0">
+                <div id="messagesContainer" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 min-h-0 relative">
                     <!-- Messages will be rendered here -->
                 </div>
+
+                <!-- Scroll Bottom Button -->
+                <button id="scrollTopBtn" onclick="scrollToBottom()" class="absolute bottom-24 right-5 w-10 h-10 bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 rounded-full shadow-lg border border-gray-100 dark:border-gray-600 hidden flex-col items-center justify-center hover:scale-110 transition-transform z-20 opacity-90 hover:opacity-100">
+                    <i class="fas fa-chevron-down text-sm"></i>
+                </button>
 
                 <!-- Input Area -->
                 <div class="p-4 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
@@ -383,6 +388,44 @@
             return regex.test(clean);
         }
 
+        function formatDateSeparator(dateString) {
+            const date = new Date(dateString);
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            const isToday = date.toDateString() === today.toDateString();
+            const isYesterday = date.toDateString() === yesterday.toDateString();
+
+            if (isToday) return 'Hari Ini';
+            if (isYesterday) return 'Kemarin';
+            
+            return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        async function copyMessage(text) {
+             try {
+                 await navigator.clipboard.writeText(text);
+                 const Toast = Swal.mixin({
+                    toast: true,
+                    position: "top",
+                    showConfirmButton: false,
+                    timer: 1500,
+                    timerProgressBar: false,
+                    didOpen: (toast) => {
+                        toast.onmouseenter = Swal.stopTimer;
+                        toast.onmouseleave = Swal.resumeTimer;
+                    }
+                });
+                Toast.fire({
+                    icon: "success",
+                    title: "Pesan disalin"
+                });
+             } catch (err) {
+                 console.error('Failed to copy: ', err);
+             }
+        }
+
         function renderMessage(msg, scroll = true) {
             // Anti-duplicate check
             if (msg.id && document.getElementById(`msg-${msg.id}`)) return;
@@ -390,6 +433,25 @@
             const isMe = msg.sender_id === currentUserId;
             const messagesContainer = document.getElementById('messagesContainer');
             
+            // --- Date Separator Logic ---
+            const msgDate = new Date(msg.created_at);
+            const msgDateString = msgDate.toDateString(); 
+            
+            const lastMsg = messagesContainer.lastElementChild;
+            const lastDateString = lastMsg ? lastMsg.getAttribute('data-date') : null;
+
+            if (lastDateString !== msgDateString) {
+                const separatorDiv = document.createElement('div');
+                separatorDiv.className = 'flex justify-center my-4 opacity-80';
+                separatorDiv.innerHTML = `
+                    <span class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] px-3 py-1 rounded-full shadow-sm font-medium">
+                        ${formatDateSeparator(msg.created_at)}
+                    </span>
+                `;
+                separatorDiv.setAttribute('data-date', msgDateString); // Prevent duplicate separators if polling re-runs
+                messagesContainer.appendChild(separatorDiv);
+            }
+
             // Deduplication for pending handling:
             // If this is a real message (has ID) and we have a pending message with same text, remove the pending one.
             if (msg.id && !msg.is_pending) {
@@ -399,6 +461,7 @@
 
             const div = document.createElement('div');
             div.id = msg.id ? `msg-${msg.id}` : `temp-${Date.now()}`;
+            div.setAttribute('data-date', msgDateString); // Track date
             if(msg.is_pending) {
                 div.classList.add('msg-pending');
                 div.setAttribute('data-content', msg.message);
@@ -444,12 +507,17 @@
                  `;
             }
 
+            const rawMessage = msg.message.replace(/'/g, "\\'").replace(/\n/g, "\\n");
+
             const actionsHtml = `
                 <div class="opacity-0 group-hover:opacity-100 group-focus:opacity-100 group-active:opacity-100 group-focus-within:opacity-100 transition-opacity flex flex-col items-center gap-1 ${isMe ? 'order-first mr-1' : 'ml-1'}">
-                    <button onclick="startReply(${msg.id}, '${displayName}', '${msg.message.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')" class="px-1.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center text-blue-500 dark:text-blue-400 text-xs shadow-sm transition-transform hover:scale-105" title="Balas">
+                    <button onclick="copyMessage('${rawMessage}')" class="px-1.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center text-gray-500 dark:text-gray-400 text-xs shadow-sm transition-transform hover:scale-105" title="Salin">
+                         <i class="far fa-copy"></i>
+                    </button>
+                    <button onclick="startReply(${msg.id}, '${displayName}', '${rawMessage}')" class="px-1.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center text-blue-500 dark:text-blue-400 text-xs shadow-sm transition-transform hover:scale-105" title="Balas">
                         <i class="fas fa-reply"></i>
                     </button>
-                    <button onclick="openForwardModal('${msg.message.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')" class="px-1.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center text-green-500 dark:text-green-400 text-xs shadow-sm transition-transform hover:scale-105" title="Teruskan">
+                    <button onclick="openForwardModal('${rawMessage}')" class="px-1.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center text-green-500 dark:text-green-400 text-xs shadow-sm transition-transform hover:scale-105" title="Teruskan">
                         <i class="fas fa-share"></i>
                     </button>
                 </div>
@@ -690,6 +758,22 @@
         // ------------------ Initialization ------------------
         
         document.addEventListener('DOMContentLoaded', async () => {
+            
+            // Scroll to Bottom Button Logic
+            const msgContainer = document.getElementById('messagesContainer');
+            if(msgContainer) {
+                msgContainer.addEventListener('scroll', () => {
+                    const btn = document.getElementById('scrollTopBtn');
+                    if (msgContainer.scrollHeight - msgContainer.scrollTop - msgContainer.clientHeight > 300) {
+                        btn.classList.remove('hidden');
+                        btn.classList.add('flex');
+                    } else {
+                        btn.classList.add('hidden');
+                        btn.classList.remove('flex');
+                    }
+                });
+            }
+            
             await fetchUsers();
             
             const urlParams = new URLSearchParams(window.location.search);
