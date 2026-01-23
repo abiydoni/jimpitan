@@ -128,4 +128,11 @@ class PushSubscription extends ResourceController
                      
         return $this->respond(['subscribed' => $exists > 0]);
     }
+
+    public function debugTokens()
+    {
+        $db = Database::connect();
+        $rows = $db->table('fcm_subscriptions')->get()->getResultArray();
+        return $this->respond($rows);
+    }
 }

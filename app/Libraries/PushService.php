@@ -14,10 +14,10 @@ class PushService
     public function sendNotification($receiverId, $messageText, $senderName, $url = null, $senderId = null, $excludeEndpoint = null)
     {
         // Now exclusively using FCM
-        return $this->sendFCMNotification($receiverId, $messageText, $senderName, $url, $senderId);
+        return $this->sendFCMNotification($receiverId, $messageText, $senderName, $url, $senderId, $excludeEndpoint);
     }
 
-    protected function sendFCMNotification($receiverId, $messageText, $senderName, $url = null, $senderId = null)
+    protected function sendFCMNotification($receiverId, $messageText, $senderName, $url = null, $senderId = null, $excludeEndpoint = null)
     {
         try {
             $db = \Config\Database::connect();
@@ -28,15 +28,22 @@ class PushService
             } else {
                 $builder->where('user_id', $receiverId);
             }
+
+            if ($excludeEndpoint) {
+                $builder->where('fcm_token !=', $excludeEndpoint);
+            }
             
             $subscriptions = $builder->get()->getResultArray();
-            $this->logger->info("FCM: Found " . count($subscriptions) . " subscriptions for receiver " . (is_array($receiverId) ? implode(',', $receiverId) : $receiverId));
+            $this->logger->info("FCM: Found " . count($subscriptions) . " subscriptions for receiver(s).");
             
-            if (empty($subscriptions)) return false;
+            if (empty($subscriptions)) {
+                $this->logger->warning("FCM: No subscriptions found for " . (is_array($receiverId) ? implode(',', $receiverId) : $receiverId));
+                return false;
+            }
 
             $accessToken = $this->getFCMAccessToken();
             if (!$accessToken) {
-                $this->logger->error("FCM: Failed to get Access Token.");
+                $this->logger->error("FCM: Failed to get Access Token. Check JSON Key file.");
                 return false;
             }
 
@@ -97,7 +104,8 @@ class PushService
                     $successCount++;
                 } else {
                     $respDecoded = json_decode($response, true);
-                    $this->logger->error("FCM Send Error ($httpCode): " . ($respDecoded['error']['message'] ?? $response));
+                    $errMsg = $respDecoded['error']['message'] ?? $response;
+                    $this->logger->error("FCM Send Error to Token " . substr($token, 0, 10) . "... ($httpCode): " . $errMsg);
                     
                     if ($httpCode === 404 || $httpCode === 400 || (isset($respDecoded['error']['status']) && $respDecoded['error']['status'] === 'UNREGISTERED')) {
                          $db->table('fcm_subscriptions')->where('fcm_token', $token)->delete();
