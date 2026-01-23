@@ -135,4 +135,60 @@ class PushSubscription extends ResourceController
         $rows = $db->table('fcm_subscriptions')->get()->getResultArray();
         return $this->respond($rows);
     }
+
+    public function testPush()
+    {
+        $session = session();
+        if (!$session->get('isLoggedIn')) {
+             return $this->respond(['error' => 'Not logged in']);
+        }
+        
+        $userId = $session->get('id_code');
+        $db = Database::connect();
+        $subs = $db->table('fcm_subscriptions')->where('user_id', $userId)->get()->getResultArray();
+        
+        if (empty($subs)) {
+            return $this->respond(['error' => 'No tokens found for user ' . $userId]);
+        }
+        
+        $pushService = new \App\Libraries\PushService();
+        $accessToken = $pushService->getFCMAccessToken();
+        
+        $results = [];
+        if ($accessToken) {
+            foreach ($subs as $sub) {
+                $token = $sub['fcm_token'];
+                $fcmUrl = 'https://fcm.googleapis.com/v1/projects/jimpitan-app-a7by777/messages:send';
+                $payload = [
+                    'message' => [
+                        'token' => $token,
+                        'notification' => ['title' => 'Test Debug Controller', 'body' => 'Bismillah bunyi!'],
+                        'data' => ['url' => '/chat']
+                    ]
+                ];
+
+                $ch = curl_init($fcmUrl);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $accessToken, 'Content-Type: application/json']);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+                
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                
+                $results[] = [
+                    'token_prefix' => substr($token, 0, 10),
+                    'http_code' => $httpCode,
+                    'response' => json_decode($response, true)
+                ];
+            }
+        }
+        
+        return $this->respond([
+            'user_id' => $userId,
+            'access_token_status' => $accessToken ? 'success' : 'failed',
+            'results' => $results
+        ]);
+    }
 }
