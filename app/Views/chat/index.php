@@ -1098,24 +1098,26 @@
                        console.log('✅ Permission already granted.');
                        registerFCM();
                    } else if (Notification.permission === 'default') {
-                       console.log('⏳ Permission is default. Trying auto-prompt + showing bell...');
+                       console.log('⏳ Permission is default. Showing SweetAlert prompt...');
                        
                        const btn = document.getElementById('btnEnableNotif');
                        if (btn) btn.classList.remove('hidden');
 
-                       // Try auto-prompt immediately
-                       askPermission(false);
-                       
-                       const triggerOnInteraction = () => {
-                           if (Notification.permission === 'default') {
-                               console.log('👆 User interaction detected. Triggering permission...');
-                               askPermission(false);
+                       // Use SweetAlert as a user-gesture bridge
+                       Swal.fire({
+                           title: 'Aktifkan Notifikasi?',
+                           text: 'Dapatkan pemberitahuan pesan baru secara real-time di HP/Laptop Anda.',
+                           icon: 'question',
+                           showCancelButton: true,
+                           confirmButtonText: 'Ya, Aktifkan',
+                           cancelButtonText: 'Nanti Saja',
+                           confirmButtonColor: '#4f46e5',
+                           reverseButtons: true
+                       }).then((result) => {
+                           if (result.isConfirmed) {
+                               askPermission(true);
                            }
-                           document.removeEventListener('click', triggerOnInteraction);
-                           document.removeEventListener('touchstart', triggerOnInteraction);
-                       };
-                       document.addEventListener('click', triggerOnInteraction);
-                       document.addEventListener('touchstart', triggerOnInteraction);
+                       });
                    } else {
                        console.log('🚫 Permission is denied.');
                        const btn = document.getElementById('btnEnableNotif');
