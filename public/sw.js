@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jimpitan-v14';
+const CACHE_NAME = 'jimpitan-v15';
 const urlsToCache = [
   './offline.html',
 ];
@@ -59,17 +59,16 @@ self.addEventListener('push', function(event) {
   }
 
   const data = event.data ? event.data.json() : {};
-  console.log('Push Received:', data);
+  console.log('Push Received v15:', data);
 
   const title = data.title || 'Pesan Baru';
   const options = {
     body: data.body || 'Anda memiliki pesan baru.',
     icon: self.location.origin + '/favicon.ico',
     badge: self.location.origin + '/favicon.ico',
-    image: self.location.origin + '/favicon.ico',
-    vibrate: [500, 110, 500, 110, 450, 110, 200, 110], // Long aggressive vibration
-    // NO fixed tag - making every message unique to force banner/popup
-    renotify: false,
+    vibrate: [200, 100, 200, 100, 200], 
+    tag: 'jimpitan-global',     // Stable tag
+    renotify: true,             // Force popup on every push
     requireInteraction: true,
     silent: false,
     timestamp: Date.now(),
