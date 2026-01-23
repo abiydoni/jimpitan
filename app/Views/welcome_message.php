@@ -438,7 +438,7 @@
 
     <footer class="mt-12 sm:mt-20 py-8 sm:py-10 border-t border-slate-100 dark:border-slate-800">
         <div class="max-w-7xl mx-auto px-6 text-center">
-            <p class="text-slate-400 dark:text-slate-500 text-xs sm:text-sm font-medium">&copy; <?= date('Y') ?> <?= 'Jimpitan App' ?>. Built with CodeIgniter 4.</p>
+            <p class="text-slate-400 dark:text-slate-500 text-xs sm:text-sm font-medium">&copy; <?= date('Y') ?> <?= 'Jimpitan App' ?> <span class="text-[10px] opacity-70 ml-1">jimpitan-v15</span>. Built with CodeIgniter 4.</p>
             <div class="flex items-center justify-center space-x-2 mt-0">
                  <span class="px-0 py-0.5 text-[10px] font-bold text-green-400 dark:text-green-500 tracking-tighter">Wesite: <a href="http://appsbee.my.id" target="_blank">appsbee.my.id</a></span>
             </div>
