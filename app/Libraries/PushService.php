@@ -2,9 +2,6 @@
 
 namespace App\Libraries;
 
-use Minishlink\WebPush\WebPush;
-use Minishlink\WebPush\Subscription;
-
 class PushService
 {
     protected $logger;
@@ -16,30 +13,15 @@ class PushService
 
     public function sendNotification($receiverId, $messageText, $senderName, $url = null, $senderId = null, $excludeEndpoint = null)
     {
+        // Now exclusively using FCM
+        return $this->sendFCMNotification($receiverId, $messageText, $senderName, $url, $senderId);
+    }
+
+    protected function sendFCMNotification($receiverId, $messageText, $senderName, $url = null, $senderId = null)
+    {
         try {
-            // Check library
-            if (!class_exists('Minishlink\WebPush\WebPush')) {
-                $this->logger->error("Push error: WebPush library class not found!");
-                return false;
-            }
-
-            // Determine Root Path safely
-            $rootPath = defined('ROOTPATH') ? ROOTPATH : FCPATH . '../';
-            $rootPath = rtrim($rootPath, '/\\') . DIRECTORY_SEPARATOR;
-
-            // Ensure OPENSSL_CONF is set
-            // DIAGNOSIS RESULT: Server is Linux and bas native OpenSSL working.
-            // We MUST NOT force openssl.cnf on Linux/Production.
-            // ONLY apply this on Windows (Development).
-            if (DIRECTORY_SEPARATOR === '\\') {
-                $opensslConfigPath = $rootPath . 'openssl.cnf';
-                if (file_exists($opensslConfigPath)) {
-                    putenv("OPENSSL_CONF=" . $opensslConfigPath);
-                }
-            }
-
             $db = \Config\Database::connect();
-            $builder = $db->table('push_subscriptions');
+            $builder = $db->table('fcm_subscriptions');
             
             if (is_array($receiverId)) {
                 $builder->whereIn('user_id', $receiverId);
@@ -47,180 +29,147 @@ class PushService
                 $builder->where('user_id', $receiverId);
             }
             
-            // Smart Filter: Exclude Sender's Endpoints (Prevent Self-Notify on Shared Device)
-            if ($senderId) {
-                $subQuery = $db->table('push_subscriptions')
-                               ->select('endpoint')
-                               ->where('user_id', $senderId)
-                               ->get()->getResultArray();
-                $excludeEps = array_column($subQuery, 'endpoint');
-                
-                if (!empty($excludeEps)) {
-                    $builder->whereNotIn('endpoint', $excludeEps);
-                }
-            }
+            $subscriptions = $builder->get()->getResultArray();
+            $this->logger->info("FCM: Found " . count($subscriptions) . " subscriptions for receiver " . (is_array($receiverId) ? implode(',', $receiverId) : $receiverId));
             
-            // Explicit Exclusion (Bulletproof) - MOVED TO PHP LOOP
-            // We removed the SQL WHERE clause to allow PHP side logging and robust comparison
-            if (!$excludeEndpoint) {
-                $this->logger->warning("PushService: No excludeEndpoint provided!");
-            }
-            
-            $subscriptions = $builder->groupBy('endpoint')
-                                     ->get()
-                                     ->getResultArray();
+            if (empty($subscriptions)) return false;
 
-            $this->logger->info("PushService: Found " . count($subscriptions) . " subscriptions for receiver " . (is_array($receiverId) ? implode(',', $receiverId) : $receiverId));
-
-            if (empty($subscriptions)) {
-                 $idStr = is_array($receiverId) ? implode(',', $receiverId) : $receiverId;
-                 $this->logger->info("PushService: No subscriptions found for user(s): " . $idStr);
-                 return false;
-            }
-
-            // Load VAPID Keys
-            // Priority 1: Helper env() (CI4 Standard)
-            $publicKey = env('VAPID_PUBLIC_KEY');
-            $privateKey = env('VAPID_PRIVATE_KEY');
-            
-            // Priority 2: getenv()
-            if (empty($publicKey) || empty($privateKey)) {
-                 $publicKey = getenv('VAPID_PUBLIC_KEY');
-                 $privateKey = getenv('VAPID_PRIVATE_KEY');
-            }
-
-            // Priority 3: Manual Parsing (Last Resort)
-            if (empty($publicKey) || empty($privateKey)) {
-                 $envPath = $rootPath . '.env';
-                 if (file_exists($envPath)) {
-                    $envContent = file_get_contents($envPath);
-                    if (empty($publicKey) && preg_match('/^VAPID_PUBLIC_KEY=(.*)$/m', $envContent, $matches)) {
-                        $publicKey = trim($matches[1], "\"' \t\n\r\0\x0B");
-                    }
-                    if (empty($privateKey) && preg_match('/^VAPID_PRIVATE_KEY=(.*)$/m', $envContent, $matches)) {
-                        $privateKey = trim($matches[1], "\"' \t\n\r\0\x0B");
-                    }
-                 } else {
-                     $this->logger->error("PushService: .env NOT FOUND at " . $envPath);
-                 }
-            }
-            
-            if (empty($publicKey) || empty($privateKey)) {
-                $this->logger->error("PushService: VAPID Keys are empty! Check .env file.");
+            $accessToken = $this->getFCMAccessToken();
+            if (!$accessToken) {
+                $this->logger->error("FCM: Failed to get Access Token.");
                 return false;
             }
 
-            // Clean keys
-            $privateKey = trim((string)$privateKey, "\"' \t\n\r\0\x0B");
-            $publicKey  = trim((string)$publicKey, "\"' \t\n\r\0\x0B");
-
-            // Format Key
-            if (strpos($privateKey, '\n') !== false) {
-                 $privateKey = str_replace('\n', "\n", $privateKey);
-            }
-            if (strpos($privateKey, 'BEGIN') === false && strlen($privateKey) > 60) {
-                 $privateKey = "-----BEGIN EC PRIVATE KEY-----\n" . 
-                               chunk_split($privateKey, 64, "\n") . 
-                               "-----END EC PRIVATE KEY-----";
-            }
-
-            $subject = 'https://jimpitan.appsbee.my.id/';
-            if (!filter_var($subject, FILTER_VALIDATE_URL) && strpos($subject, 'mailto:') !== 0) {
-                $subject = 'mailto:admin@jimpitan.appsbee.my.id'; 
-            }
-
-            $auth = [
-                'VAPID' => [
-                    'subject' => $subject,
-                    'publicKey' => $publicKey,
-                    'privateKey' => $privateKey,
-                ],
-            ];
-
-            $webPush = new WebPush($auth);
-            $webPush->setDefaultOptions([
-                'TTL' => 86400, // 24 hours
-                'urgency' => 'high', // Critical for Heads-up popups
-                'topic' => 'chat'
-            ]);
-
-            // Construct Title and URL
             $title = $senderName;
             if ($senderName !== 'System' && strpos($title, 'Pesan dari') === false) {
                 $title = 'Pesan dari ' . $senderName;
             }
 
-            // Default URL logic if not provided
-            if (!$url) {
-                // If we are in a session context (e.g. Chat Controller), we might want to link to THIS user?
-                // No, link to the SENDER.
-                // But $receiverId is the recipient. 
-                // We don't have senderId here easily passing through unless we add it to args.
-                // But for now, let's just default to /chat
-                $url = '/chat';
-            }
-
-            $payloadData = [
-                'title' => $title,
-                'body' => mb_substr($messageText, 0, 100, 'UTF-8'),
-                'url' => $url
-            ];
-            
-            $payload = json_encode($payloadData, JSON_UNESCAPED_UNICODE);
-
-            $seenEndpoints = [];
-            foreach ($subscriptions as $sub) {
-                $currentEndpoint = $sub['endpoint'];
-                if (empty($currentEndpoint)) continue;
-                
-                // PHP-Side Explicit Exclusion
-                if ($excludeEndpoint) {
-                    $this->logger->info("PushService: Comparing current [" . substr($currentEndpoint, -15) . "] with exclude [" . substr($excludeEndpoint, -15) . "]");
-                    if ($currentEndpoint === $excludeEndpoint) {
-                        $this->logger->info("PushService: EXCLUDING Sender (Exact Match): " . substr($currentEndpoint, -20));
-                        continue;
-                    }
-                    if (urldecode($currentEndpoint) === urldecode($excludeEndpoint)) {
-                        $this->logger->info("PushService: EXCLUDING Sender (Decoded Match): " . substr($currentEndpoint, -20));
-                        continue;
-                    }
-                }
-                
-                // Deduplicate: If endpoint already processed, skip
-                if (in_array($currentEndpoint, $seenEndpoints)) continue;
-                $seenEndpoints[] = $currentEndpoint;
-                
-                $this->logger->info("PushService: Queueing Notification -> " . substr($currentEndpoint, -15));
-
-                $subscription = Subscription::create([
-                    'endpoint' => $currentEndpoint,
-                    'keys' => [
-                        'p256dh' => $sub['p256dh'],
-                        'auth' => $sub['auth'],
-                    ],
-                ]);
-
-                $webPush->queueNotification($subscription, $payload);
-            }
-
             $successCount = 0;
-            foreach ($webPush->flush() as $report) {
-                $endpoint = $report->getRequest()->getUri()->__toString();
-                if (!$report->isSuccess()) {
-                    $this->logger->error("Push fail for $endpoint: " . $report->getReason());
-                    if ($report->isSubscriptionExpired()) {
-                        $db->table('push_subscriptions')->where('endpoint', $endpoint)->delete();
-                    }
-                } else {
+            $fcmUrl = 'https://fcm.googleapis.com/v1/projects/jimpitan-app-a7by777/messages:send';
+
+            foreach ($subscriptions as $sub) {
+                $token = $sub['fcm_token'];
+                
+                $payload = [
+                    'message' => [
+                        'token' => $token,
+                        'notification' => [
+                            'title' => $title,
+                            'body' => mb_substr($messageText, 0, 100, 'UTF-8')
+                        ],
+                        'webpush' => [
+                            'fcm_options' => [
+                                'link' => $url ?: '/chat'
+                            ],
+                            'notification' => [
+                                'icon' => 'https://jimpitan.appsbee.my.id/favicon.ico',
+                                'badge' => 'https://jimpitan.appsbee.my.id/favicon.ico',
+                                'tag' => 'jimpitan-global',
+                                'renotify' => true,
+                                'requireInteraction' => true,
+                                'vibrate' => [200, 100, 200, 100, 200]
+                            ]
+                        ],
+                        'data' => [
+                            'url' => $url ?: '/chat',
+                            'title' => $title,
+                            'body' => (string)$messageText
+                        ]
+                    ]
+                ];
+
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $fcmUrl);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'Authorization: Bearer ' . $accessToken,
+                    'Content-Type: application/json'
+                ]);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+                
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+
+                if ($httpCode === 200) {
                     $successCount++;
+                } else {
+                    $respDecoded = json_decode($response, true);
+                    $this->logger->error("FCM Send Error ($httpCode): " . ($respDecoded['error']['message'] ?? $response));
+                    
+                    if ($httpCode === 404 || $httpCode === 400 || (isset($respDecoded['error']['status']) && $respDecoded['error']['status'] === 'UNREGISTERED')) {
+                         $db->table('fcm_subscriptions')->where('fcm_token', $token)->delete();
+                         $this->logger->info("FCM: Deleted invalid/unregistered token.");
+                    }
                 }
             }
-            
+
             return $successCount > 0;
 
         } catch (\Exception $e) {
-            $this->logger->error("Push Exception: " . $e->getMessage());
+            $this->logger->error("FCM Exception: " . $e->getMessage());
             return false;
         }
+    }
+
+    protected function getFCMAccessToken()
+    {
+        try {
+            $jsonFile = ROOTPATH . 'jimpitan-app-a7by777-firebase-adminsdk-fbsvc-bd65b27251.json';
+            if (!file_exists($jsonFile)) {
+                $this->logger->error("FCM: Service Account JSON not found.");
+                return null;
+            }
+
+            $config = json_decode(file_get_contents($jsonFile), true);
+            $clientEmail = $config['client_email'];
+            $privateKey = $config['private_key'];
+            $tokenUri = $config['token_uri'];
+
+            $header = json_encode(['alg' => 'RS256', 'typ' => 'JWT']);
+            $now = time();
+            $payload = json_encode([
+                'iss' => $clientEmail,
+                'scope' => 'https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/firebase.messaging',
+                'aud' => $tokenUri,
+                'exp' => $now + 3600,
+                'iat' => $now
+            ]);
+
+            $base64UrlHeader = $this->base64UrlEncode($header);
+            $base64UrlPayload = $this->base64UrlEncode($payload);
+
+            $signature = '';
+            if (!openssl_sign($base64UrlHeader . "." . $base64UrlPayload, $signature, $privateKey, OPENSSL_ALGO_SHA256)) return null;
+            $base64UrlSignature = $this->base64UrlEncode($signature);
+
+            $jwt = $base64UrlHeader . "." . $base64UrlPayload . "." . $base64UrlSignature;
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $tokenUri);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+                'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                'assertion' => $jwt
+            ]));
+
+            $response = curl_exec($ch);
+            curl_close($ch);
+
+            $data = json_decode($response, true);
+            return $data['access_token'] ?? null;
+
+        } catch (\Exception $e) {
+            $this->logger->error("FCM Token Error: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    protected function base64UrlEncode($data)
+    {
+        return str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($data));
     }
 }

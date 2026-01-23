@@ -128,8 +128,10 @@ $routes->get('/chat', 'Chat::index', ['filter' => 'authFilter']);
 $routes->get('/chat/users', 'Chat::getUsers', ['filter' => 'authFilter']);
 $routes->get('/chat/messages', 'Chat::getMessages', ['filter' => 'authFilter']);
 $routes->post('/chat/send', 'Chat::sendMessage', ['filter' => 'authFilter']);
+$routes->post('/chat/system-send', 'Chat::sendSystemMessage'); // No authFilter because it uses API Key
 $routes->get('/chat/poll', 'Chat::pollUpdates', ['filter' => 'authFilter']);
 
 // Push Notifications
 $routes->post('/push/subscribe', 'PushSubscription::subscribe', ['filter' => 'authFilter']);
+$routes->post('/push/subscribe_fcm', 'PushSubscription::subscribe_fcm', ['filter' => 'authFilter']);
 $routes->post('/push/unsubscribe_all', 'PushSubscription::unsubscribeAll', ['filter' => 'authFilter']);

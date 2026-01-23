@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jimpitan-v15';
+const CACHE_NAME = 'jimpitan-fcm-v1';
 const urlsToCache = [
   './offline.html',
 ];
@@ -30,7 +30,15 @@ self.addEventListener('fetch', event => {
         if (response) {
           return response;
         }
-        return fetch(event.request);
+        return fetch(event.request).catch(err => {
+          // Fallback silently for resource fetch failures (like favicon or local dev issues)
+          console.log('SW: Fetch failed for:', event.request.url);
+          if (event.request.mode === 'navigate') {
+            return caches.match('./offline.html');
+          }
+          // For other assets, if it's not critical, just let it fail
+          return new Response('', { status: 404, statusText: 'Not Found' });
+        });
       })
   );
 });
@@ -58,8 +66,11 @@ self.addEventListener('push', function(event) {
     return;
   }
 
-  const data = event.data ? event.data.json() : {};
-  console.log('Push Received v15:', data);
+  const rawData = event.data ? event.data.json() : {};
+  console.log('Push Received (fcm-v1):', rawData);
+
+  // Normalize data (FCM puts fields inside 'data' property if sent as data message)
+  const data = rawData.data ? rawData.data : rawData;
 
   const title = data.title || 'Pesan Baru';
   const options = {
@@ -69,7 +80,7 @@ self.addEventListener('push', function(event) {
     vibrate: [200, 100, 200, 100, 200], 
     tag: 'jimpitan-global',     // Stable tag
     renotify: true,             // Force popup on every push
-    requireInteraction: true,
+    requireInteraction: true,   // Keep notification until user interacts (prevents "fast disappearance")
     silent: false,
     timestamp: Date.now(),
     actions: [

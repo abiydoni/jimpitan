@@ -64,4 +64,44 @@ class PushSubscription extends ResourceController
         
         return $this->respond(['status' => 'all_deleted', 'message' => 'Semua notifikasi berhasil di-reset.']);
     }
+
+    public function subscribe_fcm()
+    {
+        $json = $this->request->getJSON();
+        
+        if (!$json || !isset($json->token)) {
+            return $this->fail('Invalid FCM registration data', 400);
+        }
+        
+        $session = session();
+        if (!$session->get('isLoggedIn')) {
+            return $this->failUnauthorized('User not logged in');
+        }
+        
+        $userId = $session->get('id_code');
+        $token = $json->token;
+        $deviceType = $json->device_type ?? 'web';
+        
+        $db = Database::connect();
+        $builder = $db->table('fcm_subscriptions');
+        
+        // Check if token already exists for this user
+        $exists = $builder->where('fcm_token', $token)->where('user_id', $userId)->countAllResults();
+        
+        if ($exists) {
+            $builder->where('fcm_token', $token)->where('user_id', $userId)
+                    ->update(['updated_at' => date('Y-m-d H:i:s')]);
+            return $this->respond(['status' => 'updated']);
+        } else {
+            $data = [
+                'user_id' => $userId,
+                'fcm_token' => $token,
+                'device_type' => $deviceType,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            $builder->insert($data);
+            return $this->respondCreated(['status' => 'subscribed']);
+        }
+    }
 }

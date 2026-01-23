@@ -31,11 +31,16 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+    
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.5); border-radius: 20px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(156, 163, 175, 0.3); border-radius: 20px; }
 
         /* Chat Backgrounds */
         #messagesContainer {
@@ -47,9 +52,23 @@
         .dark #messagesContainer {
             background-image: url('<?= base_url('assets/img/dark.jpg') ?>');
         }
+        
+        /* Compact Tweaks */
+        .chat-bubble {
+            padding: 0.4rem 0.75rem !important;
+            line-height: 1.4 !important;
+            font-size: 0.875rem !important;
+        }
+        .message-row {
+            margin-bottom: 0.4rem !important;
+        }
+        .date-separator {
+            margin-top: 0.75rem !important;
+            margin-bottom: 0.75rem !important;
+        }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 flex flex-col h-[100dvh] overflow-hidden">
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 flex flex-col h-[100dvh] overflow-hidden text-sm">
 
     <!-- Header Mobile (Visible only on mobile when on user list) -->
 
@@ -74,9 +93,11 @@
                          <h2 class="font-bold text-lg text-gray-800 dark:text-gray-100 leading-tight"><?= esc($user_name) ?></h2>
                          <p class="text-[10px] text-green-500 font-semibold">Online</p>
                     </div>
-                    <button onclick="forceResetSubscription()" class="ml-auto w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-800 flex items-center justify-center text-red-500 dark:text-red-400 transition-colors shadow-sm" title="Reset/Perbaiki Notifikasi">
-                        <i class="fas fa-bell-slash text-xs"></i>
-                    </button>
+                    <div class="ml-auto flex gap-2">
+                        <button id="btnEnableNotif" onclick="askPermission(true)" class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 hover:bg-indigo-200 dark:hover:bg-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 transition-colors shadow-sm hidden" title="Aktifkan Notifikasi">
+                            <i class="fas fa-bell text-xs"></i>
+                        </button>
+                    </div>
                 </div>
                 <!-- Connection Status Dot -->
                 <div id="connectionStatus" class="w-3 h-3 rounded-full bg-green-500 shadow-sm border border-white dark:border-gray-800" title="Terhubung"></div>
@@ -123,7 +144,7 @@
                 </div>
 
                 <!-- Messages -->
-                <div id="messagesContainer" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 min-h-0 relative">
+                <div id="messagesContainer" class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2 min-h-0 relative">
                     <!-- Messages will be rendered here -->
                 </div>
 
@@ -183,7 +204,17 @@
         
         let allUsers = []; // Global Users State
 
-        // ------------------ Global Functions ------------------
+        function getTimeAgo(date) {
+            if (!date || date === '0000-00-00 00:00:00' || date === '0000-00-00') return 'Pernah aktif';
+            const now = new Date();
+            const then = new Date(date);
+            const seconds = Math.floor((now - then) / 1000);
+            
+            if (seconds < 60) return 'Baru saja aktif';
+            if (seconds < 3600) return `Aktif ${Math.floor(seconds / 60)}m lalu`;
+            if (seconds < 86400) return `Aktif ${Math.floor(seconds / 3600)}j lalu`;
+            return `Aktif ${Math.floor(seconds / 86400)}h lalu`;
+        }
 
         async function fetchUsers() {
             try {
@@ -191,6 +222,13 @@
                 const users = await res.json();
                 allUsers = users; // Store globally
                 renderUserList(users);
+                
+                // Update active user status in header if there is one
+                if (activeUserId) {
+                    const activeUser = allUsers.find(u => u.id_code === activeUserId);
+                    if (activeUser) updateChatHeaderStatus(activeUser);
+                }
+                
                 return users;
             } catch(e) {
                 console.error(e);
@@ -202,6 +240,12 @@
             const userListEl = document.getElementById('userList');
             if(!userListEl) return;
             userListEl.innerHTML = '';
+            
+            if (!Array.isArray(users)) {
+                console.error("renderUserList expected array, got:", users);
+                userListEl.innerHTML = '<div class="text-center text-red-500 py-4 text-xs">Gagal memuat warga</div>';
+                return;
+            }
             
             // Search Filter
             const searchInput = document.getElementById('searchUser');
@@ -221,9 +265,10 @@
                     ? 'bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400' 
                     : 'bg-indigo-100 dark:bg-indigo-800 text-indigo-600 dark:text-indigo-300';
                 
+                const statusColor = user.is_online ? 'bg-green-500' : 'bg-gray-400';
                 const onlineDot = isGroup
                     ? '' // No online dot for group
-                    : '<div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>';
+                    : `<div class="absolute bottom-0 right-0 w-3 h-3 ${statusColor} border-2 border-white dark:border-gray-800 rounded-full"></div>`;
 
                 // Initial or Photo
                 let avatarContent;
@@ -236,20 +281,23 @@
                 }
 
                 const div = document.createElement('div');
-                div.className = `p-3 rounded-xl cursor-pointer flex items-center gap-3 transition-colors ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`;
+                // Reduced padding from p-3 to p-2
+                div.className = `p-2 rounded-xl cursor-pointer flex items-center gap-3 transition-colors ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`;
                 div.onclick = () => selectUser(user);
                 
+                const statusText = isGroup ? 'Ruang diskusi warga' : getTimeAgo(user.last_active_at);
+
                 div.innerHTML = `
                     <div class="w-10 h-10 rounded-full shrink-0 ${!user.foto ? avatarBg : ''} flex items-center justify-center font-bold relative">
                         ${avatarContent}
                         ${onlineDot}
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="flex justify-between items-center mb-0.5">
+                        <div class="flex justify-between items-center mb-0">
                             <h4 class="font-semibold text-sm truncate ${isGroup ? 'text-orange-700 dark:text-orange-300' : 'text-gray-800 dark:text-gray-100'}">${user.name}</h4>
-                            <span class="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100">...</span>
+                            <span class="text-[10px] text-gray-400"></span>
                         </div>
-                        <p class="text-xs text-gray-500 truncate">${isGroup ? 'Ruang diskusi warga' : 'Klik untuk chat'}</p>
+                        <p class="text-[11px] text-gray-500 truncate">${statusText}</p>
                     </div>
                     ${unreadBadge}
                 `;
@@ -268,6 +316,7 @@
             // UI Updates
             document.getElementById('receiverId').value = activeUserId;
             document.getElementById('chatName').innerText = user.name;
+            updateChatHeaderStatus(user);
             
             const avatarEl = document.getElementById('chatAvatar');
             if (user.id_code === 'GROUP_ALL') {
@@ -298,6 +347,24 @@
             
             await loadMessages();
             fetchUsers();
+        }
+
+        function updateChatHeaderStatus(user) {
+            const statusEl = document.querySelector('#activeChat h3 + p'); // Target the p after h3 (chatName)
+            if (!statusEl) return;
+            
+            if (user.id_code === 'GROUP_ALL') {
+                statusEl.innerText = 'Grup Diskusi';
+                statusEl.className = 'text-xs text-orange-500';
+            } else {
+                if (user.is_online) {
+                    statusEl.innerText = 'Online';
+                    statusEl.className = 'text-xs text-green-500';
+                } else {
+                    statusEl.innerText = getTimeAgo(user.last_active_at);
+                    statusEl.className = 'text-xs text-gray-400';
+                }
+            }
         }
 
         async function loadMessages() {
@@ -451,9 +518,9 @@
 
             if (lastDateString !== msgDateString) {
                 const separatorDiv = document.createElement('div');
-                separatorDiv.className = 'flex justify-center my-4 opacity-80';
+                separatorDiv.className = 'flex justify-center date-separator opacity-80';
                 separatorDiv.innerHTML = `
-                    <span class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] px-3 py-1 rounded-full shadow-sm font-medium">
+                    <span class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[9px] px-2 py-0.5 rounded-full shadow-sm font-medium">
                         ${formatDateSeparator(msg.created_at)}
                     </span>
                 `;
@@ -479,7 +546,7 @@
             // PERFORMANCE FIX: Only animate if it's a NEW message (not history load)
             const animationClass = scroll ? 'animate__animated animate__fadeInUp animate__faster' : '';
             div.tabIndex = 0; // Make focusable for mobile tap
-            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-4 ${animationClass} group items-end gap-2 outline-none tap-highlight-transparent ${msg.is_pending ? 'msg-pending' : ''}`;
+            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} message-row ${animationClass} group items-end gap-1 outline-none tap-highlight-transparent ${msg.is_pending ? 'msg-pending' : ''}`;
             
             const time = new Date(msg.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
             
@@ -534,10 +601,10 @@
 
             div.innerHTML = `
                 ${isMe ? actionsHtml : ''}
-                <div class="max-w-[85%] md:max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'} overflow-hidden">
-                    <div class="${isJumbo ? 'px-0 py-0' : 'px-4 py-2'} rounded-2xl text-sm shadow-sm relative ${bubbleClass} break-words overflow-hidden max-w-full">
-                        ${(!isMe && activeUserId === 'GROUP_ALL' && !isJumbo) ? `<p class="text-[11px] font-bold ${nameColor} mb-0.5 leading-tight">${displayName}</p>` : ''}
-                        ${(!isMe && activeUserId === 'GROUP_ALL' && isJumbo) ? `<p class="text-[10px] font-bold ${nameColor} mb-0 leading-tight bg-white/80 dark:bg-slate-800/80 px-1 rounded absolute -top-4 left-0 w-max shadow-sm">${displayName}</p>` : ''}
+                <div class="max-w-[90%] md:max-w-[80%] flex flex-col ${isMe ? 'items-end' : 'items-start'} overflow-hidden">
+                    <div class="${isJumbo ? 'px-0 py-0' : 'chat-bubble'} rounded-2xl text-[13px] shadow-sm relative ${bubbleClass} break-words overflow-hidden max-w-full">
+                        ${(!isMe && activeUserId === 'GROUP_ALL' && !isJumbo) ? `<p class="text-[10px] font-bold ${nameColor} mb-0.5 leading-tight">${displayName}</p>` : ''}
+                        ${(!isMe && activeUserId === 'GROUP_ALL' && isJumbo) ? `<p class="text-[9px] font-bold ${nameColor} mb-0 leading-tight bg-white/80 dark:bg-slate-800/80 px-1 rounded absolute -top-4 left-0 w-max shadow-sm">${displayName}</p>` : ''}
                         ${quoteHtml}
                         ${formatMessage(msg.message)}
                     </div>
@@ -890,8 +957,8 @@
                         if(currentPushEndpoint) {
                              formData.append('exclude_endpoint', currentPushEndpoint);
                              console.log('📤 Sending exclude_endpoint:', currentPushEndpoint);
-                        } else {
-                             console.warn('⚠️ No currentPushEndpoint available!');
+                        } else if (Notification.permission === 'granted') {
+                             console.log('ℹ️ Push endpoint not yet captured, deduplication may be limited.');
                         }
     
                         const res = await fetch(`${baseUrl}/chat/send`, {
@@ -914,81 +981,94 @@
         });
 
         // --- PUSH NOTIFICATION LOGIC ---
-        const vapidPublicKey = '<?= $vapid_public_key ?>';
+        const vapidPublicKey = 'BIb0u4eLioyZgzPJRmFAoI3LdD87wOR2_4L6CpqDmAyIeUK_JqfW17fT-Iy3C4zTlSlrEBZn2cjZ5vh68W0KdSk';
         let currentPushEndpoint = null;
+        
+        // --- FCM LOGIC ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCMO1z8UGvFNyOnzAV-dsx1VLjOtCAjtdc",
+            authDomain: "jimpitan-app-a7by777.firebaseapp.com",
+            projectId: "jimpitan-app-a7by777",
+            storageBucket: "jimpitan-app-a7by777.firebasestorage.app",
+            messagingSenderId: "53228839762",
+            appId: "1:53228839762:web:ae75cb6fc64b9441ac108b",
+            measurementId: "G-XG704TQRJ2"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const messaging = firebase.messaging();
 
-        function urlBase64ToUint8Array(base64String) {
-            const padding = '='.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding)
-                .replace(/\-/g, '+')
-                .replace(/_/g, '/');
-            const rawData = window.atob(base64);
-            const outputArray = new Uint8Array(rawData.length);
-            for (let i = 0; i < rawData.length; ++i) {
-                outputArray[i] = rawData.charCodeAt(i);
+        async function registerFCM() {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const token = await messaging.getToken({
+                    serviceWorkerRegistration: registration,
+                    vapidKey: vapidPublicKey
+                });
+                
+                if (token) {
+                    console.log('✅ FCM Token captured:', token);
+                    currentPushEndpoint = token; // Add this line
+                    await sendFCMTokenToServer(token);
+                } else {
+                    console.warn('No FCM token received.');
+                }
+            } catch (err) {
+                console.error('Error getting FCM token:', err);
             }
-            return outputArray;
         }
 
-        async function askPermission() {
-            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-                alert('Browser tidak mendukung Push Notification.');
-                return;
-            }
+        async function sendFCMTokenToServer(token) {
+            await fetch('<?= base_url("push/subscribe_fcm") ?>', {
+                method: 'POST',
+                body: JSON.stringify({ token: token, device_type: 'web' }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        async function askPermission(isManual = false) {
+            // Fix isManual being an event if called from onclick="askPermission()"
+            if(typeof isManual !== 'boolean') isManual = true;
+
+            console.log(`🔔 askPermission called (manual: ${isManual})`);
             
-            if(!vapidPublicKey) {
-                alert("VAPID Key belum dikonfigurasi di server.");
+            if (!('serviceWorker' in navigator)) {
+                if(isManual) alert('Browser tidak mendukung Service Worker.');
                 return;
             }
 
-            const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                registerServiceWorker();
-            } else {
-                alert('Notifikasi diblokir. Silakan izinkan di pengaturan browser.');
+            try {
+                const permission = await Notification.requestPermission();
+                console.log(`🎭 Permission outcome: ${permission}`);
+                
+                if (permission === 'granted') {
+                    if(isManual) alert('Notifikasi diaktifkan!');
+                    registerServiceWorker();
+                } else if (isManual && permission === 'denied') {
+                    alert('Notifikasi diblokir. Silakan izinkan di pengaturan browser.');
+                }
+            } catch (err) {
+                console.warn('⚠️ Notification permission request failed or ignored', err);
             }
         }
 
         async function registerServiceWorker() {
             try {
-                // Register
                 await navigator.serviceWorker.register('<?= base_url("sw.js") ?>');
                 console.log('Service Worker Registered');
                 
-                // CRITICAL: Wait for Active Worker
-                const registration = await navigator.serviceWorker.ready;
-                
-                // Subscription
-                const subscription = await registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
-                });
-                
-                currentPushEndpoint = subscription.endpoint;
-                console.log('✅ Push Endpoint captured:', currentPushEndpoint);
-                
-                await sendSubscriptionToServer(subscription);
+                await navigator.serviceWorker.ready;
                 
                 const btn = document.getElementById('btnEnableNotif');
                 if(btn) btn.classList.add('hidden');
                 
+                registerFCM();
             } catch (error) {
                 console.error('Service Worker Error', error);
-                // Only alert if this was triggered by user action, or if it's a critical error
                 if (window.isResubscribing) {
                     alert("Gagal mengaktifkan notifikasi: " + error.message);
                 }
             }
-        }
-
-        async function sendSubscriptionToServer(subscription) {
-            await fetch('<?= base_url("push/subscribe") ?>', {
-                method: 'POST',
-                body: JSON.stringify(subscription),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
         }
 
         // Helper to convert ArrayBuffer to Base64 (URL Safe)
@@ -1005,104 +1085,44 @@
                 .replace(/=+$/, '');
         }
 
-        async function forceResetSubscription() {
-            if (!confirm('PERINGATAN: Ini akan menghapus TOTAL semua data notifikasi Anda di server untuk mengatasi error "double notif". Lanjutkan?')) return;
-            
-            // Set flag for post-reload
-            localStorage.setItem('push_resubscribe_pending', 'true');
-            
-            // 0. Server-side Nuclear Wipe
-            try {
-                await fetch('<?= base_url("push/unsubscribe_all") ?>', { method: 'POST' });
-                console.log('Server-side subscriptions wiped.');
-            } catch(e) {
-                console.error("Server wipe failed", e);
-            }
 
-            if ('serviceWorker' in navigator) {
-                try {
-                    // 1. Unsubscribe current active if any
-                    const readyReg = await navigator.serviceWorker.ready;
-                    const sub = await readyReg.pushManager.getSubscription();
-                    if (sub) {
-                        await sub.unsubscribe();
-                        console.log('Active subscription unsubscribed.');
-                    }
-                    
-                    // 2. Unregister ALL Service Workers (Aggressive Cleanup)
-                    const registrations = await navigator.serviceWorker.getRegistrations();
-                    for(let registration of registrations) {
-                        await registration.unregister();
-                        console.log('Service Worker unregistered:', registration.scope);
-                    }
-                    
-                    // 3. Reload for clean init
-                    alert('Reset data berhasil. Halaman akan dimuat ulang untuk inisialisasi fresh.');
-                    location.reload();
-
-                } catch(e) {
-                    console.error("Reset failed", e);
-                    alert("Gagal reset: " + e.message);
-                }
-            } else {
-                alert('Browser tidak mendukung Service Worker.');
-            }
-        }
-
-        // Check if already subscribed
-        if ('serviceWorker' in navigator && 'PushManager' in window && vapidPublicKey) {
-            // Kickstart registration to ensure .ready resolves
+        // Initialize Notifications
+        if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('<?= base_url("sw.js") ?>').then(() => {
                 return navigator.serviceWorker.ready;
             }).then(async (reg) => {
                try {
-                   // Force check for latest sw.js update on server
                    reg.update();
 
-                   // Check if we just did a reset
-                   window.isResubscribing = localStorage.getItem('push_resubscribe_pending') === 'true';
-                   if (window.isResubscribing) {
-                       localStorage.removeItem('push_resubscribe_pending');
-                       console.log("Post-reset re-subscription flow active...");
-                   }
+                   if (Notification.permission === 'granted') {
+                       console.log('✅ Permission already granted.');
+                       registerFCM();
+                   } else if (Notification.permission === 'default') {
+                       console.log('⏳ Permission is default. Trying auto-prompt + showing bell...');
+                       
+                       const btn = document.getElementById('btnEnableNotif');
+                       if (btn) btn.classList.remove('hidden');
 
-                   const sub = await reg.pushManager.getSubscription();
-                   if (!sub) {
-                       // Case 1: No subscription. Auto-ask if permission allowed.
-                       if (Notification.permission === 'granted' || Notification.permission === 'default') {
-                           registerServiceWorker().then(() => {
-                               if (window.isResubscribing) {
-                                   alert("Notifikasi telah aktif kembali secara otomatis!");
-                               }
-                           });
-                       }
-                   } else {
-                       // Case 2: Subscription exists. Check against current Key.
-                       currentPushEndpoint = sub.endpoint;
-                       console.log('✅ Push Endpoint captured:', currentPushEndpoint);
+                       // Try auto-prompt immediately
+                       askPermission(false);
                        
-                       const existingKeyBuffer = sub.options.applicationServerKey;
-                       if (existingKeyBuffer) {
-                           const existingKey = arrayBufferToBase64(existingKeyBuffer);
-                           const currentKeyClean = vapidPublicKey.replace(/=+$/, '');
-                           
-                           if (existingKey !== currentKeyClean) {
-                               console.log("⚠️ Key Mismatch detected! Rotating subscription...");
-                               await sub.unsubscribe();
-                               registerServiceWorker();
-                               return; 
+                       const triggerOnInteraction = () => {
+                           if (Notification.permission === 'default') {
+                               console.log('👆 User interaction detected. Triggering permission...');
+                               askPermission(false);
                            }
-                       }
-                       
-                       // Sync with server
-                       await sendSubscriptionToServer(sub);
-                       
-                       if (window.isResubscribing) {
-                           alert("Notifikasi sinkron kembali!");
-                       }
+                           document.removeEventListener('click', triggerOnInteraction);
+                           document.removeEventListener('touchstart', triggerOnInteraction);
+                       };
+                       document.addEventListener('click', triggerOnInteraction);
+                       document.addEventListener('touchstart', triggerOnInteraction);
+                   } else {
+                       console.log('🚫 Permission is denied.');
+                       const btn = document.getElementById('btnEnableNotif');
+                       if (btn) btn.classList.remove('hidden');
                    }
                } catch (e) {
-                   console.error("Subscription check failed", e);
+                   console.error("FCM Check failed", e);
                }
             });
         }

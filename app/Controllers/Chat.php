@@ -42,13 +42,40 @@ class Chat extends BaseController
         }
 
         $currentUserId = session()->get('id_code');
-        $users = $this->userModel->where('id_code !=', $currentUserId)->findAll();
+        $db = \Config\Database::connect();
+        
+        // Auto-fix & Column Check
+        $hasLastActiveCol = $db->fieldExists('last_active_at', 'users');
+        if (!$hasLastActiveCol) {
+            try {
+                $db->query("ALTER TABLE users ADD COLUMN last_active_at DATETIME DEFAULT NULL");
+                $hasLastActiveCol = true;
+            } catch (\Exception $e) {
+                log_message('error', 'Failed to add last_active_at column: ' . $e->getMessage());
+            }
+        }
+
+        // Update current user activity if column exists
+        if ($hasLastActiveCol) {
+            try {
+                $this->userModel->update($currentUserId, ['last_active_at' => date('Y-m-d H:i:s')]);
+            } catch (\Exception $e) {}
+        }
+        
+        // Select only existing columns to prevent "Unknown column" error
+        $builder = $this->userModel->where('id_code !=', $currentUserId);
+        if ($hasLastActiveCol) {
+            $users = $builder->findAll();
+        } else {
+            // Select everything EXCEPT last_active_at if it's still missing for some reason
+            $fields = ['id_code', 'user_name', 'name', 'password', 'role', 'shift', 'remember_token', 'nikk', 'tarif'];
+            $users = $builder->select(implode(',', $fields))->findAll();
+        }
         
         // Fetch Photos from tb_warga
         $names = array_column($users, 'name');
         $photoMap = [];
         if (!empty($names)) {
-            $db = \Config\Database::connect();
             $wargas = $db->table('tb_warga')
                          ->select('nama, foto')
                          ->whereIn('nama', $names)
@@ -64,6 +91,9 @@ class Chat extends BaseController
         // Get last activity times
         $activityTimes = $this->chatModel->getLastActivityTimes($currentUserId);
         
+        $now = time();
+        $onlineThreshold = 120; // 2 minutes
+
         // Add unread count and last activity for each user
         foreach ($users as &$user) {
             $user['unread_count'] = $this->chatModel->where('sender_id', $user['id_code'])
@@ -74,14 +104,23 @@ class Chat extends BaseController
             // Activity time
             $user['last_activity'] = $activityTimes[$user['id_code']] ?? '0000-00-00 00:00:00';
             
+            // Online Status based on last_active_at
+            $lastActive = isset($user['last_active_at']) ? strtotime($user['last_active_at']) : 0;
+            $user['is_online'] = ($now - $lastActive) < $onlineThreshold;
+
             // Add Photo
             $user['foto'] = $photoMap[$user['name']] ?? null;
         }
 
         // Group Chat Unread Logic
         $db = \Config\Database::connect();
-        $groupRead = $db->table('chat_groups_read')->where('user_id', $currentUserId)->get()->getRowArray();
-        $lastReadId = $groupRead ? $groupRead['last_read_message_id'] : 0;
+        $lastReadId = 0;
+        try {
+            $groupRead = $db->table('chat_groups_read')->where('user_id', $currentUserId)->get()->getRowArray();
+            $lastReadId = $groupRead ? $groupRead['last_read_message_id'] : 0;
+        } catch (\Exception $e) {
+            // Table might be missing, ignore and default to 0
+        }
         
         $groupUnread = $this->chatModel->where('receiver_id', 'GROUP_ALL')
                                        ->where('id >', $lastReadId)
@@ -95,6 +134,7 @@ class Chat extends BaseController
             'role' => 'group',
             'foto' => 'group_icon.png', // We handle this in frontend or use default
             'unread_count' => $groupUnread,
+            'is_online' => true,
             'last_activity' => $activityTimes['GROUP_ALL'] ?? '0000-00-00 00:00:00'
         ];
         
@@ -134,15 +174,19 @@ class Chat extends BaseController
             
             // Mark Group as Read (Upsert)
             if (!empty($messages)) {
-                $db = \Config\Database::connect();
-                // We assume successful load means user sees LATEST messages. 
-                // So we set last_read to the absolute max ID in the group channel.
-                $maxGroupMsg = $this->chatModel->selectMax('id')->where('receiver_id', 'GROUP_ALL')->first();
-                $maxId = $maxGroupMsg ? $maxGroupMsg['id'] : 0;
-                
-                if ($maxId > 0) {
-                     $sql = "INSERT INTO chat_groups_read (user_id, last_read_message_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE last_read_message_id = GREATEST(last_read_message_id, VALUES(last_read_message_id))";
-                     $db->query($sql, [$currentUserId, $maxId]);
+                try {
+                    $db = \Config\Database::connect();
+                    // We assume successful load means user sees LATEST messages. 
+                    // So we set last_read to the absolute max ID in the group channel.
+                    $maxGroupMsg = $this->chatModel->selectMax('id')->where('receiver_id', 'GROUP_ALL')->first();
+                    $maxId = $maxGroupMsg ? $maxGroupMsg['id'] : 0;
+                    
+                    if ($maxId > 0) {
+                         $sql = "INSERT INTO chat_groups_read (user_id, last_read_message_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE last_read_message_id = GREATEST(last_read_message_id, VALUES(last_read_message_id))";
+                         $db->query($sql, [$currentUserId, $maxId]);
+                    }
+                } catch (\Exception $e) {
+                    // Ignore if table missing
                 }
             }
         }
@@ -255,6 +299,74 @@ class Chat extends BaseController
             'status' => 'success',
             'data' => ['id' => $newMsgId ?? null]
         ]);
+    }
+
+    /**
+     * API Endpoint for External Systems (e.g., auto_send_test.php)
+     * To make cron-based messages real-time.
+     */
+    public function sendSystemMessage()
+    {
+        $apiKey = $this->request->getGet('key') ?: $this->request->getPost('key');
+        $expectedKey = getenv('CHAT_SYSTEM_KEY');
+
+        if (!$expectedKey || $apiKey !== $expectedKey) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid API Key'])->setStatusCode(403);
+        }
+
+        $receiverId = $this->request->getPost('receiver_id');
+        $message = $this->request->getPost('message');
+        $senderId = $this->request->getPost('sender_id') ?: 'SYSTEM';
+        $senderName = $this->request->getPost('sender_name') ?: 'System';
+
+        if (!$receiverId || !$message) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'receiver_id and message are required'])->setStatusCode(400);
+        }
+
+        $data = [
+            'sender_id' => $senderId,
+            'receiver_id' => $receiverId,
+            'message' => $message,
+            'is_read' => 0,
+            'notification_sent' => 0,
+            'reply_to_id' => null, // Ditambahkan agar semua kolom terisi
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+
+        if ($this->chatModel->insert($data)) {
+            $newMsgId = $this->chatModel->getInsertID();
+            
+            // Trigger Immediate Push
+            try {
+                $pushService = new \App\Libraries\PushService();
+                $redirectUrl = ($receiverId === 'GROUP_ALL') ? '/chat?user_id=GROUP_ALL' : '/chat?user_id=' . $senderId;
+                
+                $success = false;
+                if ($receiverId === 'GROUP_ALL') {
+                    $db = \Config\Database::connect();
+                    $users = $db->table('users')->select('id_code')->where('id_code !=', $senderId)->get()->getResultArray();
+                    $userIds = array_column($users, 'id_code');
+                    $success = $pushService->sendNotification($userIds, $message, $senderName, $redirectUrl, $senderId);
+                } else {
+                    $success = $pushService->sendNotification($receiverId, $message, $senderName, $redirectUrl, $senderId);
+                }
+
+                if ($success) {
+                    $this->chatModel->update($newMsgId, ['notification_sent' => 1]);
+                }
+            } catch (\Exception $e) {
+                log_message('error', 'System Chat API Push Error: ' . $e->getMessage());
+            }
+
+            return $this->response->setJSON([
+                'status' => 'success',
+                'chat_id' => $newMsgId,
+                'notification' => isset($success) && $success ? 'sent' : 'queued'
+            ]);
+        }
+
+        return $this->response->setJSON(['status' => 'error', 'message' => 'Failed to save message'])->setStatusCode(500);
     }
 
     private function triggerPush($receiverId, $messageText, $senderName)
