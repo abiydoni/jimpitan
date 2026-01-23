@@ -127,14 +127,25 @@ class PushService
         try {
             $jsonFile = ROOTPATH . 'jimpitan-app-a7by777-firebase-adminsdk-fbsvc-bd65b27251.json';
             if (!file_exists($jsonFile)) {
-                $this->logger->error("FCM: Service Account JSON not found.");
+                $this->logger->error("FCM: Service Account JSON not found at $jsonFile");
                 return null;
             }
 
-            $config = json_decode(file_get_contents($jsonFile), true);
-            $clientEmail = $config['client_email'];
-            $privateKey = $config['private_key'];
-            $tokenUri = $config['token_uri'];
+            $jsonContent = file_get_contents($jsonFile);
+            $config = json_decode($jsonContent, true);
+            if (!$config) {
+                $this->logger->error("FCM: Invalid JSON format in Service Account file.");
+                return null;
+            }
+
+            $clientEmail = $config['client_email'] ?? null;
+            $privateKey = $config['private_key'] ?? null;
+            $tokenUri = $config['token_uri'] ?? 'https://oauth2.googleapis.com/token';
+
+            if (!$clientEmail || !$privateKey) {
+                $this->logger->error("FCM: Missing client_email or private_key in JSON.");
+                return null;
+            }
 
             $header = json_encode(['alg' => 'RS256', 'typ' => 'JWT']);
             $now = time();
@@ -150,7 +161,10 @@ class PushService
             $base64UrlPayload = $this->base64UrlEncode($payload);
 
             $signature = '';
-            if (!openssl_sign($base64UrlHeader . "." . $base64UrlPayload, $signature, $privateKey, OPENSSL_ALGO_SHA256)) return null;
+            if (!openssl_sign($base64UrlHeader . "." . $base64UrlPayload, $signature, $privateKey, OPENSSL_ALGO_SHA256)) {
+                $this->logger->error("FCM: openssl_sign failed. Check if OpenSSL extension is enabled.");
+                return null;
+            }
             $base64UrlSignature = $this->base64UrlEncode($signature);
 
             $jwt = $base64UrlHeader . "." . $base64UrlPayload . "." . $base64UrlSignature;
@@ -160,18 +174,24 @@ class PushService
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
-                'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                'grant_type' => 'urn:ietf:params:oauth-grant-type:jwt-bearer',
                 'assertion' => $jwt
             ]));
 
             $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
+
+            if ($httpCode !== 200) {
+                $this->logger->error("FCM Token API Error ($httpCode): $response");
+                return null;
+            }
 
             $data = json_decode($response, true);
             return $data['access_token'] ?? null;
 
         } catch (\Exception $e) {
-            $this->logger->error("FCM Token Error: " . $e->getMessage());
+            $this->logger->error("FCM Token Exception: " . $e->getMessage());
             return null;
         }
     }
