@@ -14,7 +14,7 @@ class PushService
         $this->logger = \Config\Services::logger();
     }
 
-    public function sendNotification($receiverId, $messageText, $senderName, $url = null)
+    public function sendNotification($receiverId, $messageText, $senderName, $url = null, $senderId = null, $excludeEndpoint = null)
     {
         try {
             // Check library
@@ -39,10 +39,36 @@ class PushService
             }
 
             $db = \Config\Database::connect();
-            $subscriptions = $db->table('push_subscriptions')
-                                ->where('user_id', $receiverId)
-                                ->get()
-                                ->getResultArray();
+            $builder = $db->table('push_subscriptions');
+            
+            if (is_array($receiverId)) {
+                $builder->whereIn('user_id', $receiverId);
+            } else {
+                $builder->where('user_id', $receiverId);
+            }
+            
+            // Smart Filter: Exclude Sender's Endpoints (Prevent Self-Notify on Shared Device)
+            if ($senderId) {
+                $subQuery = $db->table('push_subscriptions')
+                               ->select('endpoint')
+                               ->where('user_id', $senderId)
+                               ->get()->getResultArray();
+                $excludeEps = array_column($subQuery, 'endpoint');
+                
+                if (!empty($excludeEps)) {
+                    $builder->whereNotIn('endpoint', $excludeEps);
+                }
+            }
+            
+            // Explicit Exclusion (Bulletproof) - MOVED TO PHP LOOP
+            // We removed the SQL WHERE clause to allow PHP side logging and robust comparison
+            if (!$excludeEndpoint) {
+                $this->logger->warning("PushService: No excludeEndpoint provided!");
+            }
+            
+            $subscriptions = $builder->groupBy('endpoint')
+                                     ->get()
+                                     ->getResultArray();
 
             if (empty($subscriptions)) {
                  $this->logger->info("PushService: No subscriptions for user " . $receiverId);
@@ -134,11 +160,31 @@ class PushService
             
             $payload = json_encode($payloadData, JSON_UNESCAPED_UNICODE);
 
+            $seenEndpoints = [];
             foreach ($subscriptions as $sub) {
-                if (empty($sub['endpoint'])) continue;
+                $currentEndpoint = $sub['endpoint'];
+                if (empty($currentEndpoint)) continue;
+                
+                // PHP-Side Explicit Exclusion
+                if ($excludeEndpoint) {
+                    if ($currentEndpoint === $excludeEndpoint) {
+                        $this->logger->info("PushService: SKIPPING (Exact Match): " . substr($currentEndpoint, -20));
+                        continue;
+                    }
+                    if (urldecode($currentEndpoint) === urldecode($excludeEndpoint)) {
+                        $this->logger->info("PushService: SKIPPING (Decoded Match): " . substr($currentEndpoint, -20));
+                        continue;
+                    }
+                }
+                
+                // Deduplicate: If endpoint already processed, skip
+                if (in_array($currentEndpoint, $seenEndpoints)) continue;
+                $seenEndpoints[] = $currentEndpoint;
+                
+                $this->logger->info("PushService: Queueing Notification -> " . substr($currentEndpoint, -15));
 
                 $subscription = Subscription::create([
-                    'endpoint' => $sub['endpoint'],
+                    'endpoint' => $currentEndpoint,
                     'keys' => [
                         'p256dh' => $sub['p256dh'],
                         'auth' => $sub['auth'],

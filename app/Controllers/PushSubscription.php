@@ -49,4 +49,19 @@ class PushSubscription extends ResourceController
             return $this->respondCreated(['status' => 'subscribed']);
         }
     }
+    public function unsubscribeAll()
+    {
+        $session = session();
+        if (!$session->get('isLoggedIn')) {
+             return $this->failUnauthorized('User not logged in');
+        }
+        
+        $userId = $session->get('id_code');
+        $db = Database::connect();
+        
+        // NUCLEAR OPTION: Delete ALL subscriptions for this user
+        $db->table('push_subscriptions')->where('user_id', $userId)->delete();
+        
+        return $this->respond(['status' => 'all_deleted', 'message' => 'Semua notifikasi berhasil di-reset.']);
+    }
 }

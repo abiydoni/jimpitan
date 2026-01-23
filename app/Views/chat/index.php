@@ -74,6 +74,9 @@
                          <h2 class="font-bold text-lg text-gray-800 dark:text-gray-100 leading-tight"><?= esc($user_name) ?></h2>
                          <p class="text-[10px] text-green-500 font-semibold">Online</p>
                     </div>
+                    <button onclick="forceResetSubscription()" class="ml-auto w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-800 flex items-center justify-center text-red-500 dark:text-red-400 transition-colors shadow-sm" title="Reset/Perbaiki Notifikasi">
+                        <i class="fas fa-bell-slash text-xs"></i>
+                    </button>
                 </div>
                 <!-- Connection Status Dot -->
                 <div id="connectionStatus" class="w-3 h-3 rounded-full bg-green-500 shadow-sm border border-white dark:border-gray-800" title="Terhubung"></div>
@@ -426,6 +429,12 @@
              }
         }
 
+        function decodeHtml(html) {
+            const txt = document.createElement("textarea");
+            txt.innerHTML = html;
+            return txt.value;
+        }
+
         function renderMessage(msg, scroll = true) {
             // Anti-duplicate check
             if (msg.id && document.getElementById(`msg-${msg.id}`)) return;
@@ -563,6 +572,25 @@
             }
         }
 
+        function cleanupDuplicates(newMessages) {
+            const pendings = document.querySelectorAll('.msg-pending');
+            if(pendings.length === 0) return;
+            
+            newMessages.forEach(msg => {
+                 const cleanMsg = decodeHtml(msg.message || '').trim().replace(/\r\n/g, '\n');
+                 const cleanMsgUrl = decodeURIComponent(cleanMsg);
+                 
+                 pendings.forEach(p => {
+                     const rawP = (p.getAttribute('data-content') || '').trim().replace(/\r\n/g, '\n');
+                     const rawPUrl = decodeURIComponent(rawP);
+                     
+                     if (rawP === cleanMsg || rawPUrl === cleanMsgUrl || rawP === cleanMsgUrl || rawPUrl === cleanMsg) {
+                         p.remove();
+                     }
+                 });
+            });
+        }
+
         async function startPolling() {
             if(pollingInterval) clearInterval(pollingInterval);
             pollingInterval = setInterval(async () => {
@@ -575,6 +603,9 @@
                     
                     if(activeUserId && data.messages) {
                         const messagesContainer = document.getElementById('messagesContainer');
+                        
+                        // Self-healing: Aggressive Cleanup
+                        cleanupDuplicates(data.messages);
                         
                         // Optimized Polling: Append Only, Don't Wipe
                         let hasNew = false;
@@ -808,53 +839,80 @@
                 }
             });
 
-            document.getElementById('messageForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const input = document.getElementById('messageInput');
-                const message = input.value.trim();
+            const msgForm = document.getElementById('messageForm');
+            // Singleton Guard: Prevent duplicate listeners if script re-runs
+            if (msgForm.getAttribute('data-listener-attached')) {
+                console.log("Listener already attached to messageForm");
+            } else {
+                msgForm.setAttribute('data-listener-attached', 'true');
                 
-                if(!message || !activeUserId) return;
-
-                // Optimistic Rendering
-                renderMessage({
-                    sender_id: currentUserId,
-                    message: message,
-                    created_at: new Date().toISOString(),
-                    is_pending: true,
-                    reply_to_id: replyingTo ? replyingTo.id : null,
-                    reply_message: replyingTo ? replyingTo.message : null,
-                    reply_sender: replyingTo ? replyingTo.sender : null
-                }, true);
-                
-                input.value = '';
-                input.style.height = 'auto';
-                scrollToBottom();
-
-                try {
-                    const formData = new FormData();
-                    formData.append('receiver_id', activeUserId);
-                    formData.append('message', message);
-                    if(replyingTo) {
-                        formData.append('reply_to_id', replyingTo.id);
-                        cancelReply();
-                    }
-
-                    const res = await fetch(`${baseUrl}/chat/send`, {
-                        method: 'POST',
-                        body: formData,
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    const data = await res.json();
+                let isSending = false;
+                msgForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    if(isSending) return;
                     
-                } catch(err) {
-                    console.error("Send failed", err);
-                    alert("Gagal mengirim pesan");
-                }
-            });
+                    const input = document.getElementById('messageInput');
+                    const message = input.value.trim();
+                    
+                    if(!message || !activeUserId) return;
+    
+                    isSending = true;
+                    const sendBtn = document.querySelector('#messageForm button');
+                    if(sendBtn) sendBtn.disabled = true;
+    
+                    // Optimistic Rendering
+                    renderMessage({
+                        sender_id: currentUserId,
+                        message: message,
+                        created_at: new Date().toISOString(),
+                        is_pending: true,
+                        reply_to_id: replyingTo ? replyingTo.id : null,
+                        reply_message: replyingTo ? replyingTo.message : null,
+                        reply_sender: replyingTo ? replyingTo.sender : null
+                    }, true);
+                    
+                    input.value = '';
+                    input.style.height = 'auto';
+                    scrollToBottom();
+    
+                    try {
+                        const formData = new FormData();
+                        formData.append('receiver_id', activeUserId);
+                        formData.append('message', message);
+                        if(replyingTo) {
+                            formData.append('reply_to_id', replyingTo.id);
+                            cancelReply();
+                        }
+                        
+                        if(currentPushEndpoint) {
+                             formData.append('exclude_endpoint', currentPushEndpoint);
+                             console.log('📤 Sending exclude_endpoint:', currentPushEndpoint);
+                        } else {
+                             console.warn('⚠️ No currentPushEndpoint available!');
+                        }
+    
+                        const res = await fetch(`${baseUrl}/chat/send`, {
+                            method: 'POST',
+                            body: formData,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+                        const data = await res.json();
+                        
+                    } catch(err) {
+                        console.error("Send failed", err);
+                        alert("Gagal mengirim pesan");
+                    } finally {
+                        isSending = false;
+                        const sendBtn = document.querySelector('#messageForm button');
+                        if(sendBtn) sendBtn.disabled = false;
+                    }
+                });
+            }
         });
 
         // --- PUSH NOTIFICATION LOGIC ---
         const vapidPublicKey = '<?= $vapid_public_key ?>';
+        let currentPushEndpoint = null;
 
         function urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -890,24 +948,33 @@
 
         async function registerServiceWorker() {
             try {
-                const registration = await navigator.serviceWorker.register('<?= base_url("sw.js") ?>');
+                // Register
+                await navigator.serviceWorker.register('<?= base_url("sw.js") ?>');
                 console.log('Service Worker Registered');
                 
+                // CRITICAL: Wait for Active Worker
+                const registration = await navigator.serviceWorker.ready;
+                
+                // Subscription
                 const subscription = await registration.pushManager.subscribe({
                     userVisibleOnly: true,
                     applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
                 });
+                
+                currentPushEndpoint = subscription.endpoint;
+                console.log('✅ Push Endpoint captured:', currentPushEndpoint);
                 
                 await sendSubscriptionToServer(subscription);
                 
                 const btn = document.getElementById('btnEnableNotif');
                 if(btn) btn.classList.add('hidden');
                 
-                // alert("Notifikasi telah diaktifkan!"); // Optional: less spammy
-                
             } catch (error) {
                 console.error('Service Worker Error', error);
-                alert("Gagal mengaktifkan notifikasi: " + error.message);
+                // Only alert if this was triggered by user action, or if it's a critical error
+                if (window.isResubscribing) {
+                    alert("Gagal mengaktifkan notifikasi: " + error.message);
+                }
             }
         }
 
@@ -936,21 +1003,44 @@
         }
 
         async function forceResetSubscription() {
-            if (!confirm('Ini akan mereset koneksi notifikasi Anda. Lanjutkan?')) return;
+            if (!confirm('PERINGATAN: Ini akan menghapus TOTAL semua data notifikasi Anda di server untuk mengatasi error "double notif". Lanjutkan?')) return;
             
+            // Set flag for post-reload
+            localStorage.setItem('push_resubscribe_pending', 'true');
+            
+            // 0. Server-side Nuclear Wipe
+            try {
+                await fetch('<?= base_url("push/unsubscribe_all") ?>', { method: 'POST' });
+                console.log('Server-side subscriptions wiped.');
+            } catch(e) {
+                console.error("Server wipe failed", e);
+            }
+
             if ('serviceWorker' in navigator) {
-                const reg = await navigator.serviceWorker.ready;
-                const sub = await reg.pushManager.getSubscription();
-                if (sub) {
-                    await sub.unsubscribe();
-                    console.log('Old subscription removed.');
+                try {
+                    // 1. Unsubscribe current active if any
+                    const readyReg = await navigator.serviceWorker.ready;
+                    const sub = await readyReg.pushManager.getSubscription();
+                    if (sub) {
+                        await sub.unsubscribe();
+                        console.log('Active subscription unsubscribed.');
+                    }
+                    
+                    // 2. Unregister ALL Service Workers (Aggressive Cleanup)
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for(let registration of registrations) {
+                        await registration.unregister();
+                        console.log('Service Worker unregistered:', registration.scope);
+                    }
+                    
+                    // 3. Reload for clean init
+                    alert('Reset data berhasil. Halaman akan dimuat ulang untuk inisialisasi fresh.');
+                    location.reload();
+
+                } catch(e) {
+                    console.error("Reset failed", e);
+                    alert("Gagal reset: " + e.message);
                 }
-                // Unregister SW to be safe
-                // await reg.unregister(); 
-                
-                // Re-register
-                await registerServiceWorker();
-                alert('Notifikasi berhasil di-reset! Silakan coba test kirim pesan.');
             } else {
                 alert('Browser tidak mendukung Service Worker.');
             }
@@ -958,34 +1048,52 @@
 
         // Check if already subscribed
         if ('serviceWorker' in navigator && 'PushManager' in window && vapidPublicKey) {
-            navigator.serviceWorker.ready.then(async (reg) => {
+            // Kickstart registration to ensure .ready resolves
+            navigator.serviceWorker.register('<?= base_url("sw.js") ?>').then(() => {
+                return navigator.serviceWorker.ready;
+            }).then(async (reg) => {
                try {
+                   // Check if we just did a reset
+                   window.isResubscribing = localStorage.getItem('push_resubscribe_pending') === 'true';
+                   if (window.isResubscribing) {
+                       localStorage.removeItem('push_resubscribe_pending');
+                       console.log("Post-reset re-subscription flow active...");
+                   }
+
                    const sub = await reg.pushManager.getSubscription();
                    if (!sub) {
-                       // Case 1: No subscription. Auto-ask permission on load
-                       askPermission();
+                       // Case 1: No subscription. Auto-ask if permission allowed.
+                       if (Notification.permission === 'granted' || Notification.permission === 'default') {
+                           registerServiceWorker().then(() => {
+                               if (window.isResubscribing) {
+                                   alert("Notifikasi telah aktif kembali secara otomatis!");
+                               }
+                           });
+                       }
                    } else {
                        // Case 2: Subscription exists. Check against current Key.
+                       currentPushEndpoint = sub.endpoint;
+                       console.log('✅ Push Endpoint captured:', currentPushEndpoint);
+                       
                        const existingKeyBuffer = sub.options.applicationServerKey;
                        if (existingKeyBuffer) {
                            const existingKey = arrayBufferToBase64(existingKeyBuffer);
-                           
-                           // Compare existing key with server key (remove padding '=' for safety comparison)
                            const currentKeyClean = vapidPublicKey.replace(/=+$/, '');
                            
                            if (existingKey !== currentKeyClean) {
                                console.log("⚠️ Key Mismatch detected! Rotating subscription...");
-                               
-                               // Unsubscribe old
                                await sub.unsubscribe();
-                               // Subscribe new
                                registerServiceWorker();
                                return; 
                            }
                        }
                        
-                       // Keys match, just ensure server has it
+                       // Sync with server
                        await sendSubscriptionToServer(sub);
+                       
+                       if (window.isResubscribing) {
+                           alert("Notifikasi sinkron kembali!");
+                       }
                    }
                } catch (e) {
                    console.error("Subscription check failed", e);
