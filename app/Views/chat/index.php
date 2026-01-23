@@ -1056,6 +1056,9 @@
                 return navigator.serviceWorker.ready;
             }).then(async (reg) => {
                try {
+                   // Force check for latest sw.js update on server
+                   reg.update();
+
                    // Check if we just did a reset
                    window.isResubscribing = localStorage.getItem('push_resubscribe_pending') === 'true';
                    if (window.isResubscribing) {

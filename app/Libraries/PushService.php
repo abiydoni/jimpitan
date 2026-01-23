@@ -138,6 +138,11 @@ class PushService
             ];
 
             $webPush = new WebPush($auth);
+            $webPush->setDefaultOptions([
+                'TTL' => 86400, // 24 hours
+                'urgency' => 'high', // Critical for Heads-up popups
+                'topic' => 'chat'
+            ]);
 
             // Construct Title and URL
             $title = $senderName;

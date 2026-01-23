@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jimpitan-v9';
+const CACHE_NAME = 'jimpitan-v10';
 const urlsToCache = [
   './offline.html',
 ];
@@ -70,6 +70,9 @@ self.addEventListener('push', function(event) {
     tag: 'jimpitan-chat',     // Grouping notifications
     renotify: true,           // Ensure new messages trigger sound/popup
     timestamp: Date.now(),
+    actions: [
+        { action: 'open_chat', title: 'Buka Chat' }
+    ],
     data: {
         url: data.url || '/chat'
     }
