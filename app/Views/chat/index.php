@@ -25,6 +25,8 @@
             document.documentElement.classList.remove('dark')
         }
     </script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- FontAwesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Google Fonts -->
@@ -332,24 +334,40 @@
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
 
-            // 2. Code Block (```code```)
+            // 2. Auto-link URLs, Emails, Phones
+            // URLs
+            const urlRegex = /(https?:\/\/[^\s<]+)/g;
+            formatted = formatted.replace(urlRegex, '<a href="$1" target="_blank" class="text-blue-500 hover:underline break-words">$1</a>');
+            
+            // Emails
+            const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/g;
+            formatted = formatted.replace(emailRegex, '<a href="mailto:$1" class="text-blue-500 hover:underline">$1</a>');
+
+            // Phone Numbers (Indonesian format trigger: +62, 62, 08.. followed by digits)
+            const phoneRegex = /(?:\+62|62|08)[0-9]{8,13}\b/g;
+            formatted = formatted.replace(phoneRegex, (match) => {
+                 // Ensure +62 format for href
+                 let clean = match;
+                 if(clean.startsWith('0')) clean = '62' + clean.substring(1);
+                 if(!clean.startsWith('+')) clean = '+' + clean;
+                 return `<a href="tel:${clean}" class="text-blue-500 hover:underline">${match}</a>`;
+            });
+
+            // 3. Code Block (```code```)
             formatted = formatted.replace(/```(.*?)```/gs, '<code class="bg-gray-200 dark:bg-gray-800 p-1 rounded font-mono text-xs">$1</code>');
 
-            // 3. Bold (*text*)
+            // 4. Bold (*text*)
             formatted = formatted.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
 
-            // 4. Italic (_text_)
+            // 5. Italic (_text_)
             formatted = formatted.replace(/_(.*?)_/g, '<em>$1</em>');
 
-            // 5. Strikethrough (~text~)
+            // 6. Strikethrough (~text~)
             formatted = formatted.replace(/~(.*?)~/g, '<del>$1</del>');
 
-            // 6. Newlines to <br>
+            // 7. Newlines to <br>
             formatted = formatted.replace(/\n/g, '<br>');
 
-            // 7. Jumbo Emoji Check (post-formatting check is risky if formatting added HTML, 
-            // but we can check the original text or a stripped version)
-            // Better to check original text.
             return formatted;
         }
 
@@ -366,14 +384,29 @@
         }
 
         function renderMessage(msg, scroll = true) {
+            // Anti-duplicate check
+            if (msg.id && document.getElementById(`msg-${msg.id}`)) return;
+
             const isMe = msg.sender_id === currentUserId;
             const messagesContainer = document.getElementById('messagesContainer');
             
+            // Deduplication for pending handling:
+            // If this is a real message (has ID) and we have a pending message with same text, remove the pending one.
+            if (msg.id && !msg.is_pending) {
+                const pending = document.querySelector(`.msg-pending[data-content="${CSS.escape(msg.message)}"]`);
+                if (pending) pending.remove();
+            }
+
             const div = document.createElement('div');
-            div.id = `msg-${msg.id}`;
+            div.id = msg.id ? `msg-${msg.id}` : `temp-${Date.now()}`;
+            if(msg.is_pending) {
+                div.classList.add('msg-pending');
+                div.setAttribute('data-content', msg.message);
+            }
+
             // PERFORMANCE FIX: Only animate if it's a NEW message (not history load)
             const animationClass = scroll ? 'animate__animated animate__fadeInUp animate__faster' : '';
-            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-4 ${animationClass} group items-end gap-2`;
+            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-4 ${animationClass} group items-end gap-2 ${msg.is_pending ? 'msg-pending' : ''}`;
             
             const time = new Date(msg.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
             
@@ -411,20 +444,22 @@
             }
 
             const actionsHtml = `
-                <div class="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1 ${isMe ? 'order-first' : ''}">
-                    <button onclick="startReply(${msg.id}, '${displayName}', '${msg.message.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')" class="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center text-gray-500 dark:text-gray-400" title="Balas">
-                        <i class="fas fa-reply text-[10px]"></i>
+                <div class="opacity-0 group-hover:opacity-100 transition-opacity flex flex-row items-center gap-2 ${isMe ? 'order-first mr-2' : 'ml-2'}">
+                    <button onclick="startReply(${msg.id}, '${displayName}', '${msg.message.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')" class="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1 text-gray-500 dark:text-gray-400 text-xs shadow-sm transition-transform hover:scale-105" title="Balas">
+                        <i class="fas fa-reply"></i>
+                        <span class="hidden md:inline font-medium">Balas</span>
                     </button>
-                    <button onclick="openForwardModal('${msg.message.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')" class="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center text-gray-500 dark:text-gray-400" title="Teruskan">
-                        <i class="fas fa-share text-[10px]"></i>
+                    <button onclick="openForwardModal('${msg.message.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')" class="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1 text-gray-500 dark:text-gray-400 text-xs shadow-sm transition-transform hover:scale-105" title="Teruskan">
+                        <i class="fas fa-share"></i>
+                        <span class="hidden md:inline font-medium">Teruskan</span>
                     </button>
                 </div>
             `;
 
             div.innerHTML = `
                 ${isMe ? actionsHtml : ''}
-                <div class="max-w-[75%] md:max-w-[60%] flex flex-col ${isMe ? 'items-end' : 'items-start'}">
-                    <div class="${isJumbo ? 'px-0 py-0' : 'px-4 py-2'} rounded-2xl text-sm shadow-sm relative ${bubbleClass}">
+                <div class="max-w-[85%] md:max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'} overflow-hidden">
+                    <div class="${isJumbo ? 'px-0 py-0' : 'px-4 py-2'} rounded-2xl text-sm shadow-sm relative ${bubbleClass} break-words overflow-hidden max-w-full">
                         ${(!isMe && activeUserId === 'GROUP_ALL' && !isJumbo) ? `<p class="text-[11px] font-bold ${nameColor} mb-0.5 leading-tight">${displayName}</p>` : ''}
                         ${(!isMe && activeUserId === 'GROUP_ALL' && isJumbo) ? `<p class="text-[10px] font-bold ${nameColor} mb-0 leading-tight bg-white/80 dark:bg-slate-800/80 px-1 rounded absolute -top-4 left-0 w-max shadow-sm">${displayName}</p>` : ''}
                         ${quoteHtml}
@@ -432,7 +467,7 @@
                     </div>
                     <span class="text-[10px] text-gray-400 mt-1 px-1 flex gap-1 items-center">
                         ${time}
-                        ${isMe ? (msg.is_read == 1 ? '<i class="fas fa-check-double text-blue-400"></i>' : '<i class="fas fa-check"></i>') : ''}
+                        ${isMe ? (msg.is_read == 1 ? '<i class="fas fa-check-double text-blue-400"></i>' : (msg.is_pending ? '<i class="far fa-clock"></i>' : '<i class="fas fa-check"></i>')) : ''}
                     </span>
                 </div>
                 ${!isMe ? actionsHtml : ''}
@@ -473,17 +508,17 @@
                     
                     if(activeUserId && data.messages) {
                         const messagesContainer = document.getElementById('messagesContainer');
-                        const currentCount = messagesContainer.childElementCount;
-                        if(data.messages.length !== currentCount) { 
-                             const oldScroll = messagesContainer.scrollTop;
-                             const wasAtBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop === messagesContainer.clientHeight;
-                             
-                             messagesContainer.innerHTML = '';
-                             data.messages.forEach(m => renderMessage(m, false));
-                             
-                             if(wasAtBottom) scrollToBottom();
-                             else messagesContainer.scrollTop = oldScroll;
-                        }
+                        
+                        // Optimized Polling: Append Only, Don't Wipe
+                        let hasNew = false;
+                        data.messages.forEach(m => {
+                             if(!document.getElementById(`msg-${m.id}`)) {
+                                 renderMessage(m, true);
+                                 hasNew = true;
+                             }
+                        });
+                        
+                        if(hasNew) scrollToBottom();
                     }
                 } catch(e) { console.error("Poll error", e); }
             }, 3000);
@@ -552,7 +587,34 @@
         }
         
         async function confirmForward(user) {
-            if(!confirm(`Teruskan pesan ke ${user.name}?`)) return;
+            // SweetAlert Confirmation
+            const result = await Swal.fire({
+                title: 'Teruskan Pesan?',
+                text: `Kirim ke ${user.name}?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#4f46e5',
+                cancelButtonColor: '#ef4444',
+                confirmButtonText: 'Ya, Kirim',
+                cancelButtonText: 'Batal',
+                background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#fff',
+                color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937'
+            });
+
+            if (!result.isConfirmed) return;
+            
+            closeForwardModal();
+            
+            // Optimistic Render if forwarding to currently active chat
+            if(activeUserId === user.id_code) {
+                renderMessage({
+                    sender_id: currentUserId,
+                    message: messageToForward, // forwarded message content
+                    created_at: new Date().toISOString(),
+                    is_pending: true
+                }, true);
+            }
+
             try {
                 const formData = new FormData();
                 formData.append('receiver_id', user.id_code);
@@ -560,10 +622,28 @@
                 await fetch(`${baseUrl}/chat/send`, {
                     method: 'POST', body: formData
                 });
-                alert('Pesan diteruskan!');
-                closeForwardModal();
-                if(activeUserId === user.id_code) { loadMessages(); scrollToBottom(); }
-            } catch(e) { alert('Gagal meneruskan pesan.'); }
+                
+                // Show success toast/alert only if NOT in the same chat (to avoid clutter)
+                if(activeUserId !== user.id_code) {
+                     Swal.fire({
+                        icon: 'success',
+                        title: 'Terkirim',
+                        text: `Pesan berhasil diteruskan ke ${user.name}`,
+                        timer: 1500,
+                        showConfirmButton: false,
+                        background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#fff',
+                        color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937'
+                    });
+                }
+            } catch(e) { 
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal',
+                    text: 'Gagal meneruskan pesan.',
+                    background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#fff',
+                    color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#1f2937'
+                });
+            }
         }
 
         function handlePopState(event) {
@@ -656,7 +736,10 @@
                     sender_id: currentUserId,
                     message: message,
                     created_at: new Date().toISOString(),
-                    is_pending: true 
+                    is_pending: true,
+                    reply_to_id: replyingTo ? replyingTo.id : null,
+                    reply_message: replyingTo ? replyingTo.message : null,
+                    reply_sender: replyingTo ? replyingTo.sender : null
                 }, true);
                 
                 input.value = '';
