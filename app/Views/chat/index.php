@@ -718,6 +718,9 @@
                 const formData = new FormData();
                 formData.append('receiver_id', user.id_code);
                 formData.append('message', msgContent);
+                if(currentPushEndpoint) {
+                    formData.append('exclude_endpoint', currentPushEndpoint);
+                }
                 await fetch(`${baseUrl}/chat/send`, {
                     method: 'POST', body: formData
                 });

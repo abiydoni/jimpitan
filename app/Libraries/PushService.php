@@ -70,6 +70,8 @@ class PushService
                                      ->get()
                                      ->getResultArray();
 
+            $this->logger->info("PushService: Found " . count($subscriptions) . " subscriptions for receiver " . (is_array($receiverId) ? implode(',', $receiverId) : $receiverId));
+
             if (empty($subscriptions)) {
                  $idStr = is_array($receiverId) ? implode(',', $receiverId) : $receiverId;
                  $this->logger->info("PushService: No subscriptions found for user(s): " . $idStr);
@@ -168,6 +170,7 @@ class PushService
                 
                 // PHP-Side Explicit Exclusion
                 if ($excludeEndpoint) {
+                    $this->logger->info("PushService: Comparing current [" . substr($currentEndpoint, -15) . "] with exclude [" . substr($excludeEndpoint, -15) . "]");
                     if ($currentEndpoint === $excludeEndpoint) {
                         $this->logger->info("PushService: EXCLUDING Sender (Exact Match): " . substr($currentEndpoint, -20));
                         continue;
