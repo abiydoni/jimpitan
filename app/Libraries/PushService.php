@@ -122,19 +122,28 @@ class PushService
         }
     }
 
+    private $lastError = null;
+
+    public function getLastError()
+    {
+        return $this->lastError;
+    }
+
     public function getFCMAccessToken()
     {
         try {
             $jsonFile = ROOTPATH . 'jimpitan-app-a7by777-firebase-adminsdk-fbsvc-bd65b27251.json';
             if (!file_exists($jsonFile)) {
-                $this->logger->error("FCM: Service Account JSON not found at $jsonFile");
+                $this->lastError = "Service Account JSON not found at $jsonFile";
+                $this->logger->error("FCM: " . $this->lastError);
                 return null;
             }
 
             $jsonContent = file_get_contents($jsonFile);
             $config = json_decode($jsonContent, true);
             if (!$config) {
-                $this->logger->error("FCM: Invalid JSON format in Service Account file.");
+                $this->lastError = "Invalid JSON format in Service Account file.";
+                $this->logger->error("FCM: " . $this->lastError);
                 return null;
             }
 
@@ -143,7 +152,8 @@ class PushService
             $tokenUri = $config['token_uri'] ?? 'https://oauth2.googleapis.com/token';
 
             if (!$clientEmail || !$privateKey) {
-                $this->logger->error("FCM: Missing client_email or private_key in JSON.");
+                $this->lastError = "Missing client_email or private_key in JSON.";
+                $this->logger->error("FCM: " . $this->lastError);
                 return null;
             }
 
@@ -161,8 +171,14 @@ class PushService
             $base64UrlPayload = $this->base64UrlEncode($payload);
 
             $signature = '';
+            // Suppress warnings for openssl_sign to capture them if needed, or rely on return false
             if (!openssl_sign($base64UrlHeader . "." . $base64UrlPayload, $signature, $privateKey, OPENSSL_ALGO_SHA256)) {
-                $this->logger->error("FCM: openssl_sign failed. Check if OpenSSL extension is enabled.");
+                $sslError = "";
+                while ($msg = openssl_error_string()) {
+                    $sslError .= $msg . "; ";
+                }
+                $this->lastError = "openssl_sign failed. OpenSSL Error: $sslError";
+                $this->logger->error("FCM: " . $this->lastError);
                 return null;
             }
             $base64UrlSignature = $this->base64UrlEncode($signature);
@@ -180,10 +196,12 @@ class PushService
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
             curl_close($ch);
 
             if ($httpCode !== 200) {
-                $this->logger->error("FCM Token API Error ($httpCode): $response");
+                $this->lastError = "FCM Token API Error ($httpCode): $response. Curl Error: $curlError";
+                $this->logger->error("FCM: " . $this->lastError);
                 return null;
             }
 
@@ -191,7 +209,8 @@ class PushService
             return $data['access_token'] ?? null;
 
         } catch (\Exception $e) {
-            $this->logger->error("FCM Token Exception: " . $e->getMessage());
+            $this->lastError = "FCM Token Exception: " . $e->getMessage();
+            $this->logger->error($this->lastError);
             return null;
         }
     }

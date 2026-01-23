@@ -197,6 +197,7 @@ class PushSubscription extends ResourceController
         return $this->respond([
             'user_id' => $userId,
             'access_token_status' => $accessToken ? 'success' : 'failed',
+            'error_detail' => $accessToken ? null : $pushService->getLastError(),
             'diagnostics' => $diagnostics,
             'results' => $results
         ]);
