@@ -1019,11 +1019,30 @@
         }
 
         async function sendFCMTokenToServer(token) {
-            await fetch('<?= base_url("push/subscribe_fcm") ?>', {
-                method: 'POST',
-                body: JSON.stringify({ token: token, device_type: 'web' }),
-                headers: { 'Content-Type': 'application/json' }
-            });
+            try {
+                const res = await fetch('<?= base_url("push/subscribe_fcm") ?>', {
+                    method: 'POST',
+                    body: JSON.stringify({ token: token, device_type: 'web' }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Perangkat Anda kini terdaftar untuk notifikasi real-time.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    const btn = document.getElementById('btnEnableNotif');
+                    if(btn) btn.classList.add('hidden');
+                } else {
+                    console.error('Server error registration:', data);
+                }
+            } catch (err) {
+                console.error('Failed to send token to server:', err);
+            }
         }
 
         async function askPermission(isManual = false) {
