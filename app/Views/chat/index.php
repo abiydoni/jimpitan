@@ -72,7 +72,7 @@
                     <?php endif; ?>
                     <div>
                          <h2 class="font-bold text-lg text-gray-800 dark:text-gray-100 leading-tight"><?= esc($user_name) ?></h2>
-                         <p class="text-[10px] text-green-500 font-semibold">Online</p>
+                         <p class="text-[10px] text-green-500 font-semibold">Online <span class="text-gray-400 font-normal ml-1">jimpitan-v15</span></p>
                     </div>
                     <button onclick="forceResetSubscription()" class="ml-auto w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-800 flex items-center justify-center text-red-500 dark:text-red-400 transition-colors shadow-sm" title="Reset/Perbaiki Notifikasi">
                         <i class="fas fa-bell-slash text-xs"></i>
