@@ -406,7 +406,8 @@
 
             // PERFORMANCE FIX: Only animate if it's a NEW message (not history load)
             const animationClass = scroll ? 'animate__animated animate__fadeInUp animate__faster' : '';
-            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-4 ${animationClass} group items-end gap-2 ${msg.is_pending ? 'msg-pending' : ''}`;
+            div.tabIndex = 0; // Make focusable for mobile tap
+            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} mb-4 ${animationClass} group items-end gap-2 outline-none tap-highlight-transparent ${msg.is_pending ? 'msg-pending' : ''}`;
             
             const time = new Date(msg.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
             
@@ -444,14 +445,12 @@
             }
 
             const actionsHtml = `
-                <div class="opacity-0 group-hover:opacity-100 transition-opacity flex flex-row items-center gap-2 ${isMe ? 'order-first mr-2' : 'ml-2'}">
-                    <button onclick="startReply(${msg.id}, '${displayName}', '${msg.message.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')" class="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1 text-gray-500 dark:text-gray-400 text-xs shadow-sm transition-transform hover:scale-105" title="Balas">
+                <div class="opacity-0 group-hover:opacity-100 group-focus:opacity-100 group-active:opacity-100 group-focus-within:opacity-100 transition-opacity flex flex-col items-center gap-1 ${isMe ? 'order-first mr-1' : 'ml-1'}">
+                    <button onclick="startReply(${msg.id}, '${displayName}', '${msg.message.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')" class="px-1.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center text-blue-500 dark:text-blue-400 text-xs shadow-sm transition-transform hover:scale-105" title="Balas">
                         <i class="fas fa-reply"></i>
-                        <span class="hidden md:inline font-medium">Balas</span>
                     </button>
-                    <button onclick="openForwardModal('${msg.message.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')" class="px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1 text-gray-500 dark:text-gray-400 text-xs shadow-sm transition-transform hover:scale-105" title="Teruskan">
+                    <button onclick="openForwardModal('${msg.message.replace(/'/g, "\\'").replace(/\n/g, "\\n")}')" class="px-1.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center text-green-500 dark:text-green-400 text-xs shadow-sm transition-transform hover:scale-105" title="Teruskan">
                         <i class="fas fa-share"></i>
-                        <span class="hidden md:inline font-medium">Teruskan</span>
                     </button>
                 </div>
             `;
@@ -603,13 +602,14 @@
 
             if (!result.isConfirmed) return;
             
+            const msgContent = messageToForward; // Capture before clearing
             closeForwardModal();
             
             // Optimistic Render if forwarding to currently active chat
             if(activeUserId === user.id_code) {
                 renderMessage({
                     sender_id: currentUserId,
-                    message: messageToForward, // forwarded message content
+                    message: msgContent, // forwarded message content
                     created_at: new Date().toISOString(),
                     is_pending: true
                 }, true);
@@ -618,7 +618,7 @@
             try {
                 const formData = new FormData();
                 formData.append('receiver_id', user.id_code);
-                formData.append('message', `${messageToForward}`);
+                formData.append('message', msgContent);
                 await fetch(`${baseUrl}/chat/send`, {
                     method: 'POST', body: formData
                 });
