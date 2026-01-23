@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jimpitan-v8';
+const CACHE_NAME = 'jimpitan-v9';
 const urlsToCache = [
   './offline.html',
 ];
@@ -66,6 +66,10 @@ self.addEventListener('push', function(event) {
     body: data.body || 'Anda memiliki pesan baru.',
     icon: './jimpitan1.png',
     badge: './jimpitan1.png',
+    vibrate: [200, 100, 200], // Trigger heads-up on Android
+    tag: 'jimpitan-chat',     // Grouping notifications
+    renotify: true,           // Ensure new messages trigger sound/popup
+    timestamp: Date.now(),
     data: {
         url: data.url || '/chat'
     }
