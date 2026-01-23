@@ -147,15 +147,24 @@ class PushSubscription extends ResourceController
         $db = Database::connect();
         $subs = $db->table('fcm_subscriptions')->where('user_id', $userId)->get()->getResultArray();
         
-        if (empty($subs)) {
-            return $this->respond(['error' => 'No tokens found for user ' . $userId]);
-        }
-        
         $pushService = new \App\Libraries\PushService();
         $accessToken = $pushService->getFCMAccessToken();
         
+        // --- DIAGNOSTICS ---
+        $jsonFileName = 'jimpitan-app-a7by777-firebase-adminsdk-fbsvc-bd65b27251.json';
+        $jsonPath = ROOTPATH . $jsonFileName;
+        
+        $diagnostics = [
+            'root_path' => ROOTPATH,
+            'expected_file' => $jsonPath,
+            'file_exists' => file_exists($jsonPath),
+            'openssl_working' => function_exists('openssl_sign'),
+            'json_files_found_in_root' => glob(ROOTPATH . '*.json')
+        ];
+        // -------------------
+
         $results = [];
-        if ($accessToken) {
+        if ($accessToken && !empty($subs)) {
             foreach ($subs as $sub) {
                 $token = $sub['fcm_token'];
                 $fcmUrl = 'https://fcm.googleapis.com/v1/projects/jimpitan-app-a7by777/messages:send';
@@ -188,6 +197,7 @@ class PushSubscription extends ResourceController
         return $this->respond([
             'user_id' => $userId,
             'access_token_status' => $accessToken ? 'success' : 'failed',
+            'diagnostics' => $diagnostics,
             'results' => $results
         ]);
     }
