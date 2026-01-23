@@ -362,7 +362,12 @@ class Chat extends BaseController
             return $this->response->setJSON([
                 'status' => 'success',
                 'chat_id' => $newMsgId,
-                'notification' => isset($success) && $success ? 'sent' : 'queued'
+                'notification' => isset($success) && $success ? 'sent' : 'queued',
+                'debug_info' => [
+                    'receiver_id' => $receiverId,
+                    'is_group' => ($receiverId === 'GROUP_ALL'),
+                    'push_success' => $success ?? false
+                ]
             ]);
         }
 
