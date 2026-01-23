@@ -122,7 +122,7 @@ class PushService
         }
     }
 
-    protected function getFCMAccessToken()
+    public function getFCMAccessToken()
     {
         try {
             $jsonFile = ROOTPATH . 'jimpitan-app-a7by777-firebase-adminsdk-fbsvc-bd65b27251.json';

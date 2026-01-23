@@ -33,6 +33,7 @@ echo "✅ Ditemukan " . count($subs) . " perangkat terdaftar.<br><br>";
 // Bypass PushService for RAW result
 echo "--- Menjalankan Test Kirim (Raw Mode) ---<br>";
 
+$pushService = new \App\Libraries\PushService();
 $accessToken = $pushService->getFCMAccessToken();
 echo "Access Token: " . ($accessToken ? "<span style='color:green'>Generated</span>" : "<span style='color:red'>Failed (Check JSON Key)</span>") . "<br>";
 
