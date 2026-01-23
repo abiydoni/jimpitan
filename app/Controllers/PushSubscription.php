@@ -104,4 +104,28 @@ class PushSubscription extends ResourceController
             return $this->respondCreated(['status' => 'subscribed']);
         }
     }
+
+    public function check_fcm()
+    {
+        $json = $this->request->getJSON();
+        if (!$json || !isset($json->token)) {
+            return $this->respond(['subscribed' => false]);
+        }
+        
+        $session = session();
+        if (!$session->get('isLoggedIn')) {
+            return $this->respond(['subscribed' => false]);
+        }
+        
+        $userId = $session->get('id_code');
+        $token = $json->token;
+        
+        $db = Database::connect();
+        $exists = $db->table('fcm_subscriptions')
+                     ->where('fcm_token', $token)
+                     ->where('user_id', $userId)
+                     ->countAllResults();
+                     
+        return $this->respond(['subscribed' => $exists > 0]);
+    }
 }

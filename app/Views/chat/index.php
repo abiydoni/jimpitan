@@ -1095,8 +1095,49 @@
                    reg.update();
 
                    if (Notification.permission === 'granted') {
-                       console.log('✅ Permission already granted.');
-                       registerFCM();
+                       console.log('✅ Permission already granted. Checking server registration...');
+                       
+                       const registration = await navigator.serviceWorker.ready;
+                       try {
+                           const token = await messaging.getToken({
+                               serviceWorkerRegistration: registration,
+                               vapidKey: vapidPublicKey
+                           });
+                           
+                           if (token) {
+                               const checkRes = await fetch('<?= base_url("push/check_fcm") ?>', {
+                                   method: 'POST',
+                                   body: JSON.stringify({ token: token }),
+                                   headers: { 'Content-Type': 'application/json' }
+                               });
+                               const checkData = await checkRes.json();
+                               
+                               if (!checkData.subscribed) {
+                                   console.log('⚠️ Not registered in server DB. Prompting sync...');
+                                   Swal.fire({
+                                       title: 'Sinkronkan Notifikasi?',
+                                       text: 'Izin notifikasi aktif, tapi perangkat Anda belum sinkron dengan sistem. Klik Sinkronkan agar pesan real-time masuk.',
+                                       icon: 'info',
+                                       showCancelButton: true,
+                                       confirmButtonText: 'Sinkronkan',
+                                       cancelButtonText: 'Nanti',
+                                       confirmButtonColor: '#4f46e5'
+                                   }).then((result) => {
+                                       if (result.isConfirmed) {
+                                           registerFCM();
+                                       }
+                                   });
+                               } else {
+                                   console.log('✅ Already registered in DB.');
+                                   currentPushEndpoint = token;
+                               }
+                           } else {
+                               registerFCM(); // Fallback to full register if token check fails
+                           }
+                       } catch (err) {
+                           console.error('Check registration failed', err);
+                           registerFCM();
+                       }
                    } else if (Notification.permission === 'default') {
                        console.log('⏳ Permission is default. Showing SweetAlert prompt...');
                        
