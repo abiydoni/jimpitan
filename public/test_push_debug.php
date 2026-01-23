@@ -30,18 +30,37 @@ if (empty($subs)) {
 
 echo "✅ Ditemukan " . count($subs) . " perangkat terdaftar.<br><br>";
 
-$pushService = new \App\Libraries\PushService();
-echo "--- Menjalankan Test Kirim ---<br>";
+// Bypass PushService for RAW result
+echo "--- Menjalankan Test Kirim (Raw Mode) ---<br>";
 
-// We use the first sub as a direct test
-$success = $pushService->sendNotification($userId, "Test Debug Notifikasi " . date('H:i:s'), "DEBUG SYSTEM", "/chat");
+$accessToken = $pushService->getFCMAccessToken();
+echo "Access Token: " . ($accessToken ? "<span style='color:green'>Generated</span>" : "<span style='color:red'>Failed (Check JSON Key)</span>") . "<br>";
 
-if ($success) {
-    echo "<h3 style='color:green'>✅ Sukses! Google FCM menerima permintaan pengiriman.</h3>";
-    echo "Jika HP tetap tidak bunyi, cek:<br>";
-    echo "1. Pengaturan Notifikasi Browser (Muted/Do Not Disturb).<br>";
-    echo "2. Service Worker (sw.js) di DevTools Console.<br>";
-} else {
-    echo "<h3 style='color:red'>❌ Gagal! Cek file logs di writable/logs/ untuk detail kesalahannya.</h3>";
-    echo "Biasanya masalah di file JSON Key atau koneksi server ke Google.";
+if ($accessToken) {
+    foreach ($subs as $sub) {
+        $token = $sub['fcm_token'];
+        echo "Mengirim ke Token: " . substr($token, 0, 15) . "...<br>";
+        
+        $fcmUrl = 'https://fcm.googleapis.com/v1/projects/jimpitan-app-a7by777/messages:send';
+        $payload = [
+            'message' => [
+                'token' => $token,
+                'notification' => ['title' => 'Test Debug', 'body' => 'Bismillah bunyi!'],
+                'data' => ['url' => '/chat']
+            ]
+        ];
+
+        $ch = curl_init($fcmUrl);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $accessToken, 'Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        echo "HTTP Code: $httpCode<br>";
+        echo "Response: <pre>" . htmlspecialchars($response) . "</pre><br>";
+    }
 }
