@@ -71,7 +71,8 @@ class PushService
                                      ->getResultArray();
 
             if (empty($subscriptions)) {
-                 $this->logger->info("PushService: No subscriptions for user " . $receiverId);
+                 $idStr = is_array($receiverId) ? implode(',', $receiverId) : $receiverId;
+                 $this->logger->info("PushService: No subscriptions found for user(s): " . $idStr);
                  return false;
             }
 
@@ -168,11 +169,11 @@ class PushService
                 // PHP-Side Explicit Exclusion
                 if ($excludeEndpoint) {
                     if ($currentEndpoint === $excludeEndpoint) {
-                        $this->logger->info("PushService: SKIPPING (Exact Match): " . substr($currentEndpoint, -20));
+                        $this->logger->info("PushService: EXCLUDING Sender (Exact Match): " . substr($currentEndpoint, -20));
                         continue;
                     }
                     if (urldecode($currentEndpoint) === urldecode($excludeEndpoint)) {
-                        $this->logger->info("PushService: SKIPPING (Decoded Match): " . substr($currentEndpoint, -20));
+                        $this->logger->info("PushService: EXCLUDING Sender (Decoded Match): " . substr($currentEndpoint, -20));
                         continue;
                     }
                 }
