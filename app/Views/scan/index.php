@@ -354,17 +354,23 @@
             });
         }
 
-        // Global Instance (Single Source of Truth)
-        const html5QrCode = new Html5Qrcode("reader");
+        let html5QrCode;
         let isScanning = false;
         let isFlashOn = false;
 
-        // Start Scanner manually
         async function startScanner() {
-            if (isScanning) return; // Prevent double start
+            if (isScanning) return;
+            if (!html5QrCode) {
+                 if (typeof Html5Qrcode === 'undefined') {
+                    console.error("Html5Qrcode undefined");
+                    return; 
+                 }
+                 try {
+                    html5QrCode = new Html5Qrcode("reader");
+                 } catch(e) { console.error("Init error", e); return; }
+            }
 
             try {
-                // FIXED: EXACT LEGACY CONFIG (Jimpitan New Style)
                 const config = { 
                     fps: 20, 
                     qrbox: 250
@@ -378,16 +384,12 @@
                 );
                 
                 isScanning = true;
-
-                // FORCE SHOW FLASH BUTTON
                 document.getElementById('flashToggle').classList.remove('hidden');
                 updateFlashUI(); 
 
             } catch (err) {
                 console.error(err);
-                // Clear state just in case
-                isScanning = false;
-                
+                isScanning = false; 
                 document.getElementById('reader').innerHTML = `
                     <div class="p-4 bg-red-50 text-red-600 rounded-lg text-sm font-bold">
                         Gagal Membuka Kamera: ${err.message}<br>
@@ -397,39 +399,44 @@
             }
         }
 
+        // Init Safely
+        document.addEventListener('DOMContentLoaded', () => {
+             // Delay slightly to ensure library loaded
+             setTimeout(() => {
+                 if (typeof Html5Qrcode === 'undefined') {
+                     document.getElementById('reader').innerHTML = '<div class="p-4 text-orange-500 font-bold text-sm">Library Scanner Loading... (Cek Koneksi)</div>';
+                     // Polling fallback
+                     let checkCount = 0;
+                     const checker = setInterval(() => {
+                         checkCount++;
+                         if (typeof Html5Qrcode !== 'undefined') {
+                             clearInterval(checker);
+                             startScanner();
+                         }
+                         if(checkCount > 50) { // 5 sec timeout
+                             clearInterval(checker);
+                             document.getElementById('reader').innerHTML = '<div class="p-4 text-red-500 font-bold text-sm">Gagal memuat Library Scanner. Refresh halaman.</div>';
+                         }
+                     }, 100);
+                 } else {
+                     startScanner();
+                 }
+             }, 100);
+        });
+
         // --- Detail Modal Logic ---
         const detailModal = document.getElementById('detailModal');
-        // ... (existing code)
-
-        // ... (inside toggleFlash)
-                Swal.fire({
-                    toast: true,
-                    position: 'top',
-                    icon: 'error',
-                    title: 'Gagal menyalakan lampu.',
-                    text: 'Error Sistem: ' + (err.message || 'Constraint Failed'), // Show actual error
-                    showConfirmButton: false,
-                    timer: 3000
-                });
-            }
-        }
-
-        // Init
-        startScanner();
-
-        // --- Detail Modal Logic ---
-        const detailModal = document.getElementById('detailModal');
+        // Clean up duplicates if any below...
         const detailList = document.getElementById('detailList');
         const detailCountSpan = document.getElementById('detailCount');
         const totalScanDisplay = document.getElementById('totalScanDisplay');
 
         function openDetailModal() {
             detailModal.classList.remove('invisible', 'opacity-0');
-            // Remove hidden classes
             const content = detailModal.querySelector('div.transform');
             content.classList.remove('scale-95', 'opacity-0');
-            content.classList.add('scale-100', 'opacity-100'); // Ensure full visibility
-            loadDetails(); // Fetch data
+            content.classList.add('scale-100', 'opacity-100'); 
+            loadDetails(); 
         }
 
         function closeDetailModal() {
