@@ -1109,7 +1109,7 @@
         firebase.initializeApp(firebaseConfig);
         const messaging = firebase.messaging();
 
-        async function registerFCM() {
+        async function registerFCM(silent = false) {
             try {
                 const registration = await navigator.serviceWorker.ready;
                 const token = await messaging.getToken({
@@ -1120,7 +1120,7 @@
                 if (token) {
                     console.log('✅ FCM Token captured:', token);
                     currentPushEndpoint = token; // Add this line
-                    await sendFCMTokenToServer(token);
+                    await sendFCMTokenToServer(token, silent);
                 } else {
                     console.warn('No FCM token received.');
                 }
@@ -1129,7 +1129,7 @@
             }
         }
 
-        async function sendFCMTokenToServer(token) {
+        async function sendFCMTokenToServer(token, silent = false) {
             try {
                 const res = await fetch('<?= base_url("push/subscribe_fcm") ?>', {
                     method: 'POST',
@@ -1139,13 +1139,23 @@
                 const data = await res.json();
                 
                 if (res.ok) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil!',
-                        text: 'Perangkat Anda kini terdaftar untuk notifikasi real-time.',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
+                    if (!silent) {
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: "top-end",
+                            showConfirmButton: false,
+                            timer: 3000,
+                            timerProgressBar: true,
+                            didOpen: (toast) => {
+                                toast.onmouseenter = Swal.stopTimer;
+                                toast.onmouseleave = Swal.resumeTimer;
+                            }
+                        });
+                        Toast.fire({
+                            icon: "success",
+                            title: "Notifikasi Aktif"
+                        });
+                    }
                     const btn = document.getElementById('btnEnableNotif');
                     if(btn) btn.classList.add('hidden');
                 } else {
@@ -1225,49 +1235,9 @@
                    reg.update();
 
                    if (Notification.permission === 'granted') {
-                       console.log('✅ Permission already granted. Checking server registration...');
-                       
-                       const registration = await navigator.serviceWorker.ready;
-                       try {
-                           const token = await messaging.getToken({
-                               serviceWorkerRegistration: registration,
-                               vapidKey: vapidPublicKey
-                           });
-                           
-                           if (token) {
-                               const checkRes = await fetch('<?= base_url("push/check_fcm") ?>', {
-                                   method: 'POST',
-                                   body: JSON.stringify({ token: token }),
-                                   headers: { 'Content-Type': 'application/json' }
-                               });
-                               const checkData = await checkRes.json();
-                               
-                               if (!checkData.subscribed) {
-                                   console.log('⚠️ Not registered in server DB. Prompting sync...');
-                                   Swal.fire({
-                                       title: 'Sinkronkan Notifikasi?',
-                                       text: 'Izin notifikasi aktif, tapi perangkat Anda belum sinkron dengan sistem. Klik Sinkronkan agar pesan real-time masuk.',
-                                       icon: 'info',
-                                       showCancelButton: true,
-                                       confirmButtonText: 'Sinkronkan',
-                                       cancelButtonText: 'Nanti',
-                                       confirmButtonColor: '#4f46e5'
-                                   }).then((result) => {
-                                       if (result.isConfirmed) {
-                                           registerFCM();
-                                       }
-                                   });
-                               } else {
-                                   console.log('✅ Already registered in DB.');
-                                   currentPushEndpoint = token;
-                               }
-                           } else {
-                               registerFCM(); // Fallback to full register if token check fails
-                           }
-                       } catch (err) {
-                           console.error('Check registration failed', err);
-                           registerFCM();
-                       }
+                       console.log('✅ Permission granted. Syncing token...');
+                       // Auto-register without bothering the user
+                       registerFCM(true);
                    } else if (Notification.permission === 'default') {
                        console.log('⏳ Permission is default. Showing SweetAlert prompt...');
                        
