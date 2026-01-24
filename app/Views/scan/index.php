@@ -370,33 +370,61 @@
                  } catch(e) { console.error("Init error", e); return; }
             }
 
+            const config = { fps: 20, qrbox: 250 };
+            
             try {
-                const config = { 
-                    fps: 20, 
-                    qrbox: 250
-                };
+                // STRATEGY 1: Try Specific "Back" Camera (Best for Flash support on some phones)
+                // This mimics the 'original' logic that worked for the user's Flash
+                const devices = await Html5Qrcode.getCameras();
+                let selectedId = null;
                 
-                await html5QrCode.start(
-                    { facingMode: "environment" }, 
-                    config,
-                    onScanSuccess,
-                    (errorMessage) => {}
-                );
-                
-                isScanning = true;
-                document.getElementById('flashToggle').classList.remove('hidden');
-                updateFlashUI(); 
+                if (devices && devices.length > 0) {
+                     for (const device of devices) {
+                        const label = device.label.toLowerCase();
+                        if (label.includes('back') || label.includes('belakang')) {
+                            selectedId = device.id;
+                            // Don't break, letting it pick the last one often works better or same as original logic
+                        }
+                    }
+                }
 
-            } catch (err) {
-                console.error(err);
-                isScanning = false; 
-                document.getElementById('reader').innerHTML = `
-                    <div class="p-4 bg-red-50 text-red-600 rounded-lg text-sm font-bold">
-                        Gagal Membuka Kamera: ${err.message}<br>
-                        <button onclick="location.reload()" class="mt-2 bg-red-600 text-white px-3 py-1 rounded">Coba Refresh</button>
-                    </div>
-                `;
+                if (selectedId) {
+                    console.log("Attempting Strategy 1: Specific Camera ID", selectedId);
+                    await html5QrCode.start(selectedId, config, onScanSuccess, () => {});
+                } else {
+                    throw new Error("No specific back camera found, fallback to generic.");
+                }
+
+            } catch (err1) {
+                console.warn("Strategy 1 failed, trying Strategy 2 (Generic)", err1);
+                
+                try {
+                    // STRATEGY 2: Generic Environment (Fallback for compatibility)
+                    // Ensure scanner is stopped/cleared if partial fail occurred?
+                    // Html5Qrcode usually handles restart ok, but let's just try start.
+                    await html5QrCode.start(
+                        { facingMode: "environment" }, 
+                        config,
+                        onScanSuccess, 
+                        () => {}
+                    );
+                } catch (err2) {
+                     console.error("All strategies failed", err2);
+                     isScanning = false; 
+                     document.getElementById('reader').innerHTML = `
+                        <div class="p-4 bg-red-50 text-red-600 rounded-lg text-sm font-bold">
+                            Gagal Membuka Kamera: ${err2.message}<br>
+                            <button onclick="location.reload()" class="mt-2 bg-red-600 text-white px-3 py-1 rounded">Coba Refresh</button>
+                        </div>
+                    `;
+                    return;
+                }
             }
+            
+            // Success (reached if either Strategy 1 or 2 worked)
+            isScanning = true;
+            document.getElementById('flashToggle').classList.remove('hidden');
+            updateFlashUI(); 
         }
 
         // Init Safely
