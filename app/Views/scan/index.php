@@ -367,26 +367,27 @@
             html5QrCode = new Html5Qrcode("reader");
 
             try {
-                // FIXED: Use Simple config like Old App (jimpitannew)
-                // Avoids 'getCameras' complexity which fails on some Androids
+                // FIXED: Request HD Resolution to force MAIN CAMERA (which usually has the Flash)
+                // Low res often picks wide-angle/macro lens which has no flash!
                 const config = { 
                     fps: 20, 
                     qrbox: getQrBoxSize,
-                    aspectRatio: 1.0 
+                    aspectRatio: 1.0,
+                    videoConstraints: {
+                        width: { min: 1280, ideal: 1920 },
+                        height: { min: 720, ideal: 1080 },
+                        facingMode: "environment"
+                    }
                 };
                 
-                // Use standard facingMode constraint
                 await html5QrCode.start(
                     { facingMode: "environment" }, 
                     config,
                     onScanSuccess,
-                    (errorMessage) => {
-                        // ignore frame errors
-                    }
+                    (errorMessage) => {}
                 );
 
-                // FORCE SHOW FLASH BUTTON (User Request)
-                // Terkadang browser salah deteksi capability, jadi kita paksa muncul saja.
+                // FORCE SHOW FLASH BUTTON
                 document.getElementById('flashToggle').classList.remove('hidden');
                 updateFlashUI(); 
 
@@ -398,6 +399,23 @@
                         <button onclick="location.reload()" class="mt-2 bg-red-600 text-white px-3 py-1 rounded">Coba Refresh</button>
                     </div>
                 `;
+            }
+        }
+
+        // --- Detail Modal Logic ---
+        const detailModal = document.getElementById('detailModal');
+        // ... (existing code)
+
+        // ... (inside toggleFlash)
+                Swal.fire({
+                    toast: true,
+                    position: 'top',
+                    icon: 'error',
+                    title: 'Gagal menyalakan lampu.',
+                    text: 'Error Sistem: ' + (err.message || 'Constraint Failed'), // Show actual error
+                    showConfirmButton: false,
+                    timer: 3000
+                });
             }
         }
 
@@ -592,7 +610,7 @@
                     position: 'top',
                     icon: 'error',
                     title: 'Gagal menyalakan lampu.',
-                    text: 'Browser/Driver menolak akses lampu.',
+                    text: 'Gagal akses hardware. Coba refresh halaman.',
                     showConfirmButton: false,
                     timer: 2000
                 });
