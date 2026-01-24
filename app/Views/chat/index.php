@@ -496,7 +496,7 @@
             return formatted;
         }
 
-        function isOnlyEmojis(str) {
+
         function getEmojiCount(str) {
             if(!str) return 0;
             const clean = str.replace(/\s/g, ''); 
