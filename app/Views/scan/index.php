@@ -367,17 +367,11 @@
             html5QrCode = new Html5Qrcode("reader");
 
             try {
-                // FIXED: Request HD Resolution to force MAIN CAMERA (which usually has the Flash)
-                // Low res often picks wide-angle/macro lens which has no flash!
+                // REVERT: Remove HD Constraints to ensure camera opens on all devices
                 const config = { 
                     fps: 20, 
                     qrbox: getQrBoxSize,
-                    aspectRatio: 1.0,
-                    videoConstraints: {
-                        width: { min: 1280, ideal: 1920 },
-                        height: { min: 720, ideal: 1080 },
-                        facingMode: "environment"
-                    }
+                    aspectRatio: 1.0
                 };
                 
                 await html5QrCode.start(
