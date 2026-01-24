@@ -354,26 +354,17 @@
             });
         }
 
-        let html5QrCode;
+        // Global Instance (Single Source of Truth)
+        const html5QrCode = new Html5Qrcode("reader");
+        let isScanning = false;
         let isFlashOn = false;
 
         // Start Scanner manually
         async function startScanner() {
-            if (typeof Html5Qrcode === 'undefined') {
-                document.getElementById('reader').innerHTML = '<div class="p-4 text-red-500 font-bold">Error: Library Scanner gagal dimuat.</div>';
-                return;
-            }
-
-            // CLEANUP (Safe Mode)
-            try { await html5QrCode.stop(); } catch(e) {}
-            try { await html5QrCode.clear(); } catch(e) {}
-            
-            // Re-instantiate
-            html5QrCode = new Html5Qrcode("reader");
+            if (isScanning) return; // Prevent double start
 
             try {
                 // FIXED: EXACT LEGACY CONFIG (Jimpitan New Style)
-                // qrbox using integer is safer than function/object on some ver.
                 const config = { 
                     fps: 20, 
                     qrbox: 250
@@ -385,6 +376,8 @@
                     onScanSuccess,
                     (errorMessage) => {}
                 );
+                
+                isScanning = true;
 
                 // FORCE SHOW FLASH BUTTON
                 document.getElementById('flashToggle').classList.remove('hidden');
@@ -392,6 +385,9 @@
 
             } catch (err) {
                 console.error(err);
+                // Clear state just in case
+                isScanning = false;
+                
                 document.getElementById('reader').innerHTML = `
                     <div class="p-4 bg-red-50 text-red-600 rounded-lg text-sm font-bold">
                         Gagal Membuka Kamera: ${err.message}<br>
