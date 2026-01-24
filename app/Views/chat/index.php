@@ -1177,15 +1177,30 @@
                 return;
             }
 
+            // Check if already denied
+            if (Notification.permission === 'denied') {
+                showManualUnblockGuide();
+                return;
+            }
+
             try {
                 const permission = await Notification.requestPermission();
                 console.log(`🎭 Permission outcome: ${permission}`);
                 
                 if (permission === 'granted') {
-                    if(isManual) alert('Notifikasi diaktifkan!');
+                    if(isManual) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: 'Notifikasi diaktifkan!',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    }
                     registerServiceWorker();
                 } else if (isManual && permission === 'denied') {
-                    alert('Notifikasi diblokir. Silakan izinkan di pengaturan browser.');
+                    // Just blocked it now
+                    showManualUnblockGuide();
                 }
             } catch (err) {
                 console.warn('⚠️ Notification permission request failed or ignored', err);
@@ -1239,34 +1254,64 @@
                        // Auto-register without bothering the user
                        registerFCM(true);
                    } else if (Notification.permission === 'default') {
-                       console.log('⏳ Permission is default. Showing SweetAlert prompt...');
+                       console.log('⏳ Permission is default. Showing Soft Ask...');
                        
                        const btn = document.getElementById('btnEnableNotif');
                        if (btn) btn.classList.remove('hidden');
 
-                       // Use SweetAlert as a user-gesture bridge
+                       // SOFT ASK STRATEGY
+                       // Don't trigger browser prompt yet. Ask politely first.
+                       // If they say NO/LATER, we do nothing (Status remains 'default', not 'denied').
                        Swal.fire({
                            title: 'Aktifkan Notifikasi?',
-                           text: 'Dapatkan pemberitahuan pesan baru secara real-time di HP/Laptop Anda.',
+                           text: 'Agar tidak ketinggalan pesan baru, izinkan kami mengirim notifikasi ke perangkat ini.',
                            icon: 'question',
                            showCancelButton: true,
                            confirmButtonText: 'Ya, Aktifkan',
                            cancelButtonText: 'Nanti Saja',
                            confirmButtonColor: '#4f46e5',
-                           reverseButtons: true
+                           cancelButtonColor: '#9ca3af',
+                           reverseButtons: true,
+                           allowOutsideClick: false // Force choice
                        }).then((result) => {
                            if (result.isConfirmed) {
+                               // Only trigger actual browser prompt if they said YES
                                askPermission(true);
                            }
+                           // If Cancel/Nanti: We do nothing. 
+                           // Browser permission stays 'default'. 
+                           // Next visit, we can ask again!
                        });
                    } else {
                        console.log('🚫 Permission is denied.');
+                       // Show bell so they can change their mind
                        const btn = document.getElementById('btnEnableNotif');
                        if (btn) btn.classList.remove('hidden');
                    }
                } catch (e) {
                    console.error("FCM Check failed", e);
                }
+            });
+        }
+        
+        function showManualUnblockGuide() {
+            Swal.fire({
+                title: 'Akses Notifikasi Diblokir',
+                html: `
+                    <div class="text-left text-sm space-y-2">
+                        <p>Anda sebelumnya memilih "Block". Browser mencegah kami meminta izin lagi secara otomatis.</p>
+                        <p class="font-bold mt-2">Cara Mengaktifkan Kembali:</p>
+                        <ol class="list-decimal pl-5 space-y-1">
+                            <li>Klik ikon <i class="fas fa-lock"></i> <strong>Gembok</strong> / <strong>Pengaturan</strong> di samping alamat website (URL) di atas.</li>
+                            <li>Cari menu <strong>Notifications</strong> atau <strong>Izin Situs</strong>.</li>
+                            <li>Ubah dari <strong>Block</strong> menjadi <strong>Allow / Izinkan</strong>.</li>
+                            <li>Muat ulang (Refresh) halaman ini.</li>
+                        </ol>
+                    </div>
+                `,
+                icon: 'warning',
+                confirmButtonText: 'Saya paham',
+                confirmButtonColor: '#4f46e5'
             });
         }
     </script>

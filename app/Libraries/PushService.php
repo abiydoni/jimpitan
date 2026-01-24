@@ -122,9 +122,17 @@ class PushService
                     $errMsg = $respDecoded['error']['message'] ?? $response;
                     $this->logger->error("FCM Send Error to Token " . substr($token, 0, 10) . "... ($httpCode): " . $errMsg);
                     
-                    if ($httpCode === 404 || $httpCode === 400 || (isset($respDecoded['error']['status']) && $respDecoded['error']['status'] === 'UNREGISTERED')) {
+                    // Strict check: Only delete if explicitly UNREGISTERED or INVALID_ARGUMENT (Token)
+                    $errorCode = $respDecoded['error']['status'] ?? '';
+                    $errorDetails = $respDecoded['error']['message'] ?? '';
+                    
+                    if ($errorCode === 'UNREGISTERED' || 
+                       ($errorCode === 'INVALID_ARGUMENT' && stripos($errorDetails, 'token') !== false)) {
                          $db->table('fcm_subscriptions')->where('fcm_token', $token)->delete();
-                         $this->logger->info("FCM: Deleted invalid/unregistered token.");
+                         $this->logger->info("FCM: Deleted invalid/unregistered token: " . substr($token, 0, 10));
+                    } else {
+                         // Just log other errors (e.g. Quota, Internal, Malformed Payload)
+                         $this->logger->warning("FCM Error (Retrying next time): $errorCode - $errorDetails");
                     }
                 }
             }
