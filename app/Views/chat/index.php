@@ -203,6 +203,41 @@
         let replyingTo = null; // { id, message, sender }
         
         let allUsers = []; // Global Users State
+        
+        // --- GLOBAL AUDIO SYSTEM ---
+        const sentSound = new Audio('<?= base_url("assets/audio/sent.mp3") ?>?v=7');
+        sentSound.volume = 0.6;
+        
+        const notifSound = new Audio('<?= base_url("assets/audio/notification.mp3") ?>?v=7');
+        notifSound.volume = 1.0;
+
+        // Unlock Audio Context on First Interaction (Mobile Fix)
+        function unlockAudio() {
+            console.log("🔊 Unlocking Audio Context...");
+            const playPromise1 = sentSound.play();
+            if (playPromise1 !== undefined) {
+                playPromise1.then(_ => {
+                    sentSound.pause();
+                    sentSound.currentTime = 0;
+                }).catch(error => console.log("Audio unlock failed/waiting", error));
+            }
+            
+            const playPromise2 = notifSound.play();
+            if (playPromise2 !== undefined) {
+                playPromise2.then(_ => {
+                    notifSound.pause();
+                    notifSound.currentTime = 0;
+                }).catch(error => {});
+            }
+            
+            // Remove listener once unlocked
+            document.removeEventListener('click', unlockAudio);
+            document.removeEventListener('touchstart', unlockAudio);
+        }
+        
+        document.addEventListener('click', unlockAudio);
+        document.addEventListener('touchstart', unlockAudio);
+        // ---------------------------
 
         function getTimeAgo(date) {
             if (!date || date === '0000-00-00 00:00:00' || date === '0000-00-00') return 'Pernah aktif';
@@ -1052,10 +1087,9 @@
                         reply_sender: replyingTo ? replyingTo.sender : null
                     }, true);
                     
-                    // Play Sent Sound (Soft) using LOCAL FILE
-                    const sentAudio = new Audio('<?= base_url("assets/audio/sent.mp3") ?>?v=4'); 
-                    sentAudio.volume = 0.6; 
-                    sentAudio.play().catch(e => console.error("Sent Audio Error:", e));
+                    // Play Sent Sound (Soft) using GLOBAL UNLOCKED OBJECT
+                    sentSound.currentTime = 0; // Reset
+                    sentSound.play().catch(e => console.error("Sent Audio Error:", e));
                     
                     input.value = '';
                     input.style.height = 'auto';
@@ -1127,10 +1161,9 @@
             // Native Notification (if permission granted but page focused)
             // Some browsers don't show native notif if page focused, so fallback to Toast/Swal
             
-            // Play Sound (LOUD) using LOCAL FILE
-            const audio = new Audio('<?= base_url("assets/audio/notification.mp3") ?>?v=4'); 
-            audio.volume = 1.0; 
-            audio.play().catch(e => console.error("Audio Play Error:", e));
+            // Play Sound (LOUD) using GLOBAL UNLOCKED OBJECT
+            notifSound.currentTime = 0;
+            notifSound.play().catch(e => console.error("Audio Play Error:", e));
             
             // VIBRATE
             if (navigator.vibrate) {
