@@ -1052,9 +1052,10 @@
                         reply_sender: replyingTo ? replyingTo.sender : null
                     }, true);
                     
-                    // Play Sent Sound (Soft)
-                    const sentAudio = new Audio('<?= base_url("assets/audio/sent.mp3") ?>?v=3'); 
-                    sentAudio.volume = 0.5; 
+                    // Play Sent Sound (Soft) using CDN
+                    // Message Sent Swoosh
+                    const sentAudio = new Audio('https://cdn.pixabay.com/download/audio/2021/08/09/audio_88447e769f.mp3'); 
+                    sentAudio.volume = 0.6; 
                     sentAudio.play().catch(e => console.error("Sent Audio Error:", e));
                     
                     input.value = '';
@@ -1127,14 +1128,16 @@
             // Native Notification (if permission granted but page focused)
             // Some browsers don't show native notif if page focused, so fallback to Toast/Swal
             
-            // Play Sound (LOUD)
-            // Use relative path to avoid baseUrl issues if possible, or debug
-            const audio = new Audio('<?= base_url("assets/audio/notification.mp3") ?>?v=3'); 
-            audio.volume = 1.0; // Max volume
-            audio.play().catch(e => {
-                console.error("Audio Play Error:", e);
-                // alert("Gagal memutar audio: " + e.message); // Debug
-            });
+            // Play Sound (LOUD) using CDN for reliability
+            // Glass Ping
+            const audio = new Audio('https://cdn.pixabay.com/download/audio/2022/03/10/audio_c8c8a73467.mp3'); 
+            audio.volume = 1.0; 
+            audio.play().catch(e => console.error("Audio Play Error:", e));
+            
+            // VIBRATE (Tambahan baru)
+            if (navigator.vibrate) {
+                navigator.vibrate([200, 100, 200, 100, 200]); // Getar 3x
+            }
 
             const Toast = Swal.mixin({
                 toast: true,
