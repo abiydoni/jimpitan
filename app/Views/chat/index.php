@@ -1053,9 +1053,9 @@
                     }, true);
                     
                     // Play Sent Sound (Soft)
-                    const sentAudio = new Audio(baseUrl + '/assets/audio/sent.mp3?v=2024'); 
-                    sentAudio.volume = 0.4; // Softer
-                    sentAudio.play().catch(e => {}); // Ignore autoplay errors
+                    const sentAudio = new Audio('<?= base_url("assets/audio/sent.mp3") ?>?v=3'); 
+                    sentAudio.volume = 0.5; 
+                    sentAudio.play().catch(e => console.error("Sent Audio Error:", e));
                     
                     input.value = '';
                     input.style.height = 'auto';
@@ -1128,9 +1128,13 @@
             // Some browsers don't show native notif if page focused, so fallback to Toast/Swal
             
             // Play Sound (LOUD)
-            const audio = new Audio(baseUrl + '/assets/audio/notification.mp3'); 
+            // Use relative path to avoid baseUrl issues if possible, or debug
+            const audio = new Audio('<?= base_url("assets/audio/notification.mp3") ?>?v=3'); 
             audio.volume = 1.0; // Max volume
-            audio.play().catch(e => console.log("Audio autoplay blocked (need interaction first):", e));
+            audio.play().catch(e => {
+                console.error("Audio Play Error:", e);
+                // alert("Gagal memutar audio: " + e.message); // Debug
+            });
 
             const Toast = Swal.mixin({
                 toast: true,
