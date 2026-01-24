@@ -65,6 +65,17 @@ class PushService
                             'title' => $title,
                             'body' => mb_substr($messageText, 0, 100, 'UTF-8')
                         ],
+                        'webpush' => [
+                            'headers' => [
+                                'Urgency' => 'high',
+                                'TTL' => '4500'
+                            ],
+                            'notification' => [
+                                'requireInteraction' => true,
+                                'renotify' => true,
+                                'vibrate' => [200, 100, 200]
+                            ]
+                        ],
                         'data' => [
                             'url' => $url ?: '/chat',
                             'title' => $title,
