@@ -593,12 +593,13 @@
         // --- Announcement Popup Logic (Custom Glass Modal) ---
         <?php if(!empty($announcements)): ?>
             // Insert Modal HTML to Body
-            const anno = <?= json_encode($announcements[0]) ?>;
-            const storageKey = 'seen_anno_' + anno.id;
-            
+            // Announcement List
+            const annoList = <?= json_encode($announcements) ?>;
+            let currentIndex = 0;
+
             // Temporary: Show every time (commented out check)
-            // if (!sessionStorage.getItem(storageKey)) {
-            if (true) {
+            // if (!sessionStorage.getItem('seen_attr_' + annoList[0].id)) {
+            if (true && annoList.length > 0) {
                 
                  // Global Close Function (Defined first)
                 window.closeAnnoModal = function() {
@@ -612,7 +613,7 @@
                         
                         setTimeout(() => {
                             modalOverlay.remove();
-                            sessionStorage.setItem(storageKey, 'true');
+                            // sessionStorage.setItem('seen_attr_' + annoList[0].id, 'true'); 
                         }, 300);
                     }
                 };
@@ -625,96 +626,145 @@
                 // Glass Backdrop
                 const backdrop = document.createElement('div');
                 backdrop.className = "absolute inset-0 bg-black/40 backdrop-blur-sm";
-                backdrop.onclick = window.closeAnnoModal; // Use window reference
+                backdrop.onclick = window.closeAnnoModal;
                 
-                // Determine Classes based on is_transparent toggle
-                const isTransparent = anno.is_transparent == 1;
-                // If hide_text is on, forcing hasContent to false so text block is skipped and image goes full
-                const hideText = anno.hide_text == 1;
-                const hasContent = !hideText && (anno.content && anno.content.trim() !== '');
+                // Container for dynamic updates
+                const modalContainerWrapper = document.createElement('div');
+                modalContainerWrapper.id = 'annoModalWrapper';
+                modalContainerWrapper.className = "relative z-10 w-full flex justify-center pointer-events-none"; // Wrapper to center and handle events
                 
-                // Base classes
-                let containerClass = "relative w-full max-w-lg rounded-3xl p-6 transform transition-all duration-300 scale-95 opacity-0 overflow-visible";
-                
-                if (isTransparent) {
-                    containerClass += " bg-transparent shadow-none backdrop-blur-none"; // No background
-                } else {
-                    containerClass += " bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl"; // Glass effect
-                }
-                
-                // Image Only Mode logic
-                if (!hasContent && anno.image) {
-                     containerClass = containerClass.replace('max-w-lg', 'max-w-2xl'); // Wider for image only
-                }
-
-                const modalContent = document.createElement('div');
-                modalContent.id = 'annoModalContent';
-                modalContent.className = containerClass;
-                
-                // Decorative Elements (Blobs) - Hide in Transparent Mode if desired? Or keep them?
-                // User said "hilangkan background total", maybe means standard modal background. 
-                // Let's keep blobs for aesthetic but maybe safer to keep them attached to the container logic?
-                // Actually if transparent, we probably still want blobs behind the text/image? 
-                // Let's keep them always for consistent vibe.
-                // Close Button Style Logic
-                let btnClass = "";
-                if (isTransparent) {
-                    // Glassy White for Dark Backdrop Context
-                    btnClass = "bg-white/20 dark:bg-black/20 hover:bg-red-500/80 text-white border-white/30";
-                } else {
-                    // Solid Contrast for Modal Context
-                    btnClass = "bg-white dark:bg-slate-700 hover:bg-red-500 hover:text-white text-slate-700 dark:text-gray-200 border-slate-200 dark:border-slate-600";
-                }
-
-                modalContent.innerHTML = `
-                    <div class="absolute -top-10 -left-10 w-40 h-40 bg-indigo-500/40 rounded-full blur-3xl pointer-events-none mix-blend-multiply dark:mix-blend-screen animate-blob"></div>
-                    <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-purple-500/40 rounded-full blur-3xl pointer-events-none mix-blend-multiply dark:mix-blend-screen animate-blob animation-delay-2000"></div>
-                    
-                    <!-- Close Button (Top Right) -->
-                    <button onclick="closeAnnoModal()" class="absolute -top-3 -right-3 z-50 w-10 h-10 flex items-center justify-center rounded-full shadow-lg backdrop-blur-md border transition-all transform hover:scale-110 active:scale-95 group ${btnClass}">
-                        <i class="fas fa-times text-lg drop-shadow-sm"></i>
-                    </button>
-
-                    <!-- Content -->
-                    <div class="relative z-0 ${isTransparent ? 'p-0' : ''}">
-                        ${anno.image ? `
-                            <div class="rounded-2xl overflow-hidden ${hasContent ? 'mb-5' : ''} shadow-lg relative group">
-                                <img src="<?= base_url('img/announcement/') ?>/${anno.image}" class="w-full h-auto ${hasContent ? 'max-h-[300px]' : 'max-h-[80vh]'} object-contain hover:scale-105 transition-transform duration-700">
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
-                            </div>
-                        ` : ''}
-                        
-                        ${hasContent ? `
-                            <div class="${isTransparent ? 'mt-4' : ''}">
-                                <h3 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-purple-700 dark:from-indigo-200 dark:to-purple-200 mb-3 leading-tight drop-shadow-md">
-                                    ${anno.title}
-                                </h3>
-                                
-                                <div class="prose dark:prose-invert prose-sm max-w-none text-slate-800 dark:text-slate-100 leading-relaxed overflow-y-auto max-h-[200px] fancy-scrollbar pr-2 font-medium drop-shadow-md">
-                                    ${anno.content.replace(/\n/g, '<br>')}
-                                </div>
-                            </div>
-                        ` : ''}
-
-                        ${anno.link ? `
-                            <div class="mt-6">
-                                <a href="${anno.link}" target="_blank" class="block w-full text-center py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-transform active:scale-95">
-                                    Buka Tautan <i class="fas fa-external-link-alt ml-1 md:text-sm"></i>
-                                </a>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-
                 modalOverlay.appendChild(backdrop);
-                modalOverlay.appendChild(modalContent);
+                modalOverlay.appendChild(modalContainerWrapper);
                 document.body.appendChild(modalOverlay);
 
-                // Animate In
+                // Function to Render Content
+                function renderAnnouncement(index) {
+                    const anno = annoList[index];
+                    const wrapper = document.getElementById('annoModalWrapper');
+                    wrapper.innerHTML = ''; // Clear previous
+
+                    // Determine Logic
+                    const isTransparent = anno.is_transparent == 1;
+                    const hideText = anno.hide_text == 1;
+                    const hasContent = !hideText && (anno.content && anno.content.trim() !== '');
+                    
+                    // Container Classes
+                    let containerClass = "pointer-events-auto relative w-full max-w-lg rounded-3xl p-6 transform transition-all duration-300 shadow-2xl overflow-hidden";
+                    
+                    if (isTransparent) {
+                        containerClass += " bg-transparent shadow-none backdrop-blur-none"; 
+                    } else {
+                        containerClass += " bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 dark:border-white/10";
+                    }
+                    
+                    // Image Only Mode logic
+                    if (!hasContent && anno.image) {
+                        containerClass = containerClass.replace('max-w-lg', 'max-w-3xl'); 
+                    }
+
+                    // Button Style
+                    let btnClass = "";
+                    if (isTransparent) {
+                        btnClass = "bg-white/20 dark:bg-black/20 hover:bg-red-500/80 text-white border-white/30";
+                    } else {
+                        btnClass = "bg-white dark:bg-slate-700 hover:bg-red-500 hover:text-white text-slate-700 dark:text-gray-200 border-slate-200 dark:border-slate-600";
+                    }
+                    
+                    // Nav Button Style
+                    let navBtnClass = "";
+                    if (isTransparent) {
+                        navBtnClass = "bg-white/10 hover:bg-white/30 text-white backdrop-blur-md border border-white/20";
+                    } else {
+                        navBtnClass = "bg-white dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 text-slate-700 dark:text-white shadow-lg border border-slate-200 dark:border-slate-700";
+                    }
+
+                    const contentHTML = `
+                        <div id="annoModalContent" class="${containerClass} animate__animated animate__zoomIn animate__faster">
+                             <!-- Blobs (Persistent) -->
+                            <div class="absolute -top-10 -left-10 w-40 h-40 bg-indigo-500/40 rounded-full blur-3xl pointer-events-none mix-blend-multiply dark:mix-blend-screen animate-blob"></div>
+                            <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-purple-500/40 rounded-full blur-3xl pointer-events-none mix-blend-multiply dark:mix-blend-screen animate-blob animation-delay-2000"></div>
+
+                            <!-- Close Button -->
+                            <button onclick="closeAnnoModal()" class="absolute -top-3 -right-3 z-50 w-10 h-10 flex items-center justify-center rounded-full shadow-lg backdrop-blur-md border transition-all transform hover:scale-110 active:scale-95 group ${btnClass}">
+                                <i class="fas fa-times text-lg drop-shadow-sm"></i>
+                            </button>
+
+                             <!-- Navigation Buttons (If multiple) -->
+                            ${annoList.length > 1 ? `
+                                <div class="absolute inset-y-0 -left-4 md:-left-16 flex items-center z-40 pointer-events-none">
+                                     <button onclick="prevAnno()" class="pointer-events-auto w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-all transform hover:scale-110 active:scale-95 ${navBtnClass} ${index === 0 ? 'opacity-50 cursor-not-allowed hidden' : ''}">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </button>
+                                </div>
+                                <div class="absolute inset-y-0 -right-4 md:-right-16 flex items-center z-40 pointer-events-none">
+                                    <button onclick="nextAnno()" class="pointer-events-auto w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-all transform hover:scale-110 active:scale-95 ${navBtnClass} ${index === annoList.length - 1 ? 'opacity-50 cursor-not-allowed hidden' : ''}">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                            ` : ''}
+
+                            <!-- Content Body -->
+                            <div class="relative z-0 ${isTransparent ? 'p-0' : ''}">
+                                ${anno.image ? `
+                                    <div class="rounded-2xl overflow-hidden ${hasContent ? 'mb-5' : ''} shadow-lg relative group">
+                                        <img src="<?= base_url('img/announcement/') ?>/${anno.image}" class="w-full h-auto ${hasContent ? 'max-h-[300px]' : 'max-h-[80vh]'} object-contain hover:scale-105 transition-transform duration-700">
+                                        <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${hasContent ? `
+                                    <div class="${isTransparent ? 'mt-4' : ''}">
+                                        <h3 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-purple-700 dark:from-indigo-200 dark:to-purple-200 mb-3 leading-tight drop-shadow-md">
+                                            ${anno.title}
+                                        </h3>
+                                        <div class="prose dark:prose-invert prose-sm max-w-none text-slate-800 dark:text-slate-100 leading-relaxed overflow-y-auto max-h-[200px] fancy-scrollbar pr-2 font-medium drop-shadow-md">
+                                            ${anno.content.replace(/\n/g, '<br>')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                ${anno.link ? `
+                                    <div class="mt-6">
+                                        <a href="${anno.link}" target="_blank" class="block w-full text-center py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-transform active:scale-95">
+                                            Buka Tautan <i class="fas fa-external-link-alt ml-1 md:text-sm"></i>
+                                        </a>
+                                    </div>
+                                ` : ''}
+
+                                <!-- Counters -->
+                                ${annoList.length > 1 ? `
+                                    <div class="absolute bottom-2 right-2 px-2 py-1 bg-black/50 text-white text-[10px] rounded-full backdrop-blur-sm">
+                                        ${index + 1} / ${annoList.length}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                    
+                    wrapper.innerHTML = contentHTML;
+                }
+
+                // Nav Functions
+                window.prevAnno = function() {
+                    if(currentIndex > 0) {
+                        currentIndex--;
+                        renderAnnouncement(currentIndex);
+                    }
+                };
+                
+                window.nextAnno = function() {
+                    if(currentIndex < annoList.length - 1) {
+                        currentIndex++;
+                        renderAnnouncement(currentIndex);
+                    }
+                };
+
+                // Initial Render
+                renderAnnouncement(currentIndex);
+
+                // Animate In Overlay
                 requestAnimationFrame(() => {
                     modalOverlay.classList.remove('opacity-0');
-                    modalContent.classList.remove('scale-95', 'opacity-0');
-                    modalContent.classList.add('scale-100', 'opacity-100');
                 });
             }
         <?php endif; ?>
