@@ -94,10 +94,6 @@
                          <p class="text-[10px] text-green-500 font-semibold">Online</p>
                     </div>
                     <div class="ml-auto flex gap-2">
-                        <!-- Debug Audio Button -->
-                        <button onclick="testAudio()" class="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/50 hover:bg-red-200 flex items-center justify-center text-red-600 shadow-sm" title="Test Audio">
-                            <i class="fas fa-volume-up text-xs"></i>
-                        </button>
                         <button id="btnEnableNotif" onclick="askPermission(true)" class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 hover:bg-indigo-200 dark:hover:bg-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 transition-colors shadow-sm hidden" title="Aktifkan Notifikasi">
                             <i class="fas fa-bell text-xs"></i>
                         </button>
@@ -1367,33 +1363,6 @@
                 confirmButtonText: 'Saya paham',
                 confirmButtonColor: '#4f46e5'
             });
-        }
-        async function testAudio() {
-             const sentPath = '<?= base_url("assets/audio/sent.mp3") ?>?v=6';
-             const notifPath = '<?= base_url("assets/audio/notification.mp3") ?>?v=6';
-             
-             try {
-                 console.log("Testing Audio...");
-                 const a1 = new Audio(sentPath);
-                 const a2 = new Audio(notifPath);
-                 
-                 // Chain playback
-                 await a1.play();
-                 console.log("Sent Audio OK");
-                 
-                 setTimeout(async () => {
-                     try {
-                        await a2.play();
-                        alert("Audio Berhasil Diputar! ✅\nJika Anda tetap mendengar suara bawaan HP saat chat ditutup, itu wajar (karena diatur Android). Tapi saat chat DIBUKA, harusnya bunyi suara ini.");
-                     } catch(err2) {
-                        alert("Error Play Notification: " + err2.message);
-                     }
-                 }, 1000);
-                 
-             } catch(err) {
-                 alert("Error Play Sent: " + err.message + "\nCek console browser.");
-                 console.error(err);
-             }
         }
     </script>
 </body>
