@@ -94,6 +94,10 @@
                          <p class="text-[10px] text-green-500 font-semibold">Online</p>
                     </div>
                     <div class="ml-auto flex gap-2">
+                        <!-- Debug Audio Button -->
+                        <button onclick="testAudio()" class="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/50 hover:bg-red-200 flex items-center justify-center text-red-600 shadow-sm" title="Test Audio">
+                            <i class="fas fa-volume-up text-xs"></i>
+                        </button>
                         <button id="btnEnableNotif" onclick="askPermission(true)" class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 hover:bg-indigo-200 dark:hover:bg-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 transition-colors shadow-sm hidden" title="Aktifkan Notifikasi">
                             <i class="fas fa-bell text-xs"></i>
                         </button>
