@@ -650,7 +650,7 @@
                     const hasContent = !hideText && (anno.content && anno.content.trim() !== '');
                     
                     // Container Classes
-                    let containerClass = "pointer-events-auto relative w-full max-w-lg rounded-3xl p-6 transform transition-all duration-300 shadow-2xl overflow-hidden";
+                    let containerClass = "pointer-events-auto relative w-full max-w-lg rounded-3xl p-6 transform transition-all duration-300 shadow-2xl overflow-visible";
                     
                     if (isTransparent) {
                         containerClass += " bg-transparent shadow-none backdrop-blur-none"; 
