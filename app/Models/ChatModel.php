@@ -95,11 +95,15 @@ class ChatModel extends Model
     
     public function getUnreadCount($receiver_id)
     {
-         // JOIN with users to ensure sender exists (matches Chat Page logic)
+         // Use LEFT JOIN to verify sender existence, but explicitly allow 'SYSTEM'
          return $this->select('chats.id')
-                     ->join('users', 'users.id_code = chats.sender_id')
+                     ->join('users', 'users.id_code = chats.sender_id', 'left')
                      ->where('chats.receiver_id', $receiver_id)
                      ->where('chats.is_read', 0)
+                     ->groupStart()
+                        ->where('users.id_code IS NOT NULL')
+                        ->orWhere('chats.sender_id', 'SYSTEM')
+                     ->groupEnd()
                      ->countAllResults();
     }
     
