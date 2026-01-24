@@ -67,10 +67,13 @@ class ChatModel extends Model
     
     public function getGroupMessages()
     {
-        $result = $this->select('chats.*, 
-                            users.name as sender_name,
+        $result = $this->select("chats.*, 
+                            CASE 
+                                WHEN chats.sender_id = 'SYSTEM' THEN 'appsbee System'
+                                ELSE users.name 
+                            END as sender_name,
                             reply.message as reply_message, 
-                            reply_user.name as reply_sender')
+                            reply_user.name as reply_sender")
                     ->join('users', 'users.id_code = chats.sender_id', 'left')
                     ->join('chats as reply', 'reply.id = chats.reply_to_id', 'left')
                     ->join('users as reply_user', 'reply_user.id_code = reply.sender_id', 'left')

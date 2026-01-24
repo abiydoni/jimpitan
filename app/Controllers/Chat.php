@@ -138,6 +138,24 @@ class Chat extends BaseController
             'last_activity' => $activityTimes['GROUP_ALL'] ?? '0000-00-00 00:00:00'
         ];
         
+        // Add System User for s_admin
+        if (session()->get('role') === 's_admin') {
+            $systemUser = [
+                'id_code' => 'SYSTEM',
+                'name' => 'appsbee System',
+                'user_name' => 'system',
+                'role' => 'system',
+                'foto' => null, // Handled by frontend icon
+                'unread_count' => $this->chatModel->where('sender_id', 'SYSTEM')
+                                                  ->where('receiver_id', $currentUserId)
+                                                  ->where('is_read', 0)
+                                                  ->countAllResults(),
+                'is_online' => true, // Always online
+                'last_activity' => $activityTimes['SYSTEM'] ?? date('Y-m-d H:i:s')
+            ];
+            $users[] = $systemUser;
+        }
+
         // Add group to array
         $users[] = $groupChat;
         
