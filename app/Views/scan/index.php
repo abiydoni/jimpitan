@@ -367,26 +367,18 @@
             html5QrCode = new Html5Qrcode("reader");
 
             try {
-                // 1. Get Cameras
-                const devices = await Html5Qrcode.getCameras();
-                if (!devices || devices.length === 0) {
-                    throw new Error("Tidak ada kamera terdeteksi.");
-                }
+                // FIXED: Use Simple config like Old App (jimpitannew)
+                // Avoids 'getCameras' complexity which fails on some Androids
+                const config = { 
+                    fps: 20, 
+                    qrbox: getQrBoxSize,
+                    aspectRatio: 1.0 
+                };
                 
-                // 2. Select Back Camera
-                let cameraId = devices[0].id; 
-                for (const device of devices) {
-                    if (device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('belakang')) {
-                        cameraId = device.id;
-                    }
-                }
-                // 3. Start Scanning
+                // Use standard facingMode constraint
                 await html5QrCode.start(
-                    cameraId, 
-                    {
-                        fps: 10,
-                        qrbox: getQrBoxSize
-                    },
+                    { facingMode: "environment" }, 
+                    config,
                     onScanSuccess,
                     (errorMessage) => {
                         // ignore frame errors
@@ -395,7 +387,7 @@
 
                 // Show Flash Button after camera start
                 document.getElementById('flashToggle').classList.remove('hidden');
-                updateFlashUI(); // Ensure consistent initial state
+                updateFlashUI(); 
 
             } catch (err) {
                 console.error(err);
