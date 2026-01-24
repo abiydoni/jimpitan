@@ -364,6 +364,14 @@
                 return;
             }
 
+            // CLEANUP: Stop existing scanner if any
+            if (html5QrCode && html5QrCode.isScanning) {
+                try { await html5QrCode.stop(); } catch(e) {}
+            }
+            // Clear element to avoid "Element in use" errors
+            try { html5QrCode.clear(); } catch(e) {}
+            
+            // Re-instantiate
             html5QrCode = new Html5Qrcode("reader");
 
             try {
