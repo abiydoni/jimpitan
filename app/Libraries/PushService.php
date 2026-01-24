@@ -65,38 +65,11 @@ class PushService
                             'title' => $title,
                             'body' => mb_substr($messageText, 0, 100, 'UTF-8')
                         ],
-                        'android' => [
-                            'priority' => 'high',
-                            'notification' => [
-                                'channel_id' => 'jimpitan-chat-channel', // Needs to be created in SW or Android Manifest if native
-                                'priority' => 'high',
-                                'default_sound' => true,
-                                'visibility' => 'public',
-                                'icon' => 'stock_ticker_update',
-                                'color' => '#6366f1'
-                            ]
-                        ],
-                        'webpush' => [
-                            'headers' => [
-                                'Urgency' => 'high',
-                                'TTL' => '4500' 
-                            ],
-                            'fcm_options' => [
-                                'link' => $url ?: '/chat'
-                            ],
-                            'notification' => [
-                                'icon' => 'https://jimpitan.appsbee.my.id/favicon.ico',
-                                'badge' => 'https://jimpitan.appsbee.my.id/favicon.ico',
-                                'tag' => 'jimpitan-global',
-                                'renotify' => true,
-                                'requireInteraction' => true,
-                                'vibrate' => [200, 100, 200, 100, 200]
-                            ]
-                        ],
                         'data' => [
                             'url' => $url ?: '/chat',
                             'title' => $title,
-                            'body' => (string)$messageText
+                            'body' => (string)$messageText,
+                            'click_action' => $url ?: '/chat' // Legacy support
                         ]
                     ]
                 ];
