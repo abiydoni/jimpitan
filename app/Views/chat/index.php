@@ -617,10 +617,12 @@
             if (isJumbo) {
                 bubbleClass = 'bg-transparent shadow-none p-0 border-none leading-none ';
                 // 1=6xl (4rem), 2=5xl (3rem), 3=4xl (2.25rem), 4=3xl (1.875rem)
-                if(emojiCount === 1) inlineStyle = 'font-size: 4rem !important; line-height: 1;';
-                else if(emojiCount === 2) inlineStyle = 'font-size: 3rem !important; line-height: 1;';
-                else if(emojiCount === 3) inlineStyle = 'font-size: 2.25rem !important; line-height: 1;';
-                else inlineStyle = 'font-size: 1.875rem !important; line-height: 1;';
+                // 1=6xl (4rem), 2=5xl (3rem), 3=4xl (2.25rem), 4=3xl (1.875rem)
+                // Using line-height: 1.2 to prevent vertical cropping
+                if(emojiCount === 1) inlineStyle = 'font-size: 4rem !important; line-height: 1.2;';
+                else if(emojiCount === 2) inlineStyle = 'font-size: 3rem !important; line-height: 1.2;';
+                else if(emojiCount === 3) inlineStyle = 'font-size: 2.25rem !important; line-height: 1.2;';
+                else inlineStyle = 'font-size: 1.875rem !important; line-height: 1.2;';
             } else {
                 bubbleClass = isMe 
                     ? 'bg-indigo-600 text-white rounded-br-none' 
@@ -667,8 +669,8 @@
 
             div.innerHTML = `
                 ${isMe ? actionsHtml : ''}
-                <div class="max-w-[90%] md:max-w-[80%] flex flex-col ${isMe ? 'items-end' : 'items-start'} overflow-hidden">
-                    <div style="${inlineStyle}" class="${isJumbo ? 'px-0 py-0' : 'chat-bubble'} rounded-2xl ${isJumbo ? '' : 'text-[13px]'} shadow-sm relative ${bubbleClass} break-words overflow-hidden max-w-full">
+                <div class="max-w-[90%] md:max-w-[80%] flex flex-col ${isMe ? 'items-end' : 'items-start'} ${isJumbo ? '' : 'overflow-hidden'}">
+                    <div style="${inlineStyle}" class="${isJumbo ? 'px-1 py-1' : 'chat-bubble'} rounded-2xl ${isJumbo ? '' : 'text-[13px]'} shadow-sm relative ${bubbleClass} break-words ${isJumbo ? '' : 'overflow-hidden'} max-w-full">
                         ${(!isMe && activeUserId === 'GROUP_ALL' && !isJumbo) ? `<p class="text-[10px] font-bold ${nameColor} mb-0.5 leading-tight">${displayName}</p>` : ''}
                         ${(!isMe && activeUserId === 'GROUP_ALL' && isJumbo) ? `<p class="text-[9px] font-bold ${nameColor} mb-0 leading-tight bg-white/80 dark:bg-slate-800/80 px-1 rounded absolute -top-4 left-0 w-max shadow-sm">${displayName}</p>` : ''}
                         ${quoteHtml}
