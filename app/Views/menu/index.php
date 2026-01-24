@@ -196,6 +196,110 @@
     <!-- Global Loader -->
     <?= $this->include('partials/loader') ?>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+
+    <script>
+        // --- AUTO REGISTRATION & PERMISSIONS LOGIC ---
+        const vapidPublicKey = 'BIb0u4eLioyZgzPJRmFAoI3LdD87wOR2_4L6CpqDmAyIeUK_JqfW17fT-Iy3C4zTlSlrEBZn2cjZ5vh68W0KdSk';
+        const firebaseConfig = {
+            apiKey: "AIzaSyCMO1z8UGvFNyOnzAV-dsx1VLjOtCAjtdc",
+            authDomain: "jimpitan-app-a7by777.firebaseapp.com",
+            projectId: "jimpitan-app-a7by777",
+            storageBucket: "jimpitan-app-a7by777.firebasestorage.app",
+            messagingSenderId: "53228839762",
+            appId: "1:53228839762:web:ae75cb6fc64b9441ac108b",
+            measurementId: "G-XG704TQRJ2"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const messaging = firebase.messaging();
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAndRequestPermissions();
+        });
+
+        async function checkAndRequestPermissions() {
+            // 1. Check Notification Permission
+            if (!('serviceWorker' in navigator)) return;
+
+            if (Notification.permission === 'default') {
+                // Soft Ask for Notification
+                await Swal.fire({
+                    title: 'Aktifkan Fitur?',
+                    html: 'Mohon izinkan <strong>Notifikasi</strong> agar aplikasi berjalan maksimal.',
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonText: 'Izinkan',
+                    cancelButtonText: 'Nanti',
+                    confirmButtonColor: '#4f46e5',
+                    allowOutsideClick: false
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        await Notification.requestPermission();
+                        if (Notification.permission === 'granted') {
+                            registerFCM(true);
+                        }
+                    }
+                });
+            } else if (Notification.permission === 'granted') {
+                // Auto sync in background if already granted
+                registerFCM(true);
+            }
+
+            // 2. Check Camera Permission (Optional, quiet check)
+            /*
+            try {
+                // Only ask if we really need it or if status is prompt. 
+                // Browsers don't support "checking" camera permission easily without triggering it.
+                // We can query permission API.
+                const camPerm = await navigator.permissions.query({ name: 'camera' });
+                if (camPerm.state === 'prompt') {
+                     // Maybe ask? Or wait until Scan QR feature is used.
+                     // Generally better to ask contextually.
+                }
+            } catch(e) {}
+            */
+        }
+
+        async function registerFCM(silent = false) {
+            try {
+                // Register SW if not already
+                let registration = await navigator.serviceWorker.getRegistration();
+                if(!registration) {
+                    registration = await navigator.serviceWorker.register('<?= base_url("sw.js") ?>');
+                    await navigator.serviceWorker.ready;
+                }
+                
+                const token = await messaging.getToken({
+                    serviceWorkerRegistration: registration,
+                    vapidKey: vapidPublicKey
+                });
+                
+                if (token) {
+                    console.log('FCM Auto-Sync:', token);
+                    await sendFCMTokenToServer(token, silent);
+                }
+            } catch (err) {
+                console.error('FCM Register Error:', err);
+            }
+        }
+
+        async function sendFCMTokenToServer(token, silent = false) {
+            try {
+                const res = await fetch('<?= base_url("push/subscribe_fcm") ?>', {
+                    method: 'POST',
+                    body: JSON.stringify({ token: token, device_type: 'web' }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if(res.ok && !silent) {
+                    // Optional: Notify success
+                }
+            } catch (err) { }
+        }
+    </script>
+
     <script>
         // --- UI Logic ---
         

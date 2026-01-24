@@ -1050,7 +1050,13 @@
                         reply_to_id: replyingTo ? replyingTo.id : null,
                         reply_message: replyingTo ? replyingTo.message : null,
                         reply_sender: replyingTo ? replyingTo.sender : null
+                        reply_sender: replyingTo ? replyingTo.sender : null
                     }, true);
+                    
+                    // Play Sent Sound (Soft)
+                    const sentAudio = new Audio(baseUrl + '/assets/audio/sent.mp3'); 
+                    sentAudio.volume = 0.4; // Softer
+                    sentAudio.play().catch(e => {}); // Ignore autoplay errors
                     
                     input.value = '';
                     input.style.height = 'auto';
@@ -1122,9 +1128,10 @@
             // Native Notification (if permission granted but page focused)
             // Some browsers don't show native notif if page focused, so fallback to Toast/Swal
             
-            // Play Sound
-            // const audio = new Audio(baseUrl + '/assets/audio/notification.mp3'); 
-            // audio.play().catch(e => {}); // Silent fail if no interaction
+            // Play Sound (LOUD)
+            const audio = new Audio(baseUrl + '/assets/audio/notification.mp3'); 
+            audio.volume = 1.0; // Max volume
+            audio.play().catch(e => console.log("Audio autoplay blocked (need interaction first):", e));
 
             const Toast = Swal.mixin({
                 toast: true,
