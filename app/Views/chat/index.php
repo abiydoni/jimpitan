@@ -1050,7 +1050,6 @@
                         reply_to_id: replyingTo ? replyingTo.id : null,
                         reply_message: replyingTo ? replyingTo.message : null,
                         reply_sender: replyingTo ? replyingTo.sender : null
-                        reply_sender: replyingTo ? replyingTo.sender : null
                     }, true);
                     
                     // Play Sent Sound (Soft)
