@@ -497,15 +497,18 @@
         }
 
         function isOnlyEmojis(str) {
-            if(!str) return false;
-            // Remove whitespace and newlines
-            const clean = str.replace(/\s/g, '');
-            if(!clean) return false;
+        function getEmojiCount(str) {
+            if(!str) return 0;
+            const clean = str.replace(/\s/g, ''); 
+            if(!clean) return 0;
             
-            // Regex for Emoji (Simple version, covers most)
-            // Matches 1 to 5 emojis from start to end
-            const regex = /^(\p{Extended_Pictographic}|\p{Emoji_Presentation}){1,5}$/u;
-            return regex.test(clean);
+            // Must be ONLY emojis
+            const validationRegex = /^(\p{Extended_Pictographic}|\p{Emoji_Presentation})+$/u;
+            if(!validationRegex.test(clean)) return 0;
+
+            // Count
+            const matches = clean.match(/(\p{Extended_Pictographic}|\p{Emoji_Presentation})/gu);
+            return matches ? matches.length : 0;
         }
 
         function formatDateSeparator(dateString) {
@@ -604,12 +607,23 @@
             const nameColor = (!isMe && activeUserId === 'GROUP_ALL') ? getNameColor(displayName) : '';
             
             // Check for Jumbo Emoji
-            const isJumbo = isOnlyEmojis(msg.message);
-            const bubbleClass = isJumbo 
-                ? 'bg-transparent shadow-none text-4xl p-0 border-none' // Jumbo Style
-                : (isMe 
+            const emojiCount = getEmojiCount(msg.message);
+            // Treat up to 4 emojis as "Jumbo" special styling
+            const isJumbo = emojiCount > 0 && emojiCount <= 4; 
+            
+            let bubbleClass = '';
+            if (isJumbo) {
+                bubbleClass = 'bg-transparent shadow-none p-0 border-none ';
+                // 1=6xl, 2=5xl, 3=4xl, 4=3xl
+                if(emojiCount === 1) bubbleClass += 'text-6xl';
+                else if(emojiCount === 2) bubbleClass += 'text-5xl';
+                else if(emojiCount === 3) bubbleClass += 'text-4xl';
+                else bubbleClass += 'text-3xl';
+            } else {
+                bubbleClass = isMe 
                     ? 'bg-indigo-600 text-white rounded-br-none' 
-                    : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-bl-none border border-gray-100 dark:border-gray-600');
+                    : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-bl-none border border-gray-100 dark:border-gray-600';
+            }
             
             let quoteHtml = '';
             if(msg.reply_to_id && msg.reply_message) {
