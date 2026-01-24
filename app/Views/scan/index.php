@@ -385,9 +385,27 @@
                     }
                 );
 
-                // Show Flash Button after camera start
-                document.getElementById('flashToggle').classList.remove('hidden');
-                updateFlashUI(); 
+                // Check Flash Capability
+                let hasTorch = false;
+                try {
+                    const video = document.querySelector('#reader video');
+                    if (video && video.srcObject) {
+                        const track = video.srcObject.getVideoTracks()[0];
+                        if (track) {
+                            const capabilities = track.getCapabilities();
+                            if (capabilities.torch) {
+                                hasTorch = true;
+                            }
+                        }
+                    }
+                } catch(e) { console.warn("Cap check failed", e); }
+
+                if (hasTorch) {
+                    document.getElementById('flashToggle').classList.remove('hidden');
+                    updateFlashUI(); 
+                } else {
+                    console.log("Flash/Torch not supported on this device");
+                } 
 
             } catch (err) {
                 console.error(err);
