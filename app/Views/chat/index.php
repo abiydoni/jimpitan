@@ -1108,6 +1108,45 @@
         
         firebase.initializeApp(firebaseConfig);
         const messaging = firebase.messaging();
+        
+        // Handle foreground messages
+        messaging.onMessage((payload) => {
+            console.log('Message received. ', payload);
+            const { title, body } = payload.notification || {};
+            const { url } = payload.data || {};
+            
+            // Only show if chat is NOT active for this sender
+            // (Or just show Toast unconditionally for testing)
+            // Ideally, play sound here too.
+            
+            // Native Notification (if permission granted but page focused)
+            // Some browsers don't show native notif if page focused, so fallback to Toast/Swal
+            
+            // Play Sound
+            // const audio = new Audio(baseUrl + '/assets/audio/notification.mp3'); 
+            // audio.play().catch(e => {}); // Silent fail if no interaction
+
+            const Toast = Swal.mixin({
+                toast: true,
+                position: "top-end",
+                showConfirmButton: false,
+                timer: 4000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.onclick = () => {
+                        if(url) window.location.href = url;
+                    };
+                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                    toast.addEventListener('mouseleave', Swal.resumeTimer)
+                }
+            });
+
+            Toast.fire({
+                icon: "info",
+                title: title || "Pesan Baru",
+                text: body
+            });
+        });
 
         async function registerFCM(silent = false) {
             try {

@@ -1,7 +1,39 @@
 const CACHE_NAME = 'jimpitan-fcm-v1';
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+
 const urlsToCache = [
   './offline.html',
 ];
+
+// Initialize Firebase in SW (Required for background handler)
+firebase.initializeApp({
+    apiKey: "AIzaSyCMO1z8UGvFNyOnzAV-dsx1VLjOtCAjtdc",
+    authDomain: "jimpitan-app-a7by777.firebaseapp.com",
+    projectId: "jimpitan-app-a7by777",
+    storageBucket: "jimpitan-app-a7by777.firebasestorage.app",
+    messagingSenderId: "53228839762",
+    appId: "1:53228839762:web:ae75cb6fc64b9441ac108b",
+    measurementId: "G-XG704TQRJ2"
+});
+
+const messaging = firebase.messaging();
+
+// Handle Background Messages explicitly
+messaging.setBackgroundMessageHandler(function(payload) {
+  console.log('[firebase-messaging-sw.js] Received background message ', payload);
+  // Customize notification here
+  const notificationTitle = payload.notification.title || 'Pesan Baru';
+  const notificationOptions = {
+    body: payload.notification.body,
+    icon: '/favicon.ico',
+    tag: 'jimpitan-global',
+    data: payload.data
+  };
+
+  return self.registration.showNotification(notificationTitle,
+    notificationOptions);
+});
 
 self.addEventListener('install', event => {
   self.skipWaiting();
