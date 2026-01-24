@@ -263,17 +263,21 @@
                 // Style Differentiation
                 const avatarBg = isGroup 
                     ? 'bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400' 
-                    : 'bg-indigo-100 dark:bg-indigo-800 text-indigo-600 dark:text-indigo-300';
+                    : (user.id_code === 'SYSTEM' 
+                        ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
+                        : 'bg-indigo-100 dark:bg-indigo-800 text-indigo-600 dark:text-indigo-300');
                 
                 const statusColor = user.is_online ? 'bg-green-500' : 'bg-gray-400';
-                const onlineDot = isGroup
-                    ? '' // No online dot for group
+                const onlineDot = (isGroup || user.id_code === 'SYSTEM')
+                    ? '' // No online dot for group or system
                     : `<div class="absolute bottom-0 right-0 w-3 h-3 ${statusColor} border-2 border-white dark:border-gray-800 rounded-full"></div>`;
 
                 // Initial or Photo
                 let avatarContent;
                 if (isGroup) {
                     avatarContent = '<i class="fas fa-users text-sm"></i>';
+                } else if (user.id_code === 'SYSTEM') {
+                    avatarContent = '<i class="fas fa-robot text-sm"></i>';
                 } else if (user.foto) {
                     avatarContent = `<img src="${baseUrl}/img/warga/${user.foto}" class="w-full h-full rounded-full object-cover">`;
                 } else {
@@ -315,13 +319,21 @@
             
             // UI Updates
             document.getElementById('receiverId').value = activeUserId;
-            document.getElementById('chatName').innerText = user.name;
+            
+            // Customize Name
+            let displayName = user.name;
+            if (activeUserId === 'SYSTEM') displayName = 'appsbee System';
+            document.getElementById('chatName').innerText = displayName;
+
             updateChatHeaderStatus(user);
             
             const avatarEl = document.getElementById('chatAvatar');
             if (user.id_code === 'GROUP_ALL') {
                  avatarEl.innerHTML = '<i class="fas fa-users text-sm"></i>';
                  avatarEl.className = 'w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 flex items-center justify-center font-bold text-lg';
+            } else if (user.id_code === 'SYSTEM') {
+                 avatarEl.innerHTML = '<i class="fas fa-robot text-sm"></i>';
+                 avatarEl.className = 'w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-lg';
             } else if (user.foto) {
                  avatarEl.innerHTML = `<img src="${baseUrl}/img/warga/${user.foto}" class="w-full h-full rounded-full object-cover">`;
                  avatarEl.className = 'w-10 h-10 rounded-full bg-transparent flex items-center justify-center';
@@ -356,6 +368,9 @@
             if (user.id_code === 'GROUP_ALL') {
                 statusEl.innerText = 'Grup Diskusi';
                 statusEl.className = 'text-xs text-orange-500';
+            } else if (user.id_code === 'SYSTEM') {
+                statusEl.innerText = 'Official System';
+                statusEl.className = 'text-xs text-blue-500 font-bold';
             } else {
                 if (user.is_online) {
                     statusEl.innerText = 'Online';

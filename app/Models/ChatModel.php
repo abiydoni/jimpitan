@@ -92,8 +92,11 @@ class ChatModel extends Model
     
     public function getUnreadCount($receiver_id)
     {
-         return $this->where('receiver_id', $receiver_id)
-                     ->where('is_read', 0)
+         // JOIN with users to ensure sender exists (matches Chat Page logic)
+         return $this->select('chats.id')
+                     ->join('users', 'users.id_code = chats.sender_id')
+                     ->where('chats.receiver_id', $receiver_id)
+                     ->where('chats.is_read', 0)
                      ->countAllResults();
     }
     
@@ -204,6 +207,9 @@ class ChatModel extends Model
             if ($pid === 'GROUP_ALL') {
                 $c['partner_name'] = 'Forum Warga';
                 $c['unread_count'] = 0;
+            } elseif ($pid === 'SYSTEM') {
+                $c['partner_name'] = 'appsbee System';
+                $c['unread_count'] = $unreadMap[$pid] ?? 0;
             } else {
                 $c['partner_name'] = $userMap[$pid] ?? 'Unknown';
                 $c['unread_count'] = $unreadMap[$pid] ?? 0;
