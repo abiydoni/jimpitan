@@ -631,8 +631,104 @@
                 ${!isMe ? actionsHtml : ''}
             `;
             
+            // --- SWIPE TO REPLY LOGIC ---
+            // Touch handlers
+            div.addEventListener('touchstart', handleTouchStart, false);
+            div.addEventListener('touchmove', handleTouchMove, false);
+            div.addEventListener('touchend', handleTouchEnd, false);
+            
+            // Only attach for non-pending real messages
+            if (msg.id) {
+                div.dataset.msgId = msg.id;
+                div.dataset.sender = displayName;
+                div.dataset.content = rawMessage;
+            }
+
             messagesContainer.appendChild(div);
             if(scroll) scrollToBottom();
+        }
+
+        // --- Swipe Gesture Handlers ---
+        let xDown = null;
+        let yDown = null;
+        let swipeEl = null;
+        let isSwiping = false;
+
+        function handleTouchStart(evt) {
+            const firstTouch = evt.touches[0];
+            xDown = firstTouch.clientX;
+            yDown = firstTouch.clientY;
+            // Find the message-row wrapper
+            swipeEl = evt.currentTarget; 
+            isSwiping = false;
+        }
+
+        function handleTouchMove(evt) {
+            if (!xDown || !yDown) return;
+
+            let xUp = evt.touches[0].clientX;
+            let yUp = evt.touches[0].clientY;
+
+            let xDiff = xDown - xUp;
+            let yDiff = yDown - yUp;
+
+            // Horizontal Swipe Check (more horizontal than vertical)
+            if (Math.abs(xDiff) > Math.abs(yDiff)) {
+                // Prevent vertical scroll if swiping hard horizontal
+                if (Math.abs(xDiff) > 10) evt.preventDefault();
+                
+                // Visual Feedback: Translate Element
+                // Limit drag to reasonable amount
+                let translateX = -xDiff; 
+                if (translateX > 70) translateX = 70; // Cap right pull
+                if (translateX < -70) translateX = -70; // Cap left pull
+                
+                // Only move if it's a pull (optional: allow both ways)
+                swipeEl.style.transform = `translateX(${translateX}px)`;
+                swipeEl.style.transition = 'none'; // Instant follow
+                
+                isSwiping = true;
+            }
+        }
+
+        function handleTouchEnd(evt) {
+            if (!xDown || !yDown || !isSwiping) {
+                // Reset if just a tap
+                if(swipeEl) {
+                    swipeEl.style.transform = '';
+                    swipeEl.style.transition = '';
+                }
+                xDown = null; yDown = null;
+                return;
+            }
+
+            let xUp = evt.changedTouches[0].clientX;
+            let xDiff = xDown - xUp;
+            const threshold = 50; // px to trigger
+
+            // Snap back animation
+            swipeEl.style.transition = 'transform 0.3s ease-out';
+            swipeEl.style.transform = 'translateX(0px)';
+
+            // Trigger Reply if threshold met (Left or Right swipe)
+            if (Math.abs(xDiff) > threshold) {
+                // Vibrate if supported
+                if (navigator.vibrate) navigator.vibrate(50);
+                
+                const id = swipeEl.dataset.msgId;
+                const sender = swipeEl.dataset.sender;
+                const content = swipeEl.dataset.content;
+                
+                if (id && sender && content) {
+                    startReply(id, sender, content);
+                }
+            }
+
+            // Reset
+            xDown = null;
+            yDown = null;
+            swipeEl = null;
+            isSwiping = false;
         }
 
         function scrollToBottom() {
