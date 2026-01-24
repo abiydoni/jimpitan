@@ -364,22 +364,19 @@
                 return;
             }
 
-            // CLEANUP: Stop existing scanner if any
-            if (html5QrCode && html5QrCode.isScanning) {
-                try { await html5QrCode.stop(); } catch(e) {}
-            }
-            // Clear element to avoid "Element in use" errors
-            try { html5QrCode.clear(); } catch(e) {}
+            // CLEANUP (Safe Mode)
+            try { await html5QrCode.stop(); } catch(e) {}
+            try { await html5QrCode.clear(); } catch(e) {}
             
             // Re-instantiate
             html5QrCode = new Html5Qrcode("reader");
 
             try {
-                // REVERT: Remove HD Constraints to ensure camera opens on all devices
+                // FIXED: EXACT LEGACY CONFIG (Jimpitan New Style)
+                // qrbox using integer is safer than function/object on some ver.
                 const config = { 
                     fps: 20, 
-                    qrbox: getQrBoxSize,
-                    aspectRatio: 1.0
+                    qrbox: 250
                 };
                 
                 await html5QrCode.start(
