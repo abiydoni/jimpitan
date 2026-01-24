@@ -1105,9 +1105,7 @@
                         reply_sender: replyingTo ? replyingTo.sender : null
                     }, true);
                     
-                    // Play Sent Sound (Soft) using GLOBAL UNLOCKED OBJECT
-                    sentSound.currentTime = 0; // Reset
-                    sentSound.play().catch(e => console.error("Sent Audio Error:", e));
+
                     
                     input.value = '';
                     input.style.height = 'auto';
@@ -1135,6 +1133,12 @@
                             headers: { 'X-Requested-With': 'XMLHttpRequest' }
                         });
                         const data = await res.json();
+                        
+                        // Play Sent Sound (Soft) AFTER validation (Single Check)
+                        if(res.ok) {
+                            sentSound.currentTime = 0; // Reset
+                            sentSound.play().catch(e => console.error("Sent Audio Error:", e));
+                        }
                         
                     } catch(err) {
                         console.error("Send failed", err);

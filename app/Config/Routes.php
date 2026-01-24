@@ -46,6 +46,14 @@ $routes->get('/scan/Leaderboard', 'Scan::leaderboard', ['filter' => 'authFilter'
 $routes->post('/scan/reset', 'Scan::resetLeaderboard', ['filter' => 'authFilter']); // Reset Leaderboard
 $routes->get('/leaderboard', 'Scan::leaderboard', ['filter' => 'authFilter']); // Alias Shortcut
 
+// Announcements
+$routes->get('announcement', 'Announcement::index', ['filter' => 'authFilter']);
+$routes->get('announcement/create', 'Announcement::create', ['filter' => 'authFilter']);
+$routes->post('announcement/store', 'Announcement::store', ['filter' => 'authFilter']);
+$routes->get('announcement/edit/(:num)', 'Announcement::edit/$1', ['filter' => 'authFilter']);
+$routes->put('announcement/update/(:num)', 'Announcement::update/$1', ['filter' => 'authFilter']);
+$routes->delete('announcement/delete/(:num)', 'Announcement::delete/$1', ['filter' => 'authFilter']);
+
 // Data KK Management
 $routes->get('/kk', 'KK::index', ['filter' => 'authFilter']);
 $routes->get('/kk/search', 'KK::searchWarga', ['filter' => 'authFilter']);

@@ -589,6 +589,136 @@
             }
         });
 
+        // --- Announcement Popup Logic ---
+        // --- Announcement Popup Logic (Custom Glass Modal) ---
+        <?php if(!empty($announcements)): ?>
+            // Insert Modal HTML to Body
+            const anno = <?= json_encode($announcements[0]) ?>;
+            const storageKey = 'seen_anno_' + anno.id;
+            
+            // Temporary: Show every time (commented out check)
+            // if (!sessionStorage.getItem(storageKey)) {
+            if (true) {
+                
+                 // Global Close Function (Defined first)
+                window.closeAnnoModal = function() {
+                    const modalOverlay = document.getElementById('annoModalOverlay');
+                    const modalContent = document.getElementById('annoModalContent');
+                    
+                    if(modalOverlay && modalContent) {
+                        modalOverlay.classList.add('opacity-0');
+                        modalContent.classList.remove('scale-100', 'opacity-100');
+                        modalContent.classList.add('scale-95', 'opacity-0');
+                        
+                        setTimeout(() => {
+                            modalOverlay.remove();
+                            sessionStorage.setItem(storageKey, 'true');
+                        }, 300);
+                    }
+                };
+
+                // Create Modal Elements
+                const modalOverlay = document.createElement('div');
+                modalOverlay.id = 'annoModalOverlay';
+                modalOverlay.className = "fixed inset-0 z-[9999] flex items-center justify-center p-4 transition-opacity duration-300 opacity-0";
+                
+                // Glass Backdrop
+                const backdrop = document.createElement('div');
+                backdrop.className = "absolute inset-0 bg-black/40 backdrop-blur-sm";
+                backdrop.onclick = window.closeAnnoModal; // Use window reference
+                
+                // Determine Classes based on is_transparent toggle
+                const isTransparent = anno.is_transparent == 1;
+                // If hide_text is on, forcing hasContent to false so text block is skipped and image goes full
+                const hideText = anno.hide_text == 1;
+                const hasContent = !hideText && (anno.content && anno.content.trim() !== '');
+                
+                // Base classes
+                let containerClass = "relative w-full max-w-lg rounded-3xl p-6 transform transition-all duration-300 scale-95 opacity-0 overflow-visible";
+                
+                if (isTransparent) {
+                    containerClass += " bg-transparent shadow-none backdrop-blur-none"; // No background
+                } else {
+                    containerClass += " bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl"; // Glass effect
+                }
+                
+                // Image Only Mode logic
+                if (!hasContent && anno.image) {
+                     containerClass = containerClass.replace('max-w-lg', 'max-w-2xl'); // Wider for image only
+                }
+
+                const modalContent = document.createElement('div');
+                modalContent.id = 'annoModalContent';
+                modalContent.className = containerClass;
+                
+                // Decorative Elements (Blobs) - Hide in Transparent Mode if desired? Or keep them?
+                // User said "hilangkan background total", maybe means standard modal background. 
+                // Let's keep blobs for aesthetic but maybe safer to keep them attached to the container logic?
+                // Actually if transparent, we probably still want blobs behind the text/image? 
+                // Let's keep them always for consistent vibe.
+                // Close Button Style Logic
+                let btnClass = "";
+                if (isTransparent) {
+                    // Glassy White for Dark Backdrop Context
+                    btnClass = "bg-white/20 dark:bg-black/20 hover:bg-red-500/80 text-white border-white/30";
+                } else {
+                    // Solid Contrast for Modal Context
+                    btnClass = "bg-white dark:bg-slate-700 hover:bg-red-500 hover:text-white text-slate-700 dark:text-gray-200 border-slate-200 dark:border-slate-600";
+                }
+
+                modalContent.innerHTML = `
+                    <div class="absolute -top-10 -left-10 w-40 h-40 bg-indigo-500/40 rounded-full blur-3xl pointer-events-none mix-blend-multiply dark:mix-blend-screen animate-blob"></div>
+                    <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-purple-500/40 rounded-full blur-3xl pointer-events-none mix-blend-multiply dark:mix-blend-screen animate-blob animation-delay-2000"></div>
+                    
+                    <!-- Close Button (Top Right) -->
+                    <button onclick="closeAnnoModal()" class="absolute -top-3 -right-3 z-50 w-10 h-10 flex items-center justify-center rounded-full shadow-lg backdrop-blur-md border transition-all transform hover:scale-110 active:scale-95 group ${btnClass}">
+                        <i class="fas fa-times text-lg drop-shadow-sm"></i>
+                    </button>
+
+                    <!-- Content -->
+                    <div class="relative z-0 ${isTransparent ? 'p-0' : ''}">
+                        ${anno.image ? `
+                            <div class="rounded-2xl overflow-hidden ${hasContent ? 'mb-5' : ''} shadow-lg relative group">
+                                <img src="<?= base_url('img/announcement/') ?>/${anno.image}" class="w-full h-auto ${hasContent ? 'max-h-[300px]' : 'max-h-[80vh]'} object-contain hover:scale-105 transition-transform duration-700">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
+                            </div>
+                        ` : ''}
+                        
+                        ${hasContent ? `
+                            <div class="${isTransparent ? 'mt-4' : ''}">
+                                <h3 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-purple-700 dark:from-indigo-200 dark:to-purple-200 mb-3 leading-tight drop-shadow-md">
+                                    ${anno.title}
+                                </h3>
+                                
+                                <div class="prose dark:prose-invert prose-sm max-w-none text-slate-800 dark:text-slate-100 leading-relaxed overflow-y-auto max-h-[200px] fancy-scrollbar pr-2 font-medium drop-shadow-md">
+                                    ${anno.content.replace(/\n/g, '<br>')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${anno.link ? `
+                            <div class="mt-6">
+                                <a href="${anno.link}" target="_blank" class="block w-full text-center py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-transform active:scale-95">
+                                    Buka Tautan <i class="fas fa-external-link-alt ml-1 md:text-sm"></i>
+                                </a>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                modalOverlay.appendChild(backdrop);
+                modalOverlay.appendChild(modalContent);
+                document.body.appendChild(modalOverlay);
+
+                // Animate In
+                requestAnimationFrame(() => {
+                    modalOverlay.classList.remove('opacity-0');
+                    modalContent.classList.remove('scale-95', 'opacity-0');
+                    modalContent.classList.add('scale-100', 'opacity-100');
+                });
+            }
+        <?php endif; ?>
+
 
 
         // Chat Dropdown Logic

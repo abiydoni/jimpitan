@@ -87,10 +87,15 @@ class Home extends BaseController
                      ->get()
                      ->getResultArray();
 
+        // Announcements
+        $announcementModel = new \App\Models\AnnouncementModel();
+        $activeAnnouncements = $announcementModel->getActiveAnnouncements();
+
         return view('welcome_message', array_merge([
             'profil' => $profil,
             'menus'  => $menus,
             'myLogs' => $myLogs,
+            'announcements' => $activeAnnouncements
         ], $billData));
     }
 
