@@ -625,7 +625,8 @@
                 
                 // Glass Backdrop
                 const backdrop = document.createElement('div');
-                backdrop.className = "absolute inset-0 bg-black/40 backdrop-blur-sm";
+                // Reduced opacity and blur as requested
+                backdrop.className = "absolute inset-0 bg-black/30 backdrop-blur-[2px]"; 
                 backdrop.onclick = window.closeAnnoModal;
                 
                 // Container for dynamic updates
