@@ -1368,6 +1368,33 @@
                 confirmButtonColor: '#4f46e5'
             });
         }
+        async function testAudio() {
+             const sentPath = '<?= base_url("assets/audio/sent.mp3") ?>?v=6';
+             const notifPath = '<?= base_url("assets/audio/notification.mp3") ?>?v=6';
+             
+             try {
+                 console.log("Testing Audio...");
+                 const a1 = new Audio(sentPath);
+                 const a2 = new Audio(notifPath);
+                 
+                 // Chain playback
+                 await a1.play();
+                 console.log("Sent Audio OK");
+                 
+                 setTimeout(async () => {
+                     try {
+                        await a2.play();
+                        alert("Audio Berhasil Diputar! ✅\nJika Anda tetap mendengar suara bawaan HP saat chat ditutup, itu wajar (karena diatur Android). Tapi saat chat DIBUKA, harusnya bunyi suara ini.");
+                     } catch(err2) {
+                        alert("Error Play Notification: " + err2.message);
+                     }
+                 }, 1000);
+                 
+             } catch(err) {
+                 alert("Error Play Sent: " + err.message + "\nCek console browser.");
+                 console.error(err);
+             }
+        }
     </script>
 </body>
 </html>
