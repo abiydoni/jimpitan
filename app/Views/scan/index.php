@@ -385,27 +385,10 @@
                     }
                 );
 
-                // Check Flash Capability
-                let hasTorch = false;
-                try {
-                    const video = document.querySelector('#reader video');
-                    if (video && video.srcObject) {
-                        const track = video.srcObject.getVideoTracks()[0];
-                        if (track) {
-                            const capabilities = track.getCapabilities();
-                            if (capabilities.torch) {
-                                hasTorch = true;
-                            }
-                        }
-                    }
-                } catch(e) { console.warn("Cap check failed", e); }
-
-                if (hasTorch) {
-                    document.getElementById('flashToggle').classList.remove('hidden');
-                    updateFlashUI(); 
-                } else {
-                    console.log("Flash/Torch not supported on this device");
-                } 
+                // FORCE SHOW FLASH BUTTON (User Request)
+                // Terkadang browser salah deteksi capability, jadi kita paksa muncul saja.
+                document.getElementById('flashToggle').classList.remove('hidden');
+                updateFlashUI(); 
 
             } catch (err) {
                 console.error(err);
@@ -561,29 +544,40 @@
             let success = false;
             const targetState = !isFlashOn;
 
-            // Method 1: Html5Qrcode API
+            // Method 1: Html5Qrcode Helper
             if (html5QrCode) {
                 try {
                     await html5QrCode.applyVideoConstraints({ advanced: [{ torch: targetState }] });
                     success = true;
                 } catch (err) {
-                    console.log("Method 1 failed:", err);
+                    console.log("Method 1 (Lib) failed:", err);
                 }
             }
 
-            // Method 2: Native Track API (Fallback)
+            // Method 2: Native Track Manipulation (Stronger)
             if (!success) {
                 try {
                     const video = document.querySelector('#reader video');
                     if (video && video.srcObject) {
                         const track = video.srcObject.getVideoTracks()[0];
-                        if (track) {
-                            await track.applyConstraints({ advanced: [{ torch: targetState }] });
-                            success = true;
-                        }
+                        
+                        // Force constraints
+                        await track.applyConstraints({
+                            advanced: [{ torch: targetState }]
+                        });
+                        success = true;
                     }
                 } catch (err) {
-                    console.log("Method 2 failed:", err);
+                     console.log("Method 2 (Native) failed:", err);
+                     // Method 3: Fallback for some weird devices (brightness/fillLight)
+                     try {
+                        const video = document.querySelector('#reader video');
+                        const track = video.srcObject.getVideoTracks()[0];
+                        await track.applyConstraints({
+                            advanced: [{ fillLightMode: targetState ? "flash" : "off" }]
+                        });
+                        success = true;
+                     } catch(e) {}
                 }
             }
 
@@ -591,11 +585,14 @@
                 isFlashOn = targetState;
                 updateFlashUI();
             } else {
+                // If it fails, force UI update anyway to 'pretend' but warn execution failed?
+                // No, better to show error.
                 Swal.fire({
                     toast: true,
                     position: 'top',
-                    icon: 'warning',
-                    title: 'Lampu flash tidak didukung/gagal.',
+                    icon: 'error',
+                    title: 'Gagal menyalakan lampu.',
+                    text: 'Browser/Driver menolak akses lampu.',
                     showConfirmButton: false,
                     timer: 2000
                 });
