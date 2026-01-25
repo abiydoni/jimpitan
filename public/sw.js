@@ -45,10 +45,10 @@ self.addEventListener('push', function(event) {
       const title = data.title || 'Jimpitan App'; // Fallback to avoid crash
       const tag = data.tag || 'jimpitan-chat';
       const renotify = (data.renotify === 'true' || data.renotify === true);
-      const requireInteraction = true; // FORCE STICKY
+      const requireInteraction = true; // FORCE STICKY (Controlled by our timer)
       
-      // Auto-Close: Default 0 (Never close)
-      let autoCloseMs = 0; 
+      // Auto-Close: Default 7000ms (7s) - Balanced
+      let autoCloseMs = 7000; 
       if (typeof data.auto_close !== 'undefined' && data.auto_close !== null) {
            const parsed = parseInt(data.auto_close);
            if (!isNaN(parsed)) {

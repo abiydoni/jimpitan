@@ -79,7 +79,7 @@ class PushService
                             'body' => mb_substr($messageText, 0, 100, 'UTF-8'),
                             'url' => $url ?: '/chat', // Primary URL for SW
                             'sender_id' => (string)$senderId,
-                            'tag' => 'jimpitan-chat',
+                            'tag' => 'jimpitan-chat-' . uniqid(), // UNIQUE TAG to allow stacking
                             'renotify' => 'true',
                             'require_interaction' => 'true'
                         ]
