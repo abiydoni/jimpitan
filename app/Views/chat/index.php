@@ -1347,7 +1347,15 @@
 
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('<?= base_url("sw.js") ?>?v=5').then(() => {
+            // Nuke old SWs to force update (Fix for TypeError loop)
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                }
+            }).then(() => {
+                // Register Fresh v5
+                return navigator.serviceWorker.register('<?= base_url("sw.js") ?>?v=5');
+            }).then(() => {
                 return navigator.serviceWorker.ready;
             }).then(async (reg) => {
                try {
