@@ -1197,18 +1197,39 @@
             }
 
             if (shouldSuppress) {
-                console.log('silencing notification: inside chat');
-                return;
+            // MANUAL FOREGROUND NOTIFICATION
+            // Since we disabled the App Sound, we MUST show a System Notification 
+            // so the OS plays the sound and shows the banner.
+            // But NOT if we are looking at the exact same chat.
+            if (!shouldSuppress) {
+                const notifTitle = payload.notification?.title || 'Pesan Baru';
+                const notifBody = payload.notification?.body || 'Isi Pesan';
+                const notifIcon = payload.notification?.icon || '/jimpitan1.png'; // Fallback icon
+
+                if (Notification.permission === 'granted') {
+                    const n = new Notification(notifTitle, {
+                        body: notifBody,
+                        icon: notifIcon,
+                        tag: 'jimpitan-chat', // Match SW tag to prevent duplicates if race condition
+                        requireInteraction: true,
+                        renotify: true,
+                        data: { url: url } // Pass URL for click handler
+                    });
+                    
+                    n.onclick = function(event) {
+                        event.preventDefault();
+                        window.focus();
+                        n.close();
+                        if (url) window.location.href = url;
+                    };
+                }
             }
 
             // Play Sound (LOUD) using GLOBAL UNLOCKED OBJECT
             // DISABLE AUDIO to prevent Double Sound (System + App)
             /* 
             notifSound.currentTime = 0;
-            notifSound.play().catch(() => {
-                // Silent catch: User hasn't interacted yet.
-                // We suppress the error to keep console clean.
-            });
+            notifSound.play().catch(() => {});
             */
             
             // VIBRATE
