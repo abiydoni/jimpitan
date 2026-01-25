@@ -71,8 +71,8 @@ class PushService
                                 'TTL' => '4500'
                             ],
                             'notification' => [
-                                'requireInteraction' => true,
                                 'renotify' => true,
+                                'tag' => 'jimpitan-chat', // Fixes TypeError
                                 'vibrate' => [200, 100, 200]
                             ]
                         ],

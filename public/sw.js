@@ -112,7 +112,6 @@ self.addEventListener('push', function(event) {
     vibrate: [200, 100, 200, 100, 200], 
     tag: 'jimpitan-global',     // Stable tag
     renotify: true,             // Force popup on every push
-    requireInteraction: true,   // Keep notification until user interacts (prevents "fast disappearance")
     silent: false,
     timestamp: Date.now(),
     actions: [
