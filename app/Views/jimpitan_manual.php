@@ -129,12 +129,12 @@
     </main>
 
     <!-- MANUAL INPUT MODAL -->
-    <div id="manualModal" class="fixed inset-0 z-[100] hidden">
+    <div id="manualModal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
         <!-- Backdrop -->
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity opacity-0" id="modalBackdrop"></div>
         
         <!-- Modal Content -->
-        <div class="absolute bottom-0 left-0 right-0 sm:relative sm:top-1/2 sm:left-1/2 sm:transform sm:-translate-x-1/2 sm:-translate-y-1/2 bg-white dark:bg-slate-800 rounded-t-[2rem] sm:rounded-[2rem] p-6 w-full sm:max-w-md shadow-2xl transform transition-transform translate-y-full sm:translate-y-10 scale-95 opacity-0" id="modalContent">
+        <div class="w-full max-w-md bg-white dark:bg-slate-800 rounded-[2rem] p-6 shadow-2xl transform transition-all scale-90 opacity-0 relative" id="modalContent">
             
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-lg font-bold text-slate-800 dark:text-white">Input Manual</h3>
@@ -303,10 +303,7 @@
             // Animate in
             setTimeout(() => {
                 backdrop.classList.remove('opacity-0');
-                content.classList.remove('translate-y-full', 'scale-95', 'opacity-0');
-                if(window.innerWidth >= 640) { // sm breakpoint
-                    content.classList.remove('sm:translate-y-10');
-                }
+                content.classList.remove('scale-90', 'opacity-0');
             }, 10);
             
             // Sync Date
@@ -315,10 +312,7 @@
 
         function closeModal() {
             backdrop.classList.add('opacity-0');
-            content.classList.add('translate-y-full', 'scale-95', 'opacity-0');
-            if(window.innerWidth >= 640) {
-                 content.classList.add('sm:translate-y-10');
-            }
+            content.classList.add('scale-90', 'opacity-0');
             setTimeout(() => {
                 modal.classList.add('hidden');
             }, 300);
