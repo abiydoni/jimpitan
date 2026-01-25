@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jimpitan-fcm-v1';
+const CACHE_NAME = 'jimpitan-fcm-v2';
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
 
@@ -36,7 +36,7 @@ self.addEventListener('push', function(event) {
     body: data.body || 'Anda memiliki pesan baru.',
     icon: '/favicon.ico',
     badge: '/favicon.ico',
-    tag: 'jimpitan-global',     
+    tag: 'jimpitan-chat',     
     renotify: true,             
     vibrate: [200, 100, 200],
     data: { url: data.url || '/chat' }
