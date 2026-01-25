@@ -1346,9 +1346,8 @@
         }
 
 
-        // Initialize Notifications
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('<?= base_url("sw.js") ?>').then(() => {
+            navigator.serviceWorker.register('<?= base_url("sw.js") ?>?v=5').then(() => {
                 return navigator.serviceWorker.ready;
             }).then(async (reg) => {
                try {
