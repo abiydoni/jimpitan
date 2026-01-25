@@ -84,6 +84,15 @@ class PushSubscription extends ResourceController
         
         $db = Database::connect();
         $builder = $db->table('fcm_subscriptions');
+
+        // AUTO-MIGRATION: Ensure 'device_type' column exists
+        if (!$db->fieldExists('device_type', 'fcm_subscriptions')) {
+            try {
+                $db->query("ALTER TABLE fcm_subscriptions ADD COLUMN device_type VARCHAR(50) DEFAULT 'web'");
+            } catch (\Exception $e) {
+                // Ignore if race condition or already exists
+            }
+        }
         
         // ENFORCE SINGLE TOKEN POLICY (Clean Start)
         // Remove ALL previous tokens for this user on this device type to prevent "Zombie/Duplicate" tokens.
