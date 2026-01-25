@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jimpitan-fcm-v3';
+const CACHE_NAME = 'jimpitan-fcm-v4';
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
 
@@ -39,6 +39,7 @@ self.addEventListener('push', function(event) {
     tag: 'jimpitan-chat',     
     renotify: true,             
     vibrate: [200, 100, 200],
+    requireInteraction: false, // Explicitly tell browser to auto-dismiss banner
     data: { url: data.url || '/chat' }
   };
 
