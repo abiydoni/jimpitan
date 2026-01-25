@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jimpitan-fcm-v4';
+const CACHE_NAME = 'jimpitan-fcm-v5';
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
 
@@ -44,8 +44,21 @@ self.addEventListener('push', function(event) {
   };
 
   // Always show notification (Single Source of Truth)
-  // No visibility check, relying on this to be the ONLY notification.
-  event.waitUntil(self.registration.showNotification(title, options));
+  // Always show notification (Single Source of Truth)
+  // Force Close after 5 seconds manual strategy
+  const notificationPromise = self.registration.showNotification(title, options);
+  
+  const closePromise = new Promise((resolve) => {
+    setTimeout(() => {
+        self.registration.getNotifications({ tag: 'jimpitan-chat' })
+            .then(notifications => {
+                notifications.forEach(notification => notification.close());
+                resolve();
+            });
+    }, 5000); // 5 Seconds Timeout
+  });
+
+  event.waitUntil(Promise.all([notificationPromise, closePromise]));
 });
 
 self.addEventListener('notificationclick', function(event) {
