@@ -73,32 +73,15 @@ class PushService
                                 'channel_id' => 'jimpitan_channel'
                             ]
                         ],
-                        // RESTORE STANDARD NOTIFICATION (Guaranteed Display)
-                        'notification' => [
+                        // DATA-ONLY PAYLOAD (Service Worker Driven)
+                        'data' => [
                             'title' => $title,
                             'body' => mb_substr($messageText, 0, 100, 'UTF-8'),
-                        ],
-                        // WEBPUSH CONFIG (Sticky + Redirect)
-                        'webpush' => [
-                            'headers' => [
-                                'Urgency' => 'high',
-                                'TTL' => '4500'
-                            ],
-                            'notification' => [
-                                'tag' => 'jimpitan-chat',
-                                'requireInteraction' => true, // FORCE STICKY (OS Level)
-                                'renotify' => true,
-                                'icon' => base_url('jimpitan1.png'),
-                                'badge' => base_url('jimpitan1.png')
-                            ],
-                            'fcm_options' => [
-                                'link' => $url ?: base_url('/chat') // NATIVE REDIRECT
-                            ]
-                        ],
-                        'data' => [
-                            'url' => $url ?: '/chat', // Backup for SW
+                            'url' => $url ?: '/chat', // Primary URL for SW
                             'sender_id' => (string)$senderId,
-                            'hide_in_sw' => 'true' // SIGNAL SW TO SHUT UP
+                            'tag' => 'jimpitan-chat',
+                            'renotify' => 'true',
+                            'require_interaction' => 'true'
                         ]
                     ]
                 ];

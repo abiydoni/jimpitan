@@ -33,26 +33,22 @@ self.addEventListener('push', function(event) {
       const data = rawData.data || rawData || {}; // Never allow undefined
 
       // Ultra-Defensive Checks
+      // Ultra-Defensive Checks
       if (!data || Object.keys(data).length === 0) {
           console.warn('SW: Received Empty Data Push');
           return;
       }
       
-      // HYBRID SUPPRESSION:
-      // If server sent "hide_in_sw", it means the Browser already showed the default notification.
-      // We must NOT show another one.
-      if (data.hide_in_sw === 'true') {
-          console.log('[SW] Suppressing duplicate notification (Handled by Browser)');
-          return;
-      }
+      // SW DRIVEN (Persistent + Clickable)
+      // We removed 'hide_in_sw' check to allow SW to handle everything.
 
       const title = data.title || 'Jimpitan App'; // Fallback to avoid crash
       const tag = data.tag || 'jimpitan-chat';
       const renotify = (data.renotify === 'true' || data.renotify === true);
-      const requireInteraction = (data.require_interaction === 'true' || data.require_interaction === true); 
+      const requireInteraction = true; // FORCE STICKY
       
-      // Auto-Close: Parse safely (Allow 0 for persistent)
-      let autoCloseMs = 5000; // Default 5s
+      // Auto-Close: Default 0 (Never close)
+      let autoCloseMs = 0; 
       if (typeof data.auto_close !== 'undefined' && data.auto_close !== null) {
            const parsed = parseInt(data.auto_close);
            if (!isNaN(parsed)) {
