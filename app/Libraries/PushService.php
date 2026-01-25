@@ -67,6 +67,12 @@ class PushService
                             'priority' => 'high',
                             'ttl' => '4500s'
                         ],
+                        // HYBRID MODE: Restore Notification Block to Ensure Delivery (No Silent Failure)
+                        // Cache is cleared, so no more crash.
+                        'notification' => [
+                            'title' => $title,
+                            'body' => mb_substr($messageText, 0, 100, 'UTF-8'),
+                        ],
                         'webpush' => [
                             'headers' => [
                                 'Urgency' => 'high',

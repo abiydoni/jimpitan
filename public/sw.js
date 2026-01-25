@@ -28,6 +28,8 @@ self.addEventListener('push', function(event) {
 
   try {
       const rawData = event.data ? event.data.json() : {};
+      console.log('SW DEBUG RAW:', JSON.stringify(rawData)); // DEBUG LOG
+      
       const data = rawData.data || rawData || {}; // Never allow undefined
 
       // Ultra-Defensive Checks
