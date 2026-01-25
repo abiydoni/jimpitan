@@ -460,6 +460,9 @@
         const totalScanDisplay = document.getElementById('totalScanDisplay');
 
         function openDetailModal() {
+            // Push State
+            history.pushState({ modal: 'detail' }, '', '#detail');
+            
             detailModal.classList.remove('invisible', 'opacity-0');
             const content = detailModal.querySelector('div.transform');
             content.classList.remove('scale-95', 'opacity-0');
@@ -467,7 +470,8 @@
             loadDetails(); 
         }
 
-        function closeDetailModal() {
+        // Internal UI Close Logic
+        function _closeDetailUI() {
             const content = detailModal.querySelector('div.transform');
             content.classList.remove('scale-100', 'opacity-100');
             content.classList.add('scale-95', 'opacity-0');
@@ -475,6 +479,23 @@
                 detailModal.classList.add('opacity-0', 'invisible');
             }, 300);
         }
+
+        // Triggered by User Action (Button/Backdrop)
+        function closeDetailModal() {
+            // If we have history state, go back (triggering popstate)
+            // If not (direct load?), just close UI
+            if (location.hash === '#detail') {
+                history.back();
+            } else {
+                _closeDetailUI();
+            }
+        }
+
+        // Handle Back Button
+        window.addEventListener('popstate', (event) => {
+            // If URL no longer has #detail or custom state, close UI
+            _closeDetailUI();
+        });
 
         function refreshDetails() {
             // Animate Icon
