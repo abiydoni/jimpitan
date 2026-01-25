@@ -38,10 +38,10 @@
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('<?= base_url('sw.js') ?>')
                     .then(registration => {
-                        console.log('SW registered: ', registration);
+                        // console.log('SW registered: ', registration);
                     })
                     .catch(registrationError => {
-                        console.log('SW registration failed: ', registrationError);
+                        // console.log('SW registration failed: ', registrationError);
                     });
             });
         }

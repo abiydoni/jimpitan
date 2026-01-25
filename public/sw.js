@@ -21,14 +21,14 @@ const messaging = firebase.messaging();
 
 // Handle Background Messages - DEFENSIVE SERVER DRIVEN
 self.addEventListener('push', function(event) {
-  console.log('[SW] Push Received (Defensive)');
+  // console.log('[SW] Push Received (Defensive)');
   if (!(self.Notification && self.Notification.permission === 'granted')) {
     return;
   }
 
   try {
       const rawData = event.data ? event.data.json() : {};
-      console.log('SW DEBUG RAW:', JSON.stringify(rawData)); // DEBUG LOG
+      // console.log('SW DEBUG RAW:', JSON.stringify(rawData)); // CLEANED
       
       const data = rawData.data || rawData || {}; // Never allow undefined
 

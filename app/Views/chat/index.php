@@ -950,7 +950,9 @@
                 formData.append('receiver_id', user.id_code);
                 formData.append('message', msgContent);
                 if(currentPushEndpoint) {
-                    formData.append('exclude_endpoint', currentPushEndpoint);
+                    // ALLOW SELF-NOTIFICATION FOR TESTING
+                    // formData.append('exclude_endpoint', currentPushEndpoint); 
+                    // console.log('Sending message...'); // CLEANED
                 }
                 await fetch(`${baseUrl}/chat/send`, {
                     method: 'POST', body: formData
@@ -1122,7 +1124,7 @@
                         
                         if(currentPushEndpoint) {
                              formData.append('exclude_endpoint', currentPushEndpoint);
-                             console.log('📤 Sending exclude_endpoint:', currentPushEndpoint);
+                             // console.log('📤 Sending exclude_endpoint:', currentPushEndpoint);
                         } else if (Notification.permission === 'granted') {
                              console.log('ℹ️ Push endpoint not yet captured, deduplication may be limited.');
                         }
@@ -1172,7 +1174,7 @@
         
         // Handle foreground messages
         messaging.onMessage((payload) => {
-            console.log('Message received. ', payload);
+            // console.log('Message received. ', payload);
             
             // Support Data-Only Payload (preferred for control)
             const data = payload.data || {};
@@ -1266,7 +1268,7 @@
                 });
                 
                 if (token) {
-                    console.log('✅ FCM Token captured:', token);
+                    // console.log('✅ FCM Token captured:', token);
                     currentPushEndpoint = token; // Add this line
                     await sendFCMTokenToServer(token, silent);
                 } else {
@@ -1358,7 +1360,7 @@
         async function registerServiceWorker() {
             try {
                 await navigator.serviceWorker.register('<?= base_url("sw.js") ?>');
-                console.log('Service Worker Registered');
+                // console.log('Service Worker Registered');
                 
                 await navigator.serviceWorker.ready;
                 
@@ -1399,8 +1401,8 @@
                     }
                 }
             }).then(() => {
-                // Register sw.js (v7)
-                return navigator.serviceWorker.register('<?= base_url("sw.js") ?>?v=14');
+                // Register sw.js (v15)
+                return navigator.serviceWorker.register('<?= base_url("sw.js") ?>?v=15');
             }).then(() => {
                 return navigator.serviceWorker.ready;
             }).then(async (reg) => {
@@ -1408,7 +1410,7 @@
                    reg.update();
 
                    if (Notification.permission === 'granted') {
-                       console.log('✅ Permission granted. Syncing token...');
+                       // console.log('✅ Permission granted. Syncing token...');
                        // Auto-register without bothering the user
                        registerFCM(true);
                    } else if (Notification.permission === 'default') {

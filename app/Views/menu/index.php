@@ -278,7 +278,7 @@
                 });
                 
                 if (token) {
-                    console.log('FCM Auto-Sync:', token);
+                    // console.log('FCM Auto-Sync:', token);
                     await sendFCMTokenToServer(token, silent);
                 }
             } catch (err) {
