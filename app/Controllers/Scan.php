@@ -243,6 +243,7 @@ class Scan extends BaseController
         $codeId = $request->getPost('code_id');
         $date   = $request->getPost('jimpitan_date');
         $alasan = $request->getPost('alasan');
+        $confirmDelete = $request->getPost('confirm_delete'); // Check for confirmation flag
 
         if (!$codeId || !$date) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'Data warga dan tanggal harus diisi.']);
@@ -272,7 +273,28 @@ class Scan extends BaseController
                        ->getRowArray();
 
         if ($existing) {
-             return $this->response->setJSON(['status' => 'error', 'message' => 'Data jimpitan untuk warga ini pada tanggal ' . $date . ' sudah ada.']);
+             // Logic similar to Scan Camera: Confirm Delete
+             if ($confirmDelete === 'true' || $confirmDelete === true) {
+                 try {
+                    $db->table('report')->where('id', $existing['id'])->delete();
+                    log_activity('DELETE_JIMPITAN_MANUAL', 'Deleted Manual Jimpitan for: ' . $warga['kk_name']);
+                    return $this->response->setJSON([
+                        'status' => 'success',
+                        'message' => 'Data jimpitan berhasil dibatalkan/dihapus.',
+                        'action' => 'delete' // Signal that it was a delete action
+                    ]);
+                 } catch (\Exception $e) {
+                    return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal menghapus data: ' . $e->getMessage()]);
+                 }
+             } else {
+                 return $this->response->setJSON([
+                     'status' => 'confirm_delete',
+                     'message' => 'Data jimpitan untuk warga ini tanggal ' . $date . ' sudah ada. Hapus data ini?',
+                     'data' => [
+                         'nama' => $warga['kk_name']
+                     ]
+                 ]);
+             }
         }
 
         // 4. Insert (Override User with System)
