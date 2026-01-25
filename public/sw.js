@@ -20,19 +20,43 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // Handle Background Messages explicitly
-messaging.setBackgroundMessageHandler(function(payload) {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  // Customize notification here
-  const notificationTitle = payload.notification?.title || payload.data?.title || 'Pesan Baru';
-  const notificationOptions = {
-    body: payload.notification?.body || payload.data?.body || '',
+// Handle Background Messages via 'push' event for granular control (Anti-Duplicate)
+self.addEventListener('push', function(event) {
+  console.log('[SW] Push Received');
+  if (!(self.Notification && self.Notification.permission === 'granted')) {
+    return;
+  }
+
+  const rawData = event.data ? event.data.json() : {};
+  // Normalize: data-only payload puts everything in rawData.data or rawData direct
+  const data = rawData.data || rawData;
+
+  const title = data.title || 'Pesan Baru';
+  const options = {
+    body: data.body || 'Anda memiliki pesan baru.',
     icon: '/favicon.ico',
-    tag: 'jimpitan-global',
-    data: payload.data
+    badge: '/favicon.ico',
+    tag: 'jimpitan-global',     
+    renotify: true,             
+    vibrate: [200, 100, 200],
+    data: { url: data.url || '/chat' }
   };
 
-  return self.registration.showNotification(notificationTitle,
-    notificationOptions);
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      // 1. CHECK VISIBILITY
+      for (var i = 0; i < windowClients.length; i++) {
+        var client = windowClients[i];
+        if (client.visibilityState === 'visible') {
+            console.log('[SW] App is visible. Suppressing background notification.');
+            return; // EXIT: Let the foreground app handle it!
+        }
+      }
+
+      // 2. SHOW NOTIFICATION (Only if app is background/closed)
+      return self.registration.showNotification(title, options);
+    })
+  );
 });
 
 self.addEventListener('install', event => {
