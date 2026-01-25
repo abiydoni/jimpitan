@@ -1173,8 +1173,14 @@
         // Handle foreground messages
         messaging.onMessage((payload) => {
             console.log('Message received. ', payload);
-            const { title, body } = payload.notification || {};
-            const { url, sender_id } = payload.data || {};
+            
+            // Support Data-Only Payload (preferred for control)
+            const data = payload.data || {};
+            const notification = payload.notification || {};
+            
+            const title = notification.title || data.title || "Pesan Baru";
+            const body = notification.body || data.body || "";
+            const { url, sender_id } = data;
             
             // --- SUPPRESSION LOGIC ---
             // Don't show popup/sound if user is currently chatting with this person/group

@@ -69,11 +69,6 @@ class PushService
                             'headers' => [
                                 'Urgency' => 'high',
                                 'TTL' => '4500'
-                            ],
-                            'notification' => [
-                                'renotify' => true,
-                                'tag' => 'jimpitan-chat', // Fixes TypeError
-                                'vibrate' => [200, 100, 200]
                             ]
                         ],
                         'data' => [

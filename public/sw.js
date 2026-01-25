@@ -23,9 +23,9 @@ const messaging = firebase.messaging();
 messaging.setBackgroundMessageHandler(function(payload) {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
   // Customize notification here
-  const notificationTitle = payload.notification.title || 'Pesan Baru';
+  const notificationTitle = payload.notification?.title || payload.data?.title || 'Pesan Baru';
   const notificationOptions = {
-    body: payload.notification.body,
+    body: payload.notification?.body || payload.data?.body || '',
     icon: '/favicon.ico',
     tag: 'jimpitan-global',
     data: payload.data
