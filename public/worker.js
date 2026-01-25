@@ -40,7 +40,8 @@ self.addEventListener('push', function(event) {
   
   // Dynamic Assets (Icon/Badge/Vibrate)
   const icon = data.icon; 
-  const badge = data.badge; 
+  const badge = data.badge;
+  const sound = data.sound || 'default'; 
   let vibratePattern;
   try {
       if (data.vibrate) vibratePattern = JSON.parse(data.vibrate);
@@ -50,6 +51,7 @@ self.addEventListener('push', function(event) {
     body: data.body, // Server MUST send body
     icon: icon,
     badge: badge,
+    sound: sound,
     tag: tag,     
     renotify: renotify,             
     vibrate: vibratePattern,

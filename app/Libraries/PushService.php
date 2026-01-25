@@ -85,8 +85,9 @@ class PushService
                             'renotify' => 'true',
                             'auto_close' => '5000', // 5 seconds (Set to '0' to disable auto-close)
                             'require_interaction' => 'false',
-                            'icon' => base_url('assets/img/jimpitan.png'), // Use PNG for Android Compatibility
-                            'badge' => base_url('assets/img/jimpitan.png'),
+                            'icon' => base_url('jimpitan1.png'), // Use confirmed Manifest Icon
+                            'badge' => base_url('jimpitan1.png'),
+                            'sound' => 'default',
                             'vibrate' => json_encode([200, 100, 200]) // Send array as JSON string
                         ]
                     ]
