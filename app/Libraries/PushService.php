@@ -9,6 +9,7 @@ class PushService
     public function __construct()
     {
         $this->logger = \Config\Services::logger();
+        helper('url'); // Ensure base_url() works
     }
 
     public function sendNotification($receiverId, $messageText, $senderName, $url = null, $senderId = null, $excludeEndpoint = null)
@@ -113,6 +114,9 @@ class PushService
                 $response = curl_exec($ch);
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
+                
+                // Force Log Response for Debugging
+                $this->logger->info("FCM SENT ($httpCode) to " . substr($token, 0, 5) . "... Resp: " . ($response ?: 'Empty'));
 
                 if ($httpCode === 200) {
                     $successCount++;
