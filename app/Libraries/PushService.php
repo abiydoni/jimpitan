@@ -61,10 +61,7 @@ class PushService
                 $payload = [
                     'message' => [
                         'token' => $token,
-                        'notification' => [
-                            'title' => $title,
-                            'body' => mb_substr($messageText, 0, 100, 'UTF-8')
-                        ],
+                        // 'notification' block removed to prevent double notification (Browser Auto + SW)
                         'webpush' => [
                             'headers' => [
                                 'Urgency' => 'high',
