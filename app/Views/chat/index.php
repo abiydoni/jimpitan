@@ -1215,8 +1215,7 @@
                         data: { url: url },
                         tag: 'chat-msg-' + Date.now(), // Unique tag to ensure heads-up
                         vibrate: [200, 100, 200],
-                        renotify: true,
-                        requireInteraction: true // Keeps it on screen
+                        renotify: true
                     });
                 });
             }
