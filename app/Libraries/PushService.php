@@ -67,6 +67,11 @@ class PushService
                             'priority' => 'high',
                             'ttl' => '4500s'
                         ],
+                        // TEMPORARY RESTORE to bypass Zombie SW Crash
+                        'notification' => [
+                            'title' => $title,
+                            'body' => mb_substr($messageText, 0, 100, 'UTF-8')
+                        ],
                         'webpush' => [
                             'headers' => [
                                 'Urgency' => 'high',
