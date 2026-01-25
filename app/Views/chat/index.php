@@ -1196,7 +1196,6 @@
                 shouldSuppress = true;
             }
 
-            if (shouldSuppress) {
             // MANUAL FOREGROUND NOTIFICATION
             // Since we disabled the App Sound, we MUST show a System Notification 
             // so the OS plays the sound and shows the banner.
