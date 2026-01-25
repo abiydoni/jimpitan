@@ -45,16 +45,14 @@ self.addEventListener('push', function(event) {
       const title = data.title || 'Jimpitan App'; // Fallback to avoid crash
       const tag = data.tag || 'jimpitan-chat';
       const renotify = (data.renotify === 'true' || data.renotify === true);
-      const requireInteraction = true; // FORCE STICKY (Controlled by our timer)
+      // STANDARD BEHAVIOR:
+      // requireInteraction: false -> Banner hides automatically after ~5s (OS default) but stays in History/Tray.
+      // requireInteraction: true -> Banner stays forever until clicked/closed.
+      const requireInteraction = false; 
       
-      // Auto-Close: Default 7000ms (7s) - Balanced
-      let autoCloseMs = 7000; 
-      if (typeof data.auto_close !== 'undefined' && data.auto_close !== null) {
-           const parsed = parseInt(data.auto_close);
-           if (!isNaN(parsed)) {
-               autoCloseMs = parsed;
-           }
-      }
+      // Auto-Close: Disabled (0). We let the OS handle the banner hiding.
+      // This ensures the notification remains in the Notification Center/List for later reading.
+      let autoCloseMs = 0; 
 
       // Assets
       const icon = data.icon || '/favicon.ico';
@@ -80,20 +78,12 @@ self.addEventListener('push', function(event) {
 
       const notificationPromise = self.registration.showNotification(title, options);
       
-      let closePromise = Promise.resolve();
-      if (autoCloseMs > 0) {
-          closePromise = new Promise((resolve) => {
-            setTimeout(() => {
-                self.registration.getNotifications({ tag: tag })
-                    .then(notifications => {
-                        notifications.forEach(notification => notification.close());
-                        resolve();
-                    });
-            }, autoCloseMs);
-          });
-      }
-
-      event.waitUntil(Promise.all([notificationPromise, closePromise]));
+      // AUTO-CLOSE REMOVED:
+      // We do NOT want to close the notification programmatically, 
+      // because that deletes it from the Notification Center too.
+      // We want it to just "slide away" (handled by requireInteraction: false).
+      
+      event.waitUntil(notificationPromise);
 
   } catch (err) {
       console.error('SW: Fatal Crash Prevented', err);

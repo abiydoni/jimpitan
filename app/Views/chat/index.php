@@ -1400,7 +1400,7 @@
                 }
             }).then(() => {
                 // Register sw.js (v7)
-                return navigator.serviceWorker.register('<?= base_url("sw.js") ?>?v=12');
+                return navigator.serviceWorker.register('<?= base_url("sw.js") ?>?v=13');
             }).then(() => {
                 return navigator.serviceWorker.ready;
             }).then(async (reg) => {
