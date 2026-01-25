@@ -45,13 +45,12 @@ self.addEventListener('push', function(event) {
       const title = data.title || 'Jimpitan App'; // Fallback to avoid crash
       const tag = data.tag || 'jimpitan-chat';
       const renotify = (data.renotify === 'true' || data.renotify === true);
-      // STANDARD BEHAVIOR:
-      // requireInteraction: false -> Banner hides automatically after ~5s (OS default) but stays in History/Tray.
-      // requireInteraction: true -> Banner stays forever until clicked/closed.
-      const requireInteraction = false; 
+      // REVERT TO STICKY:
+      // User reported standard logic causes popup to NOT appear at all (OS Suppression).
+      // We force "True" to guarantee visibility, even if user has to close it manually.
+      const requireInteraction = true; 
       
-      // Auto-Close: Disabled (0). We let the OS handle the banner hiding.
-      // This ensures the notification remains in the Notification Center/List for later reading.
+      // Auto-Close: Disabled (0) to keep in list.
       let autoCloseMs = 0; 
 
       // Assets
