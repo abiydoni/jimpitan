@@ -146,3 +146,6 @@ $routes->post('/push/check_fcm', 'PushSubscription::check_fcm', ['filter' => 'au
 $routes->get('/push/debug-tokens', 'PushSubscription::debugTokens'); // Temporarily public for debugging
 $routes->get('/push/test-push', 'PushSubscription::testPush', ['filter' => 'authFilter']);
 $routes->post('/push/unsubscribe_all', 'PushSubscription::unsubscribeAll', ['filter' => 'authFilter']);
+
+// Temporary Test Route
+$routes->get('/testpush', 'TestPush::index');

@@ -96,7 +96,7 @@ class PushSubscription extends ResourceController
             $data = [
                 'user_id' => $userId,
                 'fcm_token' => $token,
-                'device_info' => $deviceType,
+                'device_type' => $deviceType, // FIXED: Match DB Column
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ];

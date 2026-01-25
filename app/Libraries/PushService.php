@@ -66,19 +66,25 @@ class PushService
                         // Android Wake-Up Config
                         'android' => [
                             'priority' => 'high',
-                            'ttl' => '4500s'
+                            'ttl' => '4500s',
+                            'notification' => [
+                                'tag' => 'jimpitan-chat' // Correct place for Android Tag
+                            ]
                         ],
                         // HYBRID MODE: Restore Notification Block to Ensure Delivery (No Silent Failure)
                         // Cache is cleared, so no more crash.
                         'notification' => [
                             'title' => $title,
                             'body' => mb_substr($messageText, 0, 100, 'UTF-8'),
-                            'tag' => 'jimpitan-chat', // SYNC with SW.js to merge notifications!
+                            // 'tag' REMOVED from here (Not supported in v1 generic block)
                         ],
                         'webpush' => [
                             'headers' => [
                                 'Urgency' => 'high',
                                 'TTL' => '4500'
+                            ],
+                            'notification' => [
+                                'tag' => 'jimpitan-chat' // Correct place for Web Tag
                             ]
                         ],
                         'data' => [
