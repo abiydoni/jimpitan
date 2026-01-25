@@ -1347,23 +1347,17 @@
 
 
         if ('serviceWorker' in navigator) {
-            // Nuke old SWs (Explicitly target sw.js)
+            // Unregister worker.js (Cleanup experiment) and register sw.js
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
                 for(let registration of registrations) {
-                    if (registration.active && registration.active.scriptURL.includes('sw.js')) {
-                         console.warn('Found Zombie SW (sw.js). Unregistering immediately...');
+                     if (registration.active && registration.active.scriptURL.includes('worker.js')) {
+                         console.warn('Removing worker.js...');
                          registration.unregister();
-                    } else if (registration.waiting && registration.waiting.scriptURL.includes('sw.js')) {
-                         registration.unregister();
-                    } 
-                    // Unregister others just in case, except our new worker.js
-                    if (!registration.active || !registration.active.scriptURL.includes('worker.js')) {
-                        registration.unregister();
                     }
                 }
             }).then(() => {
-                // Register Fresh worker.js (New Name = New Beginnings)
-                return navigator.serviceWorker.register('<?= base_url("worker.js") ?>?v=1');
+                // Register sw.js (v7)
+                return navigator.serviceWorker.register('<?= base_url("sw.js") ?>?v=7');
             }).then(() => {
                 return navigator.serviceWorker.ready;
             }).then(async (reg) => {
