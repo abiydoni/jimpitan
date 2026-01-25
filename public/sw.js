@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jimpitan-fcm-v7';
+const CACHE_NAME = 'jimpitan-fcm-v8';
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
 
@@ -43,10 +43,13 @@ self.addEventListener('push', function(event) {
       const renotify = (data.renotify === 'true' || data.renotify === true);
       const requireInteraction = (data.require_interaction === 'true' || data.require_interaction === true); 
       
-      // Auto-Close: Parse safely
-      let autoCloseMs = 5000;
-      if (data.auto_close) {
-           autoCloseMs = parseInt(data.auto_close) || 5000;
+      // Auto-Close: Parse safely (Allow 0 for persistent)
+      let autoCloseMs = 5000; // Default 5s
+      if (typeof data.auto_close !== 'undefined' && data.auto_close !== null) {
+           const parsed = parseInt(data.auto_close);
+           if (!isNaN(parsed)) {
+               autoCloseMs = parsed;
+           }
       }
 
       // Assets
