@@ -37,6 +37,14 @@ self.addEventListener('push', function(event) {
           console.warn('SW: Received Empty Data Push');
           return;
       }
+      
+      // HYBRID SUPPRESSION:
+      // If server sent "hide_in_sw", it means the Browser already showed the default notification.
+      // We must NOT show another one.
+      if (data.hide_in_sw === 'true') {
+          console.log('[SW] Suppressing duplicate notification (Handled by Browser)');
+          return;
+      }
 
       const title = data.title || 'Jimpitan App'; // Fallback to avoid crash
       const tag = data.tag || 'jimpitan-chat';
@@ -98,18 +106,25 @@ self.addEventListener('push', function(event) {
 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
+  
+  // Defensive: Get URL safely
+  let targetUrl = '/'; // Default fallback
+  if (event.notification.data && event.notification.data.url) {
+      targetUrl = event.notification.data.url;
+  }
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
       // Check if there is already a window open with this URL
       for (var i = 0; i < windowClients.length; i++) {
         var client = windowClients[i];
-        if (client.url.includes(event.notification.data.url) && 'focus' in client) {
+        if (client && client.url && client.url.includes(targetUrl) && 'focus' in client) {
           return client.focus();
         }
       }
       // If not, open a new window
       if (clients.openWindow) {
-        return clients.openWindow(event.notification.data.url);
+        return clients.openWindow(targetUrl);
       }
     })
   );

@@ -85,24 +85,22 @@ class PushSubscription extends ResourceController
         $db = Database::connect();
         $builder = $db->table('fcm_subscriptions');
         
-        // Check if token already exists for this user
-        $exists = $builder->where('fcm_token', $token)->where('user_id', $userId)->countAllResults();
+        // ENFORCE SINGLE TOKEN POLICY (Clean Start)
+        // Remove ALL previous tokens for this user on this device type to prevent "Zombie/Duplicate" tokens.
+        $builder->where('user_id', $userId)
+                ->where('device_type', $deviceType)
+                ->delete();
         
-        if ($exists) {
-            $builder->where('fcm_token', $token)->where('user_id', $userId)
-                    ->update(['updated_at' => date('Y-m-d H:i:s')]);
-            return $this->respond(['status' => 'updated']);
-        } else {
-            $data = [
-                'user_id' => $userId,
-                'fcm_token' => $token,
-                'device_type' => $deviceType, // FIXED: Match DB Column
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ];
-            $builder->insert($data);
-            return $this->respondCreated(['status' => 'subscribed']);
-        }
+        // Insert NEW Token
+        $data = [
+            'user_id' => $userId,
+            'fcm_token' => $token,
+            'device_type' => $deviceType,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+        $builder->insert($data);
+        return $this->respondCreated(['status' => 'subscribed_clean']);
     }
 
     public function check_fcm()

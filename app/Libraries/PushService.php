@@ -64,45 +64,41 @@ class PushService
                         'token' => $token,
                         // 'notification' block removed to prevent double notification (Browser Auto + SW)
                         // Android Wake-Up Config
+                        // Android Wake-Up Config
                         'android' => [
                             'priority' => 'high',
                             'ttl' => '4500s',
                             'notification' => [
-                                'tag' => 'jimpitan-chat' // Correct place for Android Tag
+                                'tag' => 'jimpitan-chat',
+                                'channel_id' => 'jimpitan_channel'
                             ]
                         ],
-                        // HYBRID MODE: Restore Notification Block to Ensure Delivery (No Silent Failure)
-                        // Cache is cleared, so no more crash.
+                        // RESTORE STANDARD NOTIFICATION (Guaranteed Display)
                         'notification' => [
                             'title' => $title,
                             'body' => mb_substr($messageText, 0, 100, 'UTF-8'),
-                            // 'tag' REMOVED from here (Not supported in v1 generic block)
                         ],
+                        // WEBPUSH CONFIG (Sticky + Redirect)
                         'webpush' => [
                             'headers' => [
                                 'Urgency' => 'high',
                                 'TTL' => '4500'
                             ],
                             'notification' => [
-                                'tag' => 'jimpitan-chat' // Correct place for Web Tag
+                                'tag' => 'jimpitan-chat',
+                                'requireInteraction' => true, // FORCE STICKY (OS Level)
+                                'renotify' => true,
+                                'icon' => base_url('jimpitan1.png'),
+                                'badge' => base_url('jimpitan1.png')
+                            ],
+                            'fcm_options' => [
+                                'link' => $url ?: base_url('/chat') // NATIVE REDIRECT
                             ]
                         ],
                         'data' => [
-                            'url' => $url ?: '/chat',
-                            'title' => $title,
-                            'body' => (string)$messageText,
-                            'click_action' => $url ?: '/chat', // Legacy support
+                            'url' => $url ?: '/chat', // Backup for SW
                             'sender_id' => (string)$senderId,
-                            // SERVER-DRIVEN CONFIGURATION
-                            // Change these in PHP, and JS will obey. No need to edit JS anymore.
-                            'tag' => 'jimpitan-chat', 
-                            'renotify' => 'true',
-                            'auto_close' => '0', // 0 = Disable Force Close (Persist in Tray, let OS hide banner)
-                            'require_interaction' => 'false',
-                            'icon' => base_url('jimpitan1.png'), // Use confirmed Manifest Icon
-                            'badge' => base_url('jimpitan1.png'),
-                            'sound' => 'default',
-                            'vibrate' => json_encode([200, 100, 200]) // Send array as JSON string
+                            'hide_in_sw' => 'true' // SIGNAL SW TO SHUT UP
                         ]
                     ]
                 ];

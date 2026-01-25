@@ -271,9 +271,9 @@ class Chat extends BaseController
                 log_message('info', "Chat::sendMessage - Sender: $currentUserId, ExcludeEndpoint: " . ($excludeEndpoint ?: 'NULL'));
                 $redirectUrl = '/chat';
                 if ($receiverId !== 'GROUP_ALL') {
-                     $redirectUrl = '/chat?user_id=' . $currentUserId;
+                     $redirectUrl = base_url('/chat?user_id=' . $currentUserId);
                 } else {
-                     $redirectUrl = '/chat?user_id=GROUP_ALL';
+                     $redirectUrl = base_url('/chat?user_id=GROUP_ALL');
                 }
                 
                 $success = false;

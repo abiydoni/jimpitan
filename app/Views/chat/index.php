@@ -1202,8 +1202,14 @@
             }
 
             // Play Sound (LOUD) using GLOBAL UNLOCKED OBJECT
+            // DISABLE AUDIO to prevent Double Sound (System + App)
+            /* 
             notifSound.currentTime = 0;
-            notifSound.play().catch(e => console.error("Audio Play Error:", e));
+            notifSound.play().catch(() => {
+                // Silent catch: User hasn't interacted yet.
+                // We suppress the error to keep console clean.
+            });
+            */
             
             // VIBRATE
             if (navigator.vibrate) {
@@ -1213,6 +1219,23 @@
             // Native Notification REMOVED by request.
             // Using SW.js exclusively for visual notifications to prevents duplicates.
         });
+
+        // UNLOCK AUDIO ON FIRST INTERACTION
+        // This fixes "NotAllowedError" by playing a muted sound once user touches screen.
+        function unlockAudio() {
+            notifSound.play().then(() => {
+                notifSound.pause();
+                notifSound.currentTime = 0;
+            }).catch(() => {});
+            
+            // Remove listeners once unlocked
+            ['click', 'keydown', 'touchstart'].forEach(evt => 
+                document.removeEventListener(evt, unlockAudio)
+            );
+        }
+        ['click', 'keydown', 'touchstart'].forEach(evt => 
+            document.addEventListener(evt, unlockAudio)
+        );
 
         async function registerFCM(silent = false) {
             try {
@@ -1357,7 +1380,7 @@
                 }
             }).then(() => {
                 // Register sw.js (v7)
-                return navigator.serviceWorker.register('<?= base_url("sw.js") ?>?v=7');
+                return navigator.serviceWorker.register('<?= base_url("sw.js") ?>?v=10');
             }).then(() => {
                 return navigator.serviceWorker.ready;
             }).then(async (reg) => {
