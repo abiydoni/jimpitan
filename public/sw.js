@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jimpitan-fcm-v2';
+const CACHE_NAME = 'jimpitan-fcm-v3';
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
 
@@ -42,19 +42,26 @@ self.addEventListener('push', function(event) {
     data: { url: data.url || '/chat' }
   };
 
+  // Always show notification (Single Source of Truth)
+  // No visibility check, relying on this to be the ONLY notification.
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-      // 1. CHECK VISIBILITY
+      // Check if there is already a window open with this URL
       for (var i = 0; i < windowClients.length; i++) {
         var client = windowClients[i];
-        if (client.visibilityState === 'visible') {
-            console.log('[SW] App is visible. Suppressing background notification.');
-            return; // EXIT: Let the foreground app handle it!
+        if (client.url.includes(event.notification.data.url) && 'focus' in client) {
+          return client.focus();
         }
       }
-
-      // 2. SHOW NOTIFICATION (Only if app is background/closed)
-      return self.registration.showNotification(title, options);
+      // If not, open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(event.notification.data.url);
+      }
     })
   );
 });

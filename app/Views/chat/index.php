@@ -1210,21 +1210,8 @@
                 navigator.vibrate([200, 100, 200, 100, 200]); 
             }
 
-            // Native System Notification (Heads-up / Banner)
-            // This appears in the notification shade/lock screen just like WhatsApp etc.
-            if (Notification.permission === 'granted') {
-                // Check if Service Worker is ready to show notification (more reliable for mobile)
-                navigator.serviceWorker.ready.then(registration => {
-                    registration.showNotification(title || "Pesan Baru", {
-                        body: body,
-                        icon: '<?= base_url("pwa-icon.png") ?>', 
-                        data: { url: url },
-                        tag: 'jimpitan-chat', // Fixed tag to replace old notifs & allow renotify
-                        vibrate: [200, 100, 200],
-                        renotify: true
-                    });
-                });
-            }
+            // Native Notification REMOVED by request.
+            // Using SW.js exclusively for visual notifications to prevents duplicates.
         });
 
         async function registerFCM(silent = false) {
