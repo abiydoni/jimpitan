@@ -1347,10 +1347,19 @@
 
 
         if ('serviceWorker' in navigator) {
-            // Nuke old SWs to force update (Fix for TypeError loop)
+            // Nuke old SWs (Explicitly target sw.js)
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
                 for(let registration of registrations) {
-                    registration.unregister();
+                    if (registration.active && registration.active.scriptURL.includes('sw.js')) {
+                         console.warn('Found Zombie SW (sw.js). Unregistering immediately...');
+                         registration.unregister();
+                    } else if (registration.waiting && registration.waiting.scriptURL.includes('sw.js')) {
+                         registration.unregister();
+                    } 
+                    // Unregister others just in case, except our new worker.js
+                    if (!registration.active || !registration.active.scriptURL.includes('worker.js')) {
+                        registration.unregister();
+                    }
                 }
             }).then(() => {
                 // Register Fresh worker.js (New Name = New Beginnings)

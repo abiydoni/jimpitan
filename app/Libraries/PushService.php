@@ -62,6 +62,11 @@ class PushService
                     'message' => [
                         'token' => $token,
                         // 'notification' block removed to prevent double notification (Browser Auto + SW)
+                        // Android Wake-Up Config
+                        'android' => [
+                            'priority' => 'high',
+                            'ttl' => '4500s'
+                        ],
                         'webpush' => [
                             'headers' => [
                                 'Urgency' => 'high',
