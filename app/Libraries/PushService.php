@@ -73,7 +73,16 @@ class PushService
                             'title' => $title,
                             'body' => (string)$messageText,
                             'click_action' => $url ?: '/chat', // Legacy support
-                            'sender_id' => (string)$senderId
+                            'sender_id' => (string)$senderId,
+                            // SERVER-DRIVEN CONFIGURATION
+                            // Change these in PHP, and JS will obey. No need to edit JS anymore.
+                            'tag' => 'jimpitan-chat', 
+                            'renotify' => 'true',
+                            'auto_close' => '5000', // 5 seconds (Set to '0' to disable auto-close)
+                            'require_interaction' => 'false',
+                            'icon' => '/favicon.ico',
+                            'badge' => '/favicon.ico',
+                            'vibrate' => json_encode([200, 100, 200]) // Send array as JSON string
                         ]
                     ]
                 ];

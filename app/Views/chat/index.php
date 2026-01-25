@@ -1353,8 +1353,8 @@
                     registration.unregister();
                 }
             }).then(() => {
-                // Register Fresh v5
-                return navigator.serviceWorker.register('<?= base_url("sw.js") ?>?v=5');
+                // Register Fresh worker.js (New Name = New Beginnings)
+                return navigator.serviceWorker.register('<?= base_url("worker.js") ?>?v=1');
             }).then(() => {
                 return navigator.serviceWorker.ready;
             }).then(async (reg) => {
