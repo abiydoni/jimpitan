@@ -231,34 +231,39 @@ class ChatModel extends Model
     {
          $db = \Config\Database::connect();
          
-         // Query to find latest interaction between user and others
-         $sql = "
-            SELECT partner_id, MAX(created_at) as last_activity 
-            FROM (
-                SELECT receiver_id as partner_id, created_at FROM chats WHERE sender_id = ? AND receiver_id != 'GROUP_ALL'
-                UNION ALL
-                SELECT sender_id as partner_id, created_at FROM chats WHERE receiver_id = ?
-            ) as combined
-            GROUP BY partner_id
-         ";
-         
-         $query = $db->query($sql, [$userId, $userId]);
-         $individual = $query->getResultArray();
-         
-         $result = [];
-         foreach ($individual as $row) {
-             $result[$row['partner_id']] = $row['last_activity'];
+         try {
+             // Query to find latest interaction between user and others
+             $sql = "
+                SELECT partner_id, MAX(created_at) as last_activity 
+                FROM (
+                    SELECT receiver_id as partner_id, created_at FROM chats WHERE sender_id = ? AND receiver_id != 'GROUP_ALL'
+                    UNION ALL
+                    SELECT sender_id as partner_id, created_at FROM chats WHERE receiver_id = ?
+                ) as combined
+                GROUP BY partner_id
+             ";
+             
+             $query = $db->query($sql, [$userId, $userId]);
+             $individual = $query->getResultArray();
+             
+             $result = [];
+             foreach ($individual as $row) {
+                 $result[$row['partner_id']] = $row['last_activity'];
+             }
+    
+             // Group chat activity
+             $groupLast = $this->where('receiver_id', 'GROUP_ALL')
+                               ->orderBy('created_at', 'DESC')
+                               ->first();
+                               
+             if ($groupLast) {
+                $result['GROUP_ALL'] = $groupLast['created_at'];
+             }
+    
+             return $result;
+         } catch (\Exception $e) {
+             log_message('error', 'ChatModel::getLastActivityTimes Error: ' . $e->getMessage());
+             return []; // Return empty array on failure
          }
-
-         // Group chat activity
-         $groupLast = $this->where('receiver_id', 'GROUP_ALL')
-                           ->orderBy('created_at', 'DESC')
-                           ->first();
-                           
-         if ($groupLast) {
-            $result['GROUP_ALL'] = $groupLast['created_at'];
-         }
-
-         return $result;
     }
 }

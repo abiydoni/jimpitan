@@ -37,137 +37,146 @@ class Chat extends BaseController
 
     public function getUsers()
     {
-        if (!session()->get('isLoggedIn')) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
-        }
-
-        $currentUserId = session()->get('id_code');
-        $db = \Config\Database::connect();
-        
-        // Auto-fix & Column Check
-        $hasLastActiveCol = $db->fieldExists('last_active_at', 'users');
-        if (!$hasLastActiveCol) {
-            try {
-                $db->query("ALTER TABLE users ADD COLUMN last_active_at DATETIME DEFAULT NULL");
-                $hasLastActiveCol = true;
-            } catch (\Exception $e) {
-                log_message('error', 'Failed to add last_active_at column: ' . $e->getMessage());
+        try {
+            if (!session()->get('isLoggedIn')) {
+                return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
             }
-        }
 
-        // Update current user activity if column exists
-        if ($hasLastActiveCol) {
-            try {
-                $this->userModel->update($currentUserId, ['last_active_at' => date('Y-m-d H:i:s')]);
-            } catch (\Exception $e) {}
-        }
-        
-        // Select only existing columns to prevent "Unknown column" error
-        $builder = $this->userModel->where('id_code !=', $currentUserId);
-        if ($hasLastActiveCol) {
-            $users = $builder->findAll();
-        } else {
-            // Select everything EXCEPT last_active_at if it's still missing for some reason
-            $fields = ['id_code', 'user_name', 'name', 'password', 'role', 'shift', 'remember_token', 'nikk', 'tarif'];
-            $users = $builder->select(implode(',', $fields))->findAll();
-        }
-        
-        // Fetch Photos from tb_warga
-        $names = array_column($users, 'name');
-        $photoMap = [];
-        if (!empty($names)) {
-            $wargas = $db->table('tb_warga')
-                         ->select('nama, foto')
-                         ->whereIn('nama', $names)
-                         ->get()->getResultArray();
-                         
-            foreach ($wargas as $w) {
-                if (!empty($w['foto'])) {
-                    $photoMap[$w['nama']] = $w['foto'];
+            $currentUserId = session()->get('id_code');
+            $db = \Config\Database::connect();
+            
+            // Auto-fix & Column Check
+            $hasLastActiveCol = $db->fieldExists('last_active_at', 'users');
+            if (!$hasLastActiveCol) {
+                try {
+                    $db->query("ALTER TABLE users ADD COLUMN last_active_at DATETIME DEFAULT NULL");
+                    $hasLastActiveCol = true;
+                } catch (\Exception $e) {
+                    log_message('error', 'Failed to add last_active_at column: ' . $e->getMessage());
                 }
             }
-        }
-        
-        // Get last activity times
-        $activityTimes = $this->chatModel->getLastActivityTimes($currentUserId);
-        
-        $now = time();
-        $onlineThreshold = 120; // 2 minutes
 
-        // Add unread count and last activity for each user
-        foreach ($users as &$user) {
-            $user['unread_count'] = $this->chatModel->where('sender_id', $user['id_code'])
-                                                    ->where('receiver_id', $currentUserId)
-                                                    ->where('is_read', 0)
-                                                    ->countAllResults();
+            // Update current user activity if column exists
+            if ($hasLastActiveCol) {
+                try {
+                    $this->userModel->update($currentUserId, ['last_active_at' => date('Y-m-d H:i:s')]);
+                } catch (\Exception $e) {}
+            }
             
-            // Activity time
-            $user['last_activity'] = $activityTimes[$user['id_code']] ?? '0000-00-00 00:00:00';
+            // Select only existing columns to prevent "Unknown column" error
+            $builder = $this->userModel->where('id_code !=', $currentUserId);
+            if ($hasLastActiveCol) {
+                $users = $builder->findAll();
+            } else {
+                // Select everything EXCEPT last_active_at if it's still missing for some reason
+                $fields = ['id_code', 'user_name', 'name', 'password', 'role', 'shift', 'remember_token', 'nikk', 'tarif'];
+                $users = $builder->select(implode(',', $fields))->findAll();
+            }
             
-            // Online Status based on last_active_at
-            $lastActive = isset($user['last_active_at']) ? strtotime($user['last_active_at']) : 0;
-            $user['is_online'] = ($now - $lastActive) < $onlineThreshold;
+            // Fetch Photos from tb_warga
+            $names = array_column($users, 'name');
+            $photoMap = [];
+            if (!empty($names)) {
+                $wargas = $db->table('tb_warga')
+                             ->select('nama, foto')
+                             ->whereIn('nama', $names)
+                             ->get()->getResultArray();
+                             
+                foreach ($wargas as $w) {
+                    if (!empty($w['foto'])) {
+                        $photoMap[$w['nama']] = $w['foto'];
+                    }
+                }
+            }
+            
+            // Get last activity times
+            $activityTimes = $this->chatModel->getLastActivityTimes($currentUserId);
+            
+            $now = time();
+            $onlineThreshold = 120; // 2 minutes
 
-            // Add Photo
-            $user['foto'] = $photoMap[$user['name']] ?? null;
-        }
+            // Add unread count and last activity for each user
+            foreach ($users as &$user) {
+                $user['unread_count'] = $this->chatModel->where('sender_id', $user['id_code'])
+                                                        ->where('receiver_id', $currentUserId)
+                                                        ->where('is_read', 0)
+                                                        ->countAllResults();
+                
+                // Activity time
+                $user['last_activity'] = $activityTimes[$user['id_code']] ?? '0000-00-00 00:00:00';
+                
+                // Online Status based on last_active_at
+                $lastActive = isset($user['last_active_at']) ? strtotime($user['last_active_at']) : 0;
+                $user['is_online'] = ($now - $lastActive) < $onlineThreshold;
 
-        // Group Chat Unread Logic
-        $db = \Config\Database::connect();
-        $lastReadId = 0;
-        try {
-            $groupRead = $db->table('chat_groups_read')->where('user_id', $currentUserId)->get()->getRowArray();
-            $lastReadId = $groupRead ? $groupRead['last_read_message_id'] : 0;
-        } catch (\Exception $e) {
-            // Table might be missing, ignore and default to 0
-        }
-        
-        $groupUnread = $this->chatModel->where('receiver_id', 'GROUP_ALL')
-                                       ->where('id >', $lastReadId)
-                                       ->countAllResults();
+                // Add Photo
+                $user['foto'] = $photoMap[$user['name']] ?? null;
+            }
 
-        // Add Group Chat Option
-        $groupChat = [
-            'id_code' => 'GROUP_ALL',
-            'name' => 'Forum Warga',
-            'user_name' => 'Grup',
-            'role' => 'group',
-            'foto' => 'group_icon.png', // We handle this in frontend or use default
-            'unread_count' => $groupUnread,
-            'is_online' => true,
-            'last_activity' => $activityTimes['GROUP_ALL'] ?? '0000-00-00 00:00:00'
-        ];
-        
-        // Add System User for s_admin
-        if (session()->get('role') === 's_admin') {
-            $systemUser = [
-                'id_code' => 'SYSTEM',
-                'name' => 'appsbee System',
-                'user_name' => 'system',
-                'role' => 'system',
-                'foto' => null, // Handled by frontend icon
-                'unread_count' => $this->chatModel->where('sender_id', 'SYSTEM')
-                                                  ->where('receiver_id', $currentUserId)
-                                                  ->where('is_read', 0)
-                                                  ->countAllResults(),
-                'is_online' => true, // Always online
-                'last_activity' => $activityTimes['SYSTEM'] ?? date('Y-m-d H:i:s')
+            // Group Chat Unread Logic
+            $lastReadId = 0;
+            try {
+                // Check if table exists before querying
+                if ($db->tableExists('chat_groups_read')) {
+                    $groupRead = $db->table('chat_groups_read')->where('user_id', $currentUserId)->get()->getRowArray();
+                    $lastReadId = $groupRead ? $groupRead['last_read_message_id'] : 0;
+                }
+            } catch (\Exception $e) {
+                // Ignore if table missing
+            }
+            
+            $groupUnread = $this->chatModel->where('receiver_id', 'GROUP_ALL')
+                                           ->where('id >', $lastReadId)
+                                           ->countAllResults();
+
+            // Add Group Chat Option
+            $groupChat = [
+                'id_code' => 'GROUP_ALL',
+                'name' => 'Forum Warga',
+                'user_name' => 'Grup',
+                'role' => 'group',
+                'foto' => 'group_icon.png', // We handle this in frontend or use default
+                'unread_count' => $groupUnread,
+                'is_online' => true,
+                'last_activity' => $activityTimes['GROUP_ALL'] ?? '0000-00-00 00:00:00'
             ];
-            $users[] = $systemUser;
+            
+            // Add System User for s_admin
+            if (session()->get('role') === 's_admin') {
+                $systemUser = [
+                    'id_code' => 'SYSTEM',
+                    'name' => 'appsbee System',
+                    'user_name' => 'system',
+                    'role' => 'system',
+                    'foto' => null, // Handled by frontend icon
+                    'unread_count' => $this->chatModel->where('sender_id', 'SYSTEM')
+                                                      ->where('receiver_id', $currentUserId)
+                                                      ->where('is_read', 0)
+                                                      ->countAllResults(),
+                    'is_online' => true, // Always online
+                    'last_activity' => $activityTimes['SYSTEM'] ?? date('Y-m-d H:i:s')
+                ];
+                $users[] = $systemUser;
+            }
+
+            // Add group to array
+            $users[] = $groupChat;
+            
+            // Sort by last_activity DESC
+            usort($users, function ($a, $b) {
+                return strcmp($b['last_activity'], $a['last_activity']);
+            });
+
+            // Re-index array (optional but safer for JSON)
+            $users = array_values($users);
+
+            return $this->response->setJSON($users);
+            
+        } catch (\Exception $e) {
+            log_message('error', 'Chat::getUsers Error: ' . $e->getMessage());
+            // Return empty array instead of 500 error to prevent UI crash
+            return $this->response->setJSON([]); 
         }
-
-        // Add group to array
-        $users[] = $groupChat;
-        
-        // Sort by last_activity DESC
-        usort($users, function ($a, $b) {
-            return strcmp($b['last_activity'], $a['last_activity']);
-        });
-
-        // Re-index array (optional but safer for JSON)
-        $users = array_values($users);
-
-        return $this->response->setJSON($users);
     }
 
     public function getMessages()
