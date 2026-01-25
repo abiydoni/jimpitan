@@ -1213,7 +1213,7 @@
                         body: body,
                         icon: '<?= base_url("pwa-icon.png") ?>', 
                         data: { url: url },
-                        tag: 'chat-msg-' + Date.now(), // Unique tag to ensure heads-up
+                        tag: 'jimpitan-chat', // Fixed tag to replace old notifs & allow renotify
                         vibrate: [200, 100, 200],
                         renotify: true
                     });
