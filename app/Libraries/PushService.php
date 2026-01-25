@@ -72,6 +72,7 @@ class PushService
                         'notification' => [
                             'title' => $title,
                             'body' => mb_substr($messageText, 0, 100, 'UTF-8'),
+                            'tag' => 'jimpitan-chat', // SYNC with SW.js to merge notifications!
                         ],
                         'webpush' => [
                             'headers' => [
@@ -89,7 +90,7 @@ class PushService
                             // Change these in PHP, and JS will obey. No need to edit JS anymore.
                             'tag' => 'jimpitan-chat', 
                             'renotify' => 'true',
-                            'auto_close' => '5000', // 5 seconds (Set to '0' to disable auto-close)
+                            'auto_close' => '0', // 0 = Disable Force Close (Persist in Tray, let OS hide banner)
                             'require_interaction' => 'false',
                             'icon' => base_url('jimpitan1.png'), // Use confirmed Manifest Icon
                             'badge' => base_url('jimpitan1.png'),
