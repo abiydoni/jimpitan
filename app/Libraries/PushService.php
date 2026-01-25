@@ -67,11 +67,6 @@ class PushService
                             'priority' => 'high',
                             'ttl' => '4500s'
                         ],
-                        // TEMPORARY RESTORE to bypass Zombie SW Crash
-                        'notification' => [
-                            'title' => $title,
-                            'body' => mb_substr($messageText, 0, 100, 'UTF-8')
-                        ],
                         'webpush' => [
                             'headers' => [
                                 'Urgency' => 'high',
@@ -90,8 +85,8 @@ class PushService
                             'renotify' => 'true',
                             'auto_close' => '5000', // 5 seconds (Set to '0' to disable auto-close)
                             'require_interaction' => 'false',
-                            'icon' => '/favicon.ico',
-                            'badge' => '/favicon.ico',
+                            'icon' => base_url('assets/img/jimpitan.png'), // Use PNG for Android Compatibility
+                            'badge' => base_url('assets/img/jimpitan.png'),
                             'vibrate' => json_encode([200, 100, 200]) // Send array as JSON string
                         ]
                     ]
