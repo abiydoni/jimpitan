@@ -19,62 +19,76 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Handle Background Messages - SERVER DRIVEN ARCHITECTURE
+// Handle Background Messages - DEFENSIVE SERVER DRIVEN
 self.addEventListener('push', function(event) {
-  console.log('[SW] Push Received (Restored)');
+  console.log('[SW] Push Received (Defensive)');
   if (!(self.Notification && self.Notification.permission === 'granted')) {
     return;
   }
 
-  const rawData = event.data ? event.data.json() : {};
-  const data = rawData.data || rawData;
-
-  const title = data.title; // Server MUST send title
-  
-  // Parse Server Config (Strings to types)
-  const tag = data.tag; // Server MUST send tag
-  const renotify = (data.renotify === 'true' || data.renotify === true);
-  const requireInteraction = (data.require_interaction === 'true' || data.require_interaction === true);
-  const autoCloseMs = parseInt(data.auto_close); // Server MUST send auto_close duration
-  
-  // Dynamic Assets (Icon/Badge/Vibrate)
-  const icon = data.icon; 
-  const badge = data.badge;
-  const sound = data.sound || 'default'; 
-  let vibratePattern;
   try {
-      if (data.vibrate) vibratePattern = JSON.parse(data.vibrate);
-  } catch(e) { console.error('Vibrate Parse Error', e); }
+      const rawData = event.data ? event.data.json() : {};
+      const data = rawData.data || rawData || {}; // Never allow undefined
 
-  const options = {
-    body: data.body, // Server MUST send body
-    icon: icon,
-    badge: badge,
-    sound: sound,
-    tag: tag,     
-    renotify: renotify,             
-    vibrate: vibratePattern,
-    requireInteraction: requireInteraction,
-    data: { url: data.url }
-  };
+      // Ultra-Defensive Checks
+      if (!data || Object.keys(data).length === 0) {
+          console.warn('SW: Received Empty Data Push');
+          return;
+      }
 
-  const notificationPromise = self.registration.showNotification(title, options);
-  
-  // Dynamic Auto Close Logic
-  let closePromise = Promise.resolve();
-  if (autoCloseMs > 0 && tag) { // Only auto-close if tag exists to find it
-      closePromise = new Promise((resolve) => {
-        setTimeout(() => {
-            self.registration.getNotifications({ tag: tag })
-                .then(notifications => {
-                    notifications.forEach(notification => notification.close());
-                    resolve();
-                });
-        }, autoCloseMs);
-      });
+      const title = data.title || 'Jimpitan App'; // Fallback to avoid crash
+      const tag = data.tag || 'jimpitan-chat';
+      const renotify = (data.renotify === 'true' || data.renotify === true);
+      const requireInteraction = (data.require_interaction === 'true' || data.require_interaction === true); 
+      
+      // Auto-Close: Parse safely
+      let autoCloseMs = 5000;
+      if (data.auto_close) {
+           autoCloseMs = parseInt(data.auto_close) || 5000;
+      }
+
+      // Assets
+      const icon = data.icon || '/favicon.ico';
+      const badge = data.badge || '/favicon.ico';
+      const sound = data.sound || 'default';
+      
+      let vibratePattern = [200, 100, 200];
+      try {
+          if (data.vibrate) vibratePattern = JSON.parse(data.vibrate);
+      } catch(e) { }
+
+      const options = {
+        body: data.body || 'Pesan Baru',
+        icon: icon,
+        badge: badge,
+        sound: sound,
+        tag: tag,     
+        renotify: renotify,             
+        vibrate: vibratePattern,
+        requireInteraction: requireInteraction,
+        data: { url: data.url || '/chat' }
+      };
+
+      const notificationPromise = self.registration.showNotification(title, options);
+      
+      let closePromise = Promise.resolve();
+      if (autoCloseMs > 0) {
+          closePromise = new Promise((resolve) => {
+            setTimeout(() => {
+                self.registration.getNotifications({ tag: tag })
+                    .then(notifications => {
+                        notifications.forEach(notification => notification.close());
+                        resolve();
+                    });
+            }, autoCloseMs);
+          });
+      }
+
+      event.waitUntil(Promise.all([notificationPromise, closePromise]));
+
+  } catch (err) {
+      console.error('SW: Fatal Crash Prevented', err);
   }
-
-  event.waitUntil(Promise.all([notificationPromise, closePromise]));
 });
 
 self.addEventListener('notificationclick', function(event) {
