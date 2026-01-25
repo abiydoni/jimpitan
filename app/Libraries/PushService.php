@@ -80,7 +80,8 @@ class PushService
                             'url' => $url ?: '/chat',
                             'title' => $title,
                             'body' => (string)$messageText,
-                            'click_action' => $url ?: '/chat' // Legacy support
+                            'click_action' => $url ?: '/chat', // Legacy support
+                            'sender_id' => (string)$senderId
                         ]
                     ]
                 ];

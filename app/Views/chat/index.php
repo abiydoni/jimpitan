@@ -1174,15 +1174,27 @@
         messaging.onMessage((payload) => {
             console.log('Message received. ', payload);
             const { title, body } = payload.notification || {};
-            const { url } = payload.data || {};
+            const { url, sender_id } = payload.data || {};
             
-            // Only show if chat is NOT active for this sender
-            // (Or just show Toast unconditionally for testing)
-            // Ideally, play sound here too.
-            
-            // Native Notification (if permission granted but page focused)
-            // Some browsers don't show native notif if page focused, so fallback to Toast/Swal
-            
+            // --- SUPPRESSION LOGIC ---
+            // Don't show popup/sound if user is currently chatting with this person/group
+            let shouldSuppress = false;
+
+            // 1. Private Chat: Active User matches Sender
+            if (activeUserId && sender_id && String(activeUserId) === String(sender_id)) {
+                shouldSuppress = true;
+            }
+
+            // 2. Group Chat: Active User is GROUP_ALL and Message URL is for GROUP_ALL
+            if (activeUserId === 'GROUP_ALL' && url && url.includes('GROUP_ALL')) {
+                shouldSuppress = true;
+            }
+
+            if (shouldSuppress) {
+                console.log('silencing notification: inside chat');
+                return;
+            }
+
             // Play Sound (LOUD) using GLOBAL UNLOCKED OBJECT
             notifSound.currentTime = 0;
             notifSound.play().catch(e => console.error("Audio Play Error:", e));
@@ -1192,26 +1204,22 @@
                 navigator.vibrate([200, 100, 200, 100, 200]); 
             }
 
-            const Toast = Swal.mixin({
-                toast: true,
-                position: "top-end",
-                showConfirmButton: false,
-                timer: 4000,
-                timerProgressBar: true,
-                didOpen: (toast) => {
-                    toast.onclick = () => {
-                        if(url) window.location.href = url;
-                    };
-                    toast.addEventListener('mouseenter', Swal.stopTimer)
-                    toast.addEventListener('mouseleave', Swal.resumeTimer)
-                }
-            });
-
-            Toast.fire({
-                icon: "info",
-                title: title || "Pesan Baru",
-                text: body
-            });
+            // Native System Notification (Heads-up / Banner)
+            // This appears in the notification shade/lock screen just like WhatsApp etc.
+            if (Notification.permission === 'granted') {
+                // Check if Service Worker is ready to show notification (more reliable for mobile)
+                navigator.serviceWorker.ready.then(registration => {
+                    registration.showNotification(title || "Pesan Baru", {
+                        body: body,
+                        icon: '<?= base_url("pwa-icon.png") ?>', 
+                        data: { url: url },
+                        tag: 'chat-msg-' + Date.now(), // Unique tag to ensure heads-up
+                        vibrate: [200, 100, 200],
+                        renotify: true,
+                        requireInteraction: true // Keeps it on screen
+                    });
+                });
+            }
         });
 
         async function registerFCM(silent = false) {
