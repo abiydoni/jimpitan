@@ -67,6 +67,11 @@ class PushService
                             'priority' => 'high',
                             'ttl' => '4500s'
                         ],
+                        // HYBRID STRATEGY: Send Notification Block to ensure delivery, but use TAG to merge/deduplicate.
+                        'notification' => [
+                            'title' => $title,
+                            'body' => mb_substr($messageText, 0, 100, 'UTF-8'),
+                        ],
                         'webpush' => [
                             'headers' => [
                                 'Urgency' => 'high',
