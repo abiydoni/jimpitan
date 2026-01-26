@@ -62,6 +62,7 @@ writable/uploads/*
 !writable/uploads/index.html
 
 # User Uploaded Photos
+public/img/*
 public/img/warga/*
 !public/img/warga/index.html
 !public/img/warga/.gitkeep
