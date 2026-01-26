@@ -341,6 +341,10 @@ class Chat extends BaseController
             return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid API Key'])->setStatusCode(403);
         }
 
+        // Prevent script termination if client times out
+        ignore_user_abort(true);
+        set_time_limit(0); 
+
         $receiverId = $this->request->getPost('receiver_id');
         $message = $this->request->getPost('message');
         $senderId = $this->request->getPost('sender_id') ?: 'SYSTEM';
