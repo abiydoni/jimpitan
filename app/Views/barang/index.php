@@ -70,10 +70,16 @@
             </form>
 
             <?php if(in_array(session()->get('role'), ['s_admin', 'admin'])): ?>
-            <button onclick="openModal()" class="w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 transition-all active:scale-95">
-                <i class="fas fa-plus"></i>
-                <span>Tambah Barang</span>
-            </button>
+            <div class="flex gap-2 w-full sm:w-auto">
+                <a href="/peminjaman" class="flex-1 sm:flex-none px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-xl shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95">
+                    <i class="fas fa-hand-holding"></i>
+                    <span>Peminjaman</span>
+                </a>
+                <button onclick="openModal()" class="flex-1 sm:flex-none px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 transition-all active:scale-95">
+                    <i class="fas fa-plus"></i>
+                    <span>Tambah Barang</span>
+                </button>
+            </div>
             <?php endif; ?>
         </div>
 

@@ -59,6 +59,7 @@
                     <div class="relative">
                         <select name="filter_tarif" onchange="this.form.submit()" class="w-full sm:w-64 pl-4 pr-10 py-2.5 bg-white dark:bg-slate-800 border border-indigo-100 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-indigo-500 appearance-none shadow-sm cursor-pointer">
                             <option value="">Semua Data</option>
+                            <option value="INV" <?= (isset($selectedFilter) && $selectedFilter == 'INV') ? 'selected' : '' ?>>Inventaris</option>
                             <?php foreach($tarif as $t): ?>
                                 <option value="<?= $t['kode_tarif'] ?>" <?= (isset($selectedFilter) && $selectedFilter == $t['kode_tarif']) ? 'selected' : '' ?>>
                                     <?= $t['nama_tarif'] ?>

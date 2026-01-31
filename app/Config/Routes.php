@@ -131,6 +131,13 @@ $routes->post('/barang/update', 'Barang::update', ['filter' => 'authFilter']);
 $routes->post('/barang/delete', 'Barang::delete', ['filter' => 'authFilter']);
 $routes->get('/debug-barang', 'CheckBarang::index');
 
+// Peminjaman Barang
+$routes->get('/peminjaman', 'Peminjaman::index', ['filter' => 'authFilter']);
+$routes->post('/peminjaman/store', 'Peminjaman::store', ['filter' => 'authFilter']);
+$routes->post('/peminjaman/returnItem', 'Peminjaman::returnItem', ['filter' => 'authFilter']);
+$routes->post('/peminjaman/delete', 'Peminjaman::delete', ['filter' => 'authFilter']);
+
+
 // Chat Feature
 $routes->get('/chat', 'Chat::index', ['filter' => 'authFilter']);
 $routes->get('/chat/users', 'Chat::getUsers', ['filter' => 'authFilter']);
