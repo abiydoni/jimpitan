@@ -78,11 +78,13 @@
     </nav>
 
     <div class="container mx-auto px-4 py-8">
+        <?php if (!empty($canManage) && $canManage): ?>
         <div class="flex justify-end mb-6">
             <a href="<?= base_url('announcement/create'); ?>" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-lg shadow-indigo-500/30 transition-all flex items-center gap-2">
                 <i class="fas fa-plus"></i> Tambah Pengumuman
             </a>
         </div>
+        <?php endif; ?>
 
         <?php if (session()->getFlashdata('success')) : ?>
             <div class="bg-emerald-100 border border-emerald-400 text-emerald-700 px-4 py-3 rounded-xl relative mb-4 flex items-center gap-2" role="alert">
@@ -134,6 +136,7 @@
                                     <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                    <?php if (!empty($canManage) && $canManage): ?>
                                      <a href="<?= base_url('announcement/edit/' . $item['id']); ?>" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors" title="Edit">
                                         <i class="fas fa-edit"></i>
                                      </a>
@@ -145,6 +148,9 @@
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
+                                    <?php else: ?>
+                                        <span class="text-xs text-slate-400 italic">View Only</span>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

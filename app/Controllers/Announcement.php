@@ -16,18 +16,24 @@ class Announcement extends BaseController
 
     public function index()
     {
-        $role = session()->get('role');
-        if($role !== 's_admin' && $role !== 'admin') {
-            return redirect()->to('/');
+        // Permission Check
+        if (!$this->hasMenuAccess('announcement')) {
+            return redirect()->to('/')->with('error', 'Akses ditolak.');
         }
         
+        // Determine Management Access
+        $accessType = $this->getMenuAccessType('announcement');
+        $canManage = ($accessType === 'full');
+
         $db = \Config\Database::connect();
         $profil = $db->table('tb_profil')->get()->getRowArray();
 
         $data = [
             'profil' => $profil,
             'title' => 'Kelola Pengumuman',
-            'announcements' => $this->model->orderBy('created_at', 'DESC')->findAll()
+            'announcements' => $this->model->orderBy('created_at', 'DESC')->findAll(),
+            'canManage' => $canManage,
+            'isViewOnly' => !$canManage
         ];
         
         return view('announcement/index', $data);
@@ -35,9 +41,8 @@ class Announcement extends BaseController
 
     public function create()
     {
-        $role = session()->get('role');
-        if($role !== 's_admin' && $role !== 'admin') {
-            return redirect()->to('/');
+        if ($this->getMenuAccessType('announcement') !== 'full') {
+            return redirect()->to('/announcement')->with('error', 'Akses ditolak (View Only).');
         }
 
         $db = \Config\Database::connect();
@@ -52,9 +57,8 @@ class Announcement extends BaseController
 
     public function store()
     {
-        $role = session()->get('role');
-        if($role !== 's_admin' && $role !== 'admin') {
-            return redirect()->to('/');
+        if ($this->getMenuAccessType('announcement') !== 'full') {
+            return redirect()->to('/announcement')->with('error', 'Akses ditolak.');
         }
 
         $rules = [
@@ -102,9 +106,8 @@ class Announcement extends BaseController
 
     public function edit($id)
     {
-        $role = session()->get('role');
-        if($role !== 's_admin' && $role !== 'admin') {
-            return redirect()->to('/');
+        if ($this->getMenuAccessType('announcement') !== 'full') {
+            return redirect()->to('/announcement')->with('error', 'Akses ditolak (View Only).');
         }
 
         $data = $this->model->find($id);
@@ -123,9 +126,8 @@ class Announcement extends BaseController
 
     public function update($id)
     {
-        $role = session()->get('role');
-        if($role !== 's_admin' && $role !== 'admin') {
-            return redirect()->to('/');
+        if ($this->getMenuAccessType('announcement') !== 'full') {
+            return redirect()->to('/announcement')->with('error', 'Akses ditolak.');
         }
 
         $rules = [
@@ -180,9 +182,8 @@ class Announcement extends BaseController
 
     public function delete($id)
     {
-        $role = session()->get('role');
-        if($role !== 's_admin' && $role !== 'admin') {
-            return redirect()->to('/');
+        if ($this->getMenuAccessType('announcement') !== 'full') {
+            return redirect()->to('/announcement')->with('error', 'Akses ditolak.');
         }
         
         $data = $this->model->find($id);
