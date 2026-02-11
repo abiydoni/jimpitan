@@ -155,7 +155,7 @@
     </main>
 
     <!-- Modal Form -->
-    <div id="kkModal" class="fixed inset-0 z-[1100] hidden flex items-center justify-center p-4">
+    <div id="kkModal" class="fixed inset-0 z-[1050] hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal()"></div>
         <div class="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl p-6 sm:p-8 animate__animated animate__zoomIn animate__faster">
             <div class="flex justify-between items-center mb-6">
@@ -197,7 +197,7 @@
     </div>
 
     <!-- QR Modal -->
-    <div id="qrModal" class="fixed inset-0 z-[1200] hidden flex items-center justify-center p-4">
+    <div id="qrModal" class="fixed inset-0 z-[1055] hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onclick="closeQRModal()"></div>
         <div class="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl p-8 animate__animated animate__zoomIn animate__faster text-center">
             
@@ -529,9 +529,11 @@
                         .then(() => location.reload());
                 } else {
                     Swal.fire('Gagal', res.message, 'error');
+                    if(window.resetSubmitButtons) window.resetSubmitButtons();
                 }
             } catch (err) {
                 Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+                if(window.resetSubmitButtons) window.resetSubmitButtons();
             }
         };
 
@@ -595,6 +597,7 @@
     </script>
     <!-- Global Loader -->
     <?= $this->include('partials/loader') ?>
+    <?= $this->include('partials/submit_guard') ?>
 
 </body>
 </html>

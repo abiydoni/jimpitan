@@ -75,9 +75,14 @@
         // 3. Fetch/XHR Interceptor
         const originalFetch = window.fetch;
         window.fetch = async function(...args) {
-            // Check if 'skipLoader' is passed in options (2nd arg)
-            const options = args[1];
-            const shouldSkip = options && options.skipLoader === true;
+            const url = typeof args[0] === 'string' ? args[0] : (args[0] instanceof Request ? args[0].url : '');
+            const options = args[1] || {};
+            
+            // Filters for Background/Asset Requests
+            const isExternal = url.includes('unpkg.com') || url.includes('googleapis.com') || url.includes('gstatic.com');
+            const isAsset = url.match(/\.(svg|png|jpg|jpeg|gif|webp|woff|woff2|ttf|css|js)(\?.*)?$/i);
+            const isBackgroundRoute = url.includes('push/subscribe_fcm') || url.includes('scan/search_target');
+            const shouldSkip = options.skipLoader === true || isExternal || isAsset || isBackgroundRoute;
 
             if (!shouldSkip) {
                 activeRequests++;

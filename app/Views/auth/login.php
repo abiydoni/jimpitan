@@ -189,6 +189,7 @@
     </script>
     <!-- Global Loader -->
     <?= $this->include('partials/loader') ?>
+    <?= $this->include('partials/submit_guard') ?>
 
 </body>
 </html>

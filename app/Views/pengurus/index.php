@@ -208,6 +208,7 @@
 
     <!-- Global Loader -->
     <?= $this->include('partials/loader') ?>
+    <?= $this->include('partials/submit_guard') ?>
 
     <script>
         // Modal Logic
@@ -349,9 +350,11 @@
                 } else {
                      let msg = json.message;
                     Swal.fire('Gagal', msg, 'error');
+                    if(window.resetSubmitButtons) window.resetSubmitButtons();
                 }
             } catch (err) {
                 Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+                if(window.resetSubmitButtons) window.resetSubmitButtons();
             } finally {
                 window.hideLoader();
             }

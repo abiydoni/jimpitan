@@ -179,7 +179,7 @@
     </main>
 
     <!-- User Modal -->
-    <div id="userModal" class="fixed inset-0 z-[1100] hidden flex items-center justify-center p-4">
+    <div id="userModal" class="fixed inset-0 z-[1050] hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeUserModal()"></div>
         <div class="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl p-6 sm:p-8 animate__animated animate__zoomIn animate__faster">
             <div class="flex justify-between items-center mb-6">
@@ -476,16 +476,11 @@
         form.onsubmit = async (e) => {
             e.preventDefault();
             
-            // Prevent double submission
-            const btn = form.querySelector('button[type="submit"]');
-            const originalText = btn.innerText;
-            btn.disabled = true;
-            btn.innerText = 'Menyimpan...';
-
             const url = isEdit ? '/users/update' : '/users/store';
             const formData = new FormData(form);
 
             try {
+                window.showLoader();
                 const response = await fetch(url, { method: 'POST', body: formData });
                 const res = await response.json();
 
@@ -505,17 +500,15 @@
                         html: errorMessage 
                     });
                     
-                    // Re-enable button on error
-                    btn.disabled = false;
-                    btn.innerText = originalText;
+                    if(window.resetSubmitButtons) window.resetSubmitButtons();
                 }
             } catch (err) {
                 console.error(err);
                 Swal.fire('Error', 'Sistem bermasalah', 'error');
                 
-                // Re-enable button on error
-                btn.disabled = false;
-                btn.innerText = originalText;
+                if(window.resetSubmitButtons) window.resetSubmitButtons();
+            } finally {
+                window.hideLoader();
             }
         };
 
@@ -579,5 +572,6 @@
         };
     </script>
     <?= view('partials/loader') ?>
+    <?= view('partials/submit_guard') ?>
 </body>
 </html>

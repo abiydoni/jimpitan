@@ -195,6 +195,7 @@
 
     <!-- Global Loader -->
     <?= $this->include('partials/loader') ?>
+    <?= $this->include('partials/submit_guard') ?>
 
     <script>
         // --- UI Logic ---
@@ -318,10 +319,12 @@
                         title: 'Gagal',
                         html: json.message + (json.errors ? '<br><small>' + JSON.stringify(json.errors) + '</small>' : '')
                     });
+                    if(window.resetSubmitButtons) window.resetSubmitButtons();
                 }
             } catch (err) {
                 console.error(err);
                 Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+                if(window.resetSubmitButtons) window.resetSubmitButtons();
             } finally {
                 window.hideLoader();
             }

@@ -1284,7 +1284,8 @@
                 const res = await fetch('<?= base_url("push/subscribe_fcm") ?>', {
                     method: 'POST',
                     body: JSON.stringify({ token: token, device_type: 'web' }),
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 'Content-Type': 'application/json' },
+                    skipLoader: true
                 });
                 const data = await res.json();
                 

@@ -195,6 +195,7 @@
 
     <!-- Global Loader -->
     <?= $this->include('partials/loader') ?>
+    <?= $this->include('partials/submit_guard') ?>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -291,7 +292,8 @@
                 const res = await fetch('<?= base_url("push/subscribe_fcm") ?>', {
                     method: 'POST',
                     body: JSON.stringify({ token: token, device_type: 'web' }),
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 'Content-Type': 'application/json' },
+                    skipLoader: true
                 });
                 if(res.ok && !silent) {
                     // Optional: Notify success
@@ -418,10 +420,12 @@
                         title: 'Gagal',
                         html: json.message + (json.errors ? '<br><small>' + JSON.stringify(json.errors) + '</small>' : '')
                     });
+                    if(window.resetSubmitButtons) window.resetSubmitButtons();
                 }
             } catch (err) {
                 console.error(err);
                 Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+                if(window.resetSubmitButtons) window.resetSubmitButtons();
             } finally {
                 window.hideLoader();
             }

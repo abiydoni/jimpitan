@@ -225,7 +225,7 @@
     </main>
 
     <!-- History Modal -->
-    <div id="historyModal" class="fixed inset-0 z-[1100] hidden flex items-center justify-center p-4">
+    <div id="historyModal" class="fixed inset-0 z-[1050] hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeHistoryModal()"></div>
         <div class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl p-6 sm:p-8 max-h-[85vh] flex flex-col">
             <div class="flex flex-col gap-4 mb-4 shrink-0">

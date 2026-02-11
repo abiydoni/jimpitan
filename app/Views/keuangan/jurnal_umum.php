@@ -45,9 +45,11 @@
             </a>
             <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-500 to-orange-600">Arus Kas Umum</h1>
         </div>
+        <?php if(empty($isViewOnly)): ?>
         <button onclick="openModal()" class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 hover:scale-105 transition-transform">
             <i class="fas fa-plus"></i>
         </button>
+        <?php endif; ?>
     </nav>
 
     <!-- Content -->
@@ -184,9 +186,11 @@
                     <textarea name="keterangan" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white h-24 resize-none" placeholder="Deskripsi transaksi..."></textarea>
                 </div>
 
+                <?php if(empty($isViewOnly)): ?>
                 <button type="submit" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 active:scale-95 transition-all mt-6">
                     Simpan Jurnal
                 </button>
+                <?php endif; ?>
             </form>
 
         </div>
@@ -214,11 +218,13 @@
         }
 
         <?php if(session()->getFlashdata('success')): ?>
-            Swal.fire({ icon: 'success', title: 'Berhasil', text: '<?= session()->getFlashdata('success') ?>', timer: 1500, showConfirmButton: false });
+            Swal.fire({ icon: 'success', title: 'Berhasil', text: '<?= esc(session()->getFlashdata('success'), 'js') ?>', timer: 1500, showConfirmButton: false });
         <?php endif; ?>
         <?php if(session()->getFlashdata('error')): ?>
-            Swal.fire({ icon: 'error', title: 'Gagal', text: '<?= session()->getFlashdata('error') ?>' });
+            Swal.fire({ icon: 'error', title: 'Gagal', text: '<?= esc(session()->getFlashdata('error'), 'js') ?>' });
         <?php endif; ?>
     </script>
+    <?= $this->include('partials/loader') ?>
+    <?= $this->include('partials/submit_guard') ?>
 </body>
 </html>

@@ -165,7 +165,7 @@
     <input type="file" id="photoInput" class="hidden" accept="image/png, image/jpeg, image/jpg, image/webp">
 
     <!-- Detail Modal -->
-    <div id="detailModal" class="fixed inset-0 z-[1100] hidden flex items-center justify-center p-4">
+    <div id="detailModal" class="fixed inset-0 z-[1050] hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal()"></div>
         <div class="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl overflow-hidden animate__animated animate__zoomIn animate__faster">
             

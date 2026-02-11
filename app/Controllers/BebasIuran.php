@@ -125,26 +125,31 @@ class BebasIuran extends BaseController
             return $this->response->setJSON(['status' => 'error', 'message' => 'Data tidak lengkap']);
         }
 
-        $db = \Config\Database::connect();
-        
-        // Check uniqueness
-        $exists = $db->table('tb_bebas_iuran')
-            ->where('nikk', $nikk)
-            ->where('kode_tarif', $kode_tarif)
-            ->countAllResults();
+        try {
+            $db = \Config\Database::connect();
+            
+            // Check uniqueness
+            $exists = $db->table('tb_bebas_iuran')
+                ->where('nikk', $nikk)
+                ->where('kode_tarif', $kode_tarif)
+                ->countAllResults();
 
-        if ($exists > 0) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Data sudah ada']);
-        }
+            if ($exists > 0) {
+                return $this->response->setJSON(['status' => 'error', 'message' => 'Data sudah ada']);
+            }
 
-        $data = [
-            'nikk' => $nikk,
-            'kode_tarif' => $kode_tarif
-        ];
+            $data = [
+                'nikk' => $nikk,
+                'kode_tarif' => $kode_tarif
+            ];
 
-        if ($db->table('tb_bebas_iuran')->insert($data)) {
-            log_activity('CREATE_BEBAS_IURAN', 'Added Exemption for NIKK: ' . $nikk . ' Tariff: ' . $kode_tarif);
-            return $this->response->setJSON(['status' => 'success', 'message' => 'Data berhasil disimpan']);
+            if ($db->table('tb_bebas_iuran')->insert($data)) {
+                log_activity('CREATE_BEBAS_IURAN', 'Added Exemption for NIKK: ' . $nikk . ' Tariff: ' . $kode_tarif);
+                return $this->response->setJSON(['status' => 'success', 'message' => 'Data berhasil disimpan']);
+            }
+        } catch (\Throwable $e) {
+            log_message('error', '[BebasIuran::store] ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Database Error: ' . $e->getMessage()]);
         }
 
         return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal menyimpan data']);
@@ -191,4 +196,56 @@ class BebasIuran extends BaseController
             
         return $this->response->setJSON($data);
     }
+    public function update()
+    {
+        $session = session();
+        if (!$session->get('isLoggedIn')) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        }
+
+        // Check Write Access
+        $access = $this->getMenuAccessType('bebas_iuran');
+        if ($access !== 'full') {
+             return $this->response->setJSON(['status' => 'error', 'message' => 'Anda tidak memiliki akses tulis.']);
+        }
+
+        $id = $this->request->getPost('id');
+        $nikk = $this->request->getPost('nikk');
+        $kode_tarif = $this->request->getPost('kode_tarif');
+
+        if (!$id || !$nikk || !$kode_tarif) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Data tidak lengkap']);
+        }
+
+        try {
+            $db = \Config\Database::connect();
+            
+            // Check uniqueness excluding current ID
+            $exists = $db->table('tb_bebas_iuran')
+                ->where('nikk', $nikk)
+                ->where('kode_tarif', $kode_tarif)
+                ->where('id !=', $id)
+                ->countAllResults();
+
+            if ($exists > 0) {
+                return $this->response->setJSON(['status' => 'error', 'message' => 'Data sudah ada']);
+            }
+
+            $data = [
+                'nikk' => $nikk,
+                'kode_tarif' => $kode_tarif
+            ];
+
+            if ($db->table('tb_bebas_iuran')->where('id', $id)->update($data)) {
+                log_activity('UPDATE_BEBAS_IURAN', 'Updated Exemption ID: ' . $id . ' New NIKK: ' . $nikk . ' Tariff: ' . $kode_tarif);
+                return $this->response->setJSON(['status' => 'success', 'message' => 'Data berhasil diperbarui']);
+            }
+        } catch (\Throwable $e) {
+            log_message('error', '[BebasIuran::update] ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Database Error: ' . $e->getMessage()]);
+        }
+
+        return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal memperbarui data']);
+    }
 }
+

@@ -152,13 +152,10 @@ class Keuangan extends BaseController
             // Let's assume the menu code for "Arus Kas Khusus" is 'jurnal_sub' or find via query if needed.
             // Safe approach: Query tb_menu by URL to get code, then check.
             // CHECK MENU ACCESS TYPE (View Only vs Full)
-            // Strict check: We use the likely URL 'keuangan/jurnal_sub'
-            // This relies on BaseController resolving strictly by URL or Code.
-            $menuCode = 'keuangan/jurnal_sub'; 
+            // Normalize menu code for permission check
+            $menuCode = 'jurnal_sub'; 
             
-            // Note: We don't need manual DB lookup here anymore if BaseController handles it.
-            // But if we want to be SAFE if 'keuangan/jurnal_sub' isn't the key, we rely on BaseController's strict fallback to URL lookup.
-            // So passing 'keuangan/jurnal_sub' is the correct "Real Data" approach (matching the URL).
+            // Note: BaseController resolves by kode or alamat_url.
 
             $accessType = $this->getMenuAccessType($menuCode);
             $data['isViewOnly'] = ($accessType === 'view');
@@ -193,7 +190,12 @@ class Keuangan extends BaseController
     {
         if (!session()->get('isLoggedIn')) return redirect()->to('/login');
 
+        // Check Menu Access using normalized code
+        $accessType = $this->getMenuAccessType('jurnal_umum');
+        $isViewOnly = ($accessType === 'view');
+
         $data = $this->getCommonData('Arus Kas Umum');
+        $data['isViewOnly'] = $isViewOnly;
         
         try {
             $data['transaksi'] = $this->kasUmumModel
@@ -218,6 +220,11 @@ class Keuangan extends BaseController
     public function save_sub()
     {
         if (!session()->get('isLoggedIn')) return redirect()->to('/login');
+
+        // Permission Check
+        if ($this->getMenuAccessType('jurnal_sub') !== 'full') {
+            return redirect()->back()->with('error', 'Akses ditolak. Anda hanya memiliki akses lihat.');
+        }
 
         $rules = [
             'tanggal' => 'required',
@@ -252,6 +259,11 @@ class Keuangan extends BaseController
     public function save_umum()
     {
         if (!session()->get('isLoggedIn')) return redirect()->to('/login');
+
+        // Permission Check
+        if ($this->getMenuAccessType('jurnal_umum') !== 'full') {
+            return redirect()->back()->with('error', 'Akses ditolak. Anda hanya memiliki akses lihat.');
+        }
 
          $rules = [
             'tanggal' => 'required',

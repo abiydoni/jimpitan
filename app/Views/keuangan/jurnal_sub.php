@@ -167,7 +167,7 @@
                                                     
                                                     $title = "Pembayaran " . ($t['nama_tarif'] ?? $t['reff']) . " " . $dateStr;
                                                 ?>
-                                                <a href="javascript:void(0)" onclick="showDetails('<?= htmlspecialchars($title) ?>', '<?= htmlspecialchars($t['detail_trx'] ?? '') ?>')" class="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
+                                                <a href="javascript:void(0)" onclick="showDetails('<?= htmlspecialchars($title, ENT_QUOTES) ?>', '<?= htmlspecialchars($t['detail_trx'] ?? '', ENT_QUOTES) ?>')" class="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
                                                     <?= $title ?>
                                                 </a>
                                             <?php else: ?>
@@ -282,31 +282,17 @@
                     <textarea name="keterangan" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white h-24 resize-none" placeholder="Deskripsi transaksi..."></textarea>
                 </div>
 
+                <?php if(empty($isViewOnly)): ?>
                 <button type="submit" id="btnSimpan" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 active:scale-95 transition-all mt-6 flex items-center justify-center gap-2">
                     <span id="btnText">Simpan Transaksi</span>
                     <i id="btnLoader" class="fas fa-spinner fa-spin hidden"></i>
                 </button>
+                <?php endif; ?>
             </form>
 
             <script>
-                document.querySelector('form[action="/keuangan/save_sub"]').addEventListener('submit', function(e) {
-                    const btn = document.getElementById('btnSimpan');
-                    const text = document.getElementById('btnText');
-                    const loader = document.getElementById('btnLoader');
-                    
-                    if (btn.disabled) {
-                        e.preventDefault();
-                        return;
-                    }
-
-                    // Disable button and show loader
-                    btn.disabled = true;
-                    btn.classList.add('opacity-75', 'cursor-not-allowed');
-                    text.textContent = 'Menyimpan...';
-                    loader.classList.remove('hidden');
-                });
+                // Removed manual script, now using partial
             </script>
-
         </div>
     </div>
 
@@ -415,11 +401,13 @@
         }
 
         <?php if(session()->getFlashdata('success')): ?>
-            Swal.fire({ icon: 'success', title: 'Berhasil', text: '<?= session()->getFlashdata('success') ?>', timer: 1500, showConfirmButton: false });
+            Swal.fire({ icon: 'success', title: 'Berhasil', text: '<?= esc(session()->getFlashdata('success'), 'js') ?>', timer: 1500, showConfirmButton: false });
         <?php endif; ?>
         <?php if(session()->getFlashdata('error')): ?>
-            Swal.fire({ icon: 'error', title: 'Gagal', text: '<?= session()->getFlashdata('error') ?>' });
+            Swal.fire({ icon: 'error', title: 'Gagal', text: '<?= esc(session()->getFlashdata('error'), 'js') ?>' });
         <?php endif; ?>
     </script>
+    <?= $this->include('partials/loader') ?>
+    <?= $this->include('partials/submit_guard') ?>
 </body>
 </html>

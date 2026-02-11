@@ -14,6 +14,7 @@ class BarangModel extends Model
 
     // Validation
     protected $validationRules = [
+        'kode'     => 'permit_empty',
         'kode_brg' => 'required|is_unique[tb_barang.kode_brg,kode,{kode}]',
         'nama'     => 'required',
         'jumlah'   => 'numeric'

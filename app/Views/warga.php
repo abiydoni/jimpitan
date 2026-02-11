@@ -152,7 +152,7 @@
     </main>
 
     <!-- Modal Form -->
-    <div id="wargaModal" class="fixed inset-0 z-[1100] hidden flex items-center justify-center p-4">
+    <div id="wargaModal" class="fixed inset-0 z-[1050] hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal()"></div>
         <div class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl p-6 sm:p-8 flex flex-col max-h-[90vh] animate__animated animate__zoomIn animate__faster">
             
@@ -164,7 +164,7 @@
             </div>
 
             <div class="overflow-y-auto custom-scrollbar pr-2 -mr-2">
-                <form id="wargaForm" class="space-y-4" enctype="multipart/form-data">
+                <form id="wargaForm" onsubmit="submitForm(event)" class="space-y-4" enctype="multipart/form-data">
                     <input type="hidden" name="id_warga" id="id_warga">
 
                     <!-- FOTO PROFIL -->
@@ -309,7 +309,7 @@
 
                     </div>
 
-                    <button type="button" onclick="submitForm()" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 active:scale-95 transition-all mt-6">
+                    <button type="submit" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 active:scale-95 transition-all mt-6">
                         Simpan Data
                     </button>
                     <!-- Bottom spacing -->
@@ -376,7 +376,8 @@
         }
 
         // --- CRUD Logic ---
-        function submitForm() {
+        function submitForm(e) {
+            if(e) e.preventDefault();
             if(!form.checkValidity()){
                 form.reportValidity();
                 return;
@@ -411,9 +412,13 @@
                         title: 'Gagal',
                         html: res.message
                     });
+                    if(window.resetSubmitButtons) window.resetSubmitButtons();
                 }
             })
-            .catch(err => Swal.fire('Error', 'Terjadi kesalahan sistem', 'error'));
+            .catch(err => {
+                Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+                if(window.resetSubmitButtons) window.resetSubmitButtons();
+            });
         }
 
         function confirmDelete(id, name) {
@@ -502,6 +507,10 @@
 
     <!-- Global Loader -->
     <?= $this->include('partials/loader') ?>
-
+    <?= $this->include('partials/submit_guard') ?>
+    
+    <script>
+        // ... (existing helper scripts)
+    </script>
 </body>
 </html>

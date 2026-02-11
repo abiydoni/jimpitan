@@ -14,6 +14,7 @@ class RoleModel extends Model
 
     // Validation
     protected $validationRules = [
+        'id'     => 'permit_empty',
         'name'   => 'required|is_unique[tb_role.name,id,{id}]|alpha_dash',
         'remark' => 'required'
     ];

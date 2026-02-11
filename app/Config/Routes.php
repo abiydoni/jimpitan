@@ -85,8 +85,14 @@ $routes->get('/payment/history-personal/(:segment)/(:segment)', 'Payment::get_pe
 $routes->get('/bebas-iuran', 'BebasIuran::index', ['filter' => 'authFilter']);
 $routes->get('/bebas_iuran', 'BebasIuran::index', ['filter' => 'authFilter']); // Alias for convenience
 $routes->post('/bebas-iuran/store', 'BebasIuran::store', ['filter' => 'authFilter']);
+$routes->post('/bebas-iuran/update', 'BebasIuran::update', ['filter' => 'authFilter']);
 $routes->post('/bebas-iuran/delete', 'BebasIuran::delete', ['filter' => 'authFilter']);
+// Underscore aliases
+$routes->post('/bebas_iuran/store', 'BebasIuran::store', ['filter' => 'authFilter']);
+$routes->post('/bebas_iuran/update', 'BebasIuran::update', ['filter' => 'authFilter']);
+$routes->post('/bebas_iuran/delete', 'BebasIuran::delete', ['filter' => 'authFilter']);
 $routes->get('/bebas-iuran/search-warga', 'BebasIuran::searchWarga', ['filter' => 'authFilter']);
+$routes->get('/bebas_iuran/search-warga', 'BebasIuran::searchWarga', ['filter' => 'authFilter']);
 
 // Temporary Debug
 $routes->get('debug-warga', 'DebugWarga::index');

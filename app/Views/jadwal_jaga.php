@@ -186,7 +186,7 @@
 
     <!-- Management Modal (Admin Only) -->
     <?php if($canManage): ?>
-    <div id="managementModal" class="fixed inset-0 z-[1100] hidden flex items-center justify-center p-4 sm:p-6">
+    <div id="managementModal" class="fixed inset-0 z-[1050] hidden flex items-center justify-center p-4 sm:p-6">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeManagementModal()"></div>
         <div class="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl p-6 animate__animated animate__zoomIn animate__faster">
             <div class="flex justify-between items-center mb-6">

@@ -170,6 +170,10 @@
         </div>
     </div>
 
+    <!-- Global Loader -->
+    <?= $this->include('partials/loader') ?>
+    <?= $this->include('partials/submit_guard') ?>
+
     <script>
         const themeToggle = document.getElementById('themeToggle');
         const html = document.documentElement;

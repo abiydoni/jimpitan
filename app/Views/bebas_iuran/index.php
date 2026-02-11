@@ -109,13 +109,27 @@
                                     <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center font-bold text-xs font-mono shrink-0">
                                         <?= $no++ ?>
                                     </div>
+                                    <div class="min-w-0 flex-1">
+                                        <h4 class="text-sm font-bold text-slate-700 dark:text-white truncate"><?= $item['kk_name'] ?></h4>
+                                        <div class="flex items-center gap-2">
+                                            <p class="text-[10px] text-slate-400 font-mono"><?= $item['nikk'] ?></p>
+                                            <span class="text-[9px] text-slate-300 dark:text-slate-600">•</span>
+                                            <p class="text-[9px] text-slate-400 uppercase tracking-tighter">
+                                                <?= date('d M Y', strtotime($item['created_at'])) ?>
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <?php if(!$isViewOnly): ?>
-                                <button onclick="deleteItem(<?= $item['id'] ?>)" class="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-700/50 text-slate-400 hover:bg-rose-100 hover:text-rose-500 dark:hover:bg-rose-900/30 dark:hover:text-rose-400 transition-all flex items-center justify-center shrink-0 ml-2">
-                                    <i class="fas fa-trash-alt text-xs"></i>
-                                </button>
+                                <div class="flex items-center gap-1.5 ml-2">
+                                    <button onclick="editItem(<?= htmlspecialchars(json_encode($item)) ?>)" class="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-700/50 text-slate-400 hover:bg-indigo-100 hover:text-indigo-600 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400 transition-all flex items-center justify-center shrink-0">
+                                        <i class="fas fa-edit text-xs"></i>
+                                    </button>
+                                    <button onclick="deleteItem(<?= $item['id'] ?>)" class="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-700/50 text-slate-400 hover:bg-rose-100 hover:text-rose-500 dark:hover:bg-rose-900/30 dark:hover:text-rose-400 transition-all flex items-center justify-center shrink-0">
+                                        <i class="fas fa-trash-alt text-xs"></i>
+                                    </button>
+                                </div>
                                 <?php endif; ?>
                             </div>
                             <?php endforeach; ?>
@@ -127,17 +141,18 @@
     </main>
 
     <!-- Modal -->
-    <div id="modal" class="fixed inset-0 z-[1100] hidden flex items-center justify-center p-4">
+    <div id="modal" class="fixed inset-0 z-[1050] hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal()"></div>
         <div class="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl p-6 animate__animated animate__zoomIn animate__faster">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="text-2xl font-bold text-slate-800 dark:text-white">Tambah Data</h3>
+                <h3 id="modalTitle" class="text-2xl font-bold text-slate-800 dark:text-white">Tambah Data</h3>
                 <button onclick="closeModal()" class="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
             <form id="form" class="space-y-4">
+                <input type="hidden" name="id" id="formId">
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Cari Warga</label>
                     <select id="selectWarga" name="nikk" placeholder="Ketik nama atau NIKK..." required></select>
@@ -193,23 +208,55 @@
             });
         });
 
-        const modal = document.getElementById('modal');
-        function openModal() { modal.classList.remove('hidden'); if(tsWarga) tsWarga.clear(); }
-        function closeModal() { modal.classList.add('hidden'); }
-
         document.getElementById('form').onsubmit = async (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
+            const id = formData.get('id');
+            const url = id ? '/bebas-iuran/update' : '/bebas-iuran/store';
+            
             try {
-                const res = await fetch('/bebas-iuran/store', { method: 'POST', body: formData });
+                const res = await fetch(url, { method: 'POST', body: formData });
                 const json = await res.json();
                 if (json.status === 'success') {
                     Swal.fire({ icon: 'success', title: 'Berhasil', showConfirmButton: false, timer: 1000 }).then(() => location.reload());
                 } else {
                     Swal.fire('Gagal', json.message, 'error');
+                    if(window.resetSubmitButtons) window.resetSubmitButtons();
                 }
-            } catch (err) { Swal.fire('Error', 'Terjadi kesalahan sistem', 'error'); }
+            } catch (err) { 
+                console.error(err);
+                Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+                if(window.resetSubmitButtons) window.resetSubmitButtons();
+            }
         };
+
+        function editItem(item) {
+            document.getElementById('modalTitle').innerText = 'Edit Data';
+            document.getElementById('formId').value = item.id;
+            
+            // Set TomSelect value
+            if (tsWarga) {
+                tsWarga.addOption({ nikk: item.nikk, kk_name: item.kk_name });
+                tsWarga.setValue(item.nikk);
+            }
+            
+            // Set Tariff
+            document.querySelector('select[name="kode_tarif"]').value = item.kode_tarif;
+            
+            openModal('edit');
+        }
+
+        const modal = document.getElementById('modal');
+        function openModal(mode = 'add') {
+            if (mode === 'add') {
+                document.getElementById('modalTitle').innerText = 'Tambah Data';
+                document.getElementById('formId').value = '';
+                if(tsWarga) tsWarga.clear();
+                document.querySelector('select[name="kode_tarif"]').selectedIndex = 0;
+            }
+            modal.classList.remove('hidden');
+        }
+        function closeModal() { modal.classList.add('hidden'); }
 
         function deleteItem(id) {
             Swal.fire({
@@ -275,6 +322,7 @@
 
     <!-- Global Loader -->
     <?= $this->include('partials/loader') ?>
+    <?= $this->include('partials/submit_guard') ?>
 
 </body>
 </html>
