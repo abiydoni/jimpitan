@@ -111,6 +111,13 @@ $routes->post('/role/store', 'Role::store', ['filter' => 'authFilter']);
 $routes->post('/role/update', 'Role::update', ['filter' => 'authFilter']);
 $routes->post('/role/delete', 'Role::delete', ['filter' => 'authFilter']);
 
+// Pengurus Management
+$routes->get('/pengurus', 'Pengurus::index', ['filter' => 'authFilter']);
+$routes->post('/pengurus/store', 'Pengurus::store', ['filter' => 'authFilter']);
+$routes->get('/pengurus/get/(:num)', 'Pengurus::get/$1', ['filter' => 'authFilter']);
+$routes->post('/pengurus/update', 'Pengurus::update', ['filter' => 'authFilter']);
+$routes->post('/pengurus/delete', 'Pengurus::delete', ['filter' => 'authFilter']);
+
 // Profil Management
 $routes->get('/profil', 'Profil::index', ['filter' => 'authFilter']);
 $routes->post('/profil/update', 'Profil::update', ['filter' => 'authFilter']);

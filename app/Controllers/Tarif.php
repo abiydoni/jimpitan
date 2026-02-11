@@ -20,21 +20,29 @@ class Tarif extends BaseController
             return redirect()->to('/login');
         }
         
-        // Authorization Check (Admin/S_Admin only)
-        $role = session()->get('role');
-        if ($role !== 's_admin' && $role !== 'admin') {
+        // Authorization Check
+        if (session()->get('role') !== 's_admin' && session()->get('role') !== 'admin' && !$this->hasMenuAccess('tarif')) {
             return redirect()->to('/')->with('error', 'Akses ditolak.');
         }
 
         $db = \Config\Database::connect();
         $profil = $db->table('tb_profil')->get()->getRowArray();
         
+        // Determine Access Level
+        $accessType = $this->getMenuAccessType('tarif');
+        $isViewOnly = ($accessType === 'view');
+        $role = session()->get('role');
+        
+        $canManage = in_array($role, ['s_admin', 'admin']) || (!$isViewOnly && $this->hasMenuAccess('tarif'));
+
         $tariffs = $this->tarifModel->orderBy('id', 'ASC')->findAll();
 
         $data = [
             'profil' => $profil,
             'title' => 'Manajemen Tarif',
-            'tariffs' => $tariffs
+            'tariffs' => $tariffs,
+            'canManage' => $canManage,
+            'isViewOnly' => $isViewOnly
         ];
 
         return view('tarif/index', $data);
@@ -43,8 +51,12 @@ class Tarif extends BaseController
     public function store()
     {
         $role = session()->get('role');
-        if ($role !== 's_admin' && $role !== 'admin') {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        $isAdmin = in_array($role, ['s_admin', 'admin']);
+        
+        if (!$isAdmin) {
+             if (!$this->hasMenuAccess('tarif') || $this->getMenuAccessType('tarif') === 'view') {
+                  return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+             }
         }
 
         $rules = [
@@ -83,8 +95,12 @@ class Tarif extends BaseController
     public function update()
     {
         $role = session()->get('role');
-        if ($role !== 's_admin' && $role !== 'admin') {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        $isAdmin = in_array($role, ['s_admin', 'admin']);
+        
+        if (!$isAdmin) {
+             if (!$this->hasMenuAccess('tarif') || $this->getMenuAccessType('tarif') === 'view') {
+                  return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+             }
         }
 
         $id = $this->request->getPost('id');
@@ -131,8 +147,12 @@ class Tarif extends BaseController
     public function delete()
     {
         $role = session()->get('role');
-        if ($role !== 's_admin' && $role !== 'admin') {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        $isAdmin = in_array($role, ['s_admin', 'admin']);
+        
+        if (!$isAdmin) {
+             if (!$this->hasMenuAccess('tarif') || $this->getMenuAccessType('tarif') === 'view') {
+                  return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+             }
         }
 
         $id = $this->request->getPost('id');

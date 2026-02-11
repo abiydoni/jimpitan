@@ -69,7 +69,7 @@
                 <i class="fas fa-search absolute left-3.5 top-3 text-slate-400"></i>
             </form>
 
-            <?php if(in_array(session()->get('role'), ['s_admin', 'admin'])): ?>
+            <?php if(!empty($canManage)): ?>
             <div class="flex gap-2 w-full sm:w-auto">
                 <a href="/peminjaman" class="flex-1 sm:flex-none px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-xl shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95">
                     <i class="fas fa-hand-holding"></i>
@@ -111,7 +111,7 @@
                                     </span>
                                 </div>
                                 
-                                <?php if(in_array(session()->get('role'), ['s_admin', 'admin'])): ?>
+                                <?php if(!empty($canManage)): ?>
                                 <div class="flex gap-1">
                                      <button onclick="editBarang(<?= htmlspecialchars(json_encode($b)) ?>)" class="w-5 h-5 rounded bg-indigo-50 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 dark:hover:text-white flex items-center justify-center transition-all">
                                         <i class="fas fa-pencil-alt text-[9px]"></i>

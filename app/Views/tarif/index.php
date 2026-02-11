@@ -69,10 +69,12 @@
                 <h2 class="text-xl font-bold dark:text-white">Daftar Tarif</h2>
                 <p class="text-xs text-slate-500 dark:text-slate-400">Kelola jenis iuran dan tarif warga</p>
             </div>
+            <?php if(!empty($canManage)): ?>
             <button onclick="openModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/30 flex items-center gap-2 transition-all active:scale-95">
                 <i class="fas fa-plus"></i>
                 <span class="hidden sm:inline">Tambah Tarif</span>
             </button>
+            <?php endif; ?>
         </div>
 
         <!-- Tariff Grid -->
@@ -99,6 +101,7 @@
                                 </p>
                             </div>
                         </div>
+                        <?php if(!empty($canManage)): ?>
                         <div class="flex items-center gap-2 pl-2">
                              <button onclick="editTarif(<?= htmlspecialchars(json_encode($t)) ?>)" class="w-6 h-6 rounded-md bg-indigo-50 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 dark:hover:text-white flex items-center justify-center transition-all shadow-sm" title="Edit">
                                 <i class="fas fa-edit text-[10px]"></i>
@@ -107,6 +110,7 @@
                                 <i class="fas fa-trash-alt text-[10px]"></i>
                             </button>
                         </div>
+                        <?php endif; ?>
                     </div>
 
                     <div class="mt-2.5 flex items-center justify-between border-t border-slate-50 dark:border-slate-700/50 pt-2">
@@ -116,10 +120,12 @@
                                 <?= number_format($t['tarif'], 0, ',', '.') ?>
                              </p>
                         </div>
+                        <?php if(!empty($canManage)): ?>
                         <label class="relative inline-flex items-center cursor-pointer scale-75 origin-right">
                             <input type="checkbox" value="" class="sr-only peer" onchange="toggleStatus(<?= $t['id'] ?>, this.checked)" <?= $t['status'] == 1 ? 'checked' : '' ?>>
                             <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
                         </label>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php endforeach; ?>

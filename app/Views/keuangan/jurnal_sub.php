@@ -45,9 +45,12 @@
             </a>
             <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Arus Kas Khusus</h1>
         </div>
+        
+        <?php if(empty($isViewOnly)): ?>
         <button onclick="openModal()" class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 hover:scale-105 transition-transform">
             <i class="fas fa-plus"></i>
         </button>
+        <?php endif; ?>
     </nav>
 
     <!-- Content -->
@@ -76,9 +79,10 @@
 
         <!-- Summary Cards -->
         <?php 
-            $totalDebet = !empty($transaksi) ? array_sum(array_column($transaksi, 'debet')) : 0;
-            $totalKredit = !empty($transaksi) ? array_sum(array_column($transaksi, 'kredit')) : 0;
-            $saldo = $totalDebet - $totalKredit;
+            // Totals are now calculated in Controller to cover ALL pages/filtered data
+            $totalDebet = $totalDebetAll ?? 0;
+            $totalKredit = $totalKreditAll ?? 0;
+            $saldo = $saldoAll ?? 0;
         ?>
         <div class="grid grid-cols-3 gap-2 mb-3">
             <!-- Pemasukan -->
@@ -124,22 +128,60 @@
                         </thead>
                         <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
                             <?php foreach($transaksi as $t): ?>
-                            <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                            <?php 
+                                $isAuto = strpos($t['reff'] ?? '', '_AUTO') !== false; 
+                                $rowClass = $isAuto ? 'bg-indigo-50/60 dark:bg-indigo-900/20 hover:bg-indigo-100/50 dark:hover:bg-indigo-900/30' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30';
+                            ?>
+                            <tr class="<?= $rowClass ?> transition-colors border-l-4 <?= $isAuto ? 'border-indigo-500' : 'border-transparent' ?>">
                                 <td class="px-3 py-1.5 align-top">
                                     <div class="flex flex-col gap-1">
                                         <div class="flex items-center gap-2">
                                             <span class="font-bold text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-1.5 rounded whitespace-nowrap"><?= date('d/m/y', strtotime($t['date_trx'])) ?></span>
                                             <div class="font-bold text-slate-700 dark:text-slate-200 text-xs flex items-center gap-1">
                                                 <?= $t['nama_akun'] ?>
-                                                <?php if(strpos($t['reff'] ?? '', '_AUTO') !== false): ?>
-                                                    <span class="text-[6px] bg-indigo-50 text-indigo-500 border border-indigo-100 px-1 rounded uppercase tracking-wider font-bold" title="Otomatis dari Sistem">
-                                                        auto
+                                                <?php if($isAuto): ?>
+                                                    <span class="text-[8px] bg-indigo-600 text-white px-1.5 py-0.5 rounded shadow-sm shadow-indigo-500/30 uppercase tracking-widest font-bold flex items-center gap-1" title="Otomatis dari Sistem">
+                                                        <i class="fas fa-robot text-[8px]"></i> AUTO
+                                                    </span>
+                                                <?php endif; ?>
+                                                <?php if(($t['count_trx'] ?? 0) > 1): ?>
+                                                     <span class="text-[8px] bg-slate-100 text-slate-500 px-1.5 rounded-full border border-slate-200" title="<?= $t['count_trx'] ?> Transaksi digabung">
+                                                        <?= $t['count_trx'] ?>x
                                                     </span>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
                                         <div class="text-[10px] text-slate-500 dark:text-slate-400 italic leading-tight pl-0.5">
-                                            <?= $t['desc_trx'] ?: '-' ?>
+                                            <?php if(($t['count_trx'] ?? 0) > 1): ?>
+                                                <?php 
+                                                    // Format: Pembayaran [Tarif Name] [Month Year]
+                                                    $monthNames = [
+                                                        '01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April', '05' => 'Mei', '06' => 'Juni',
+                                                        '07' => 'Juli', '08' => 'Agustus', '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
+                                                    ];
+                                                    $ts = strtotime($t['date_trx']);
+                                                    $day = date('d', $ts);
+                                                    $month = $monthNames[date('m', $ts)];
+                                                    $year = date('Y', $ts);
+                                                    $dateStr = "{$day} {$month} {$year}";
+                                                    
+                                                    $title = "Pembayaran " . ($t['nama_tarif'] ?? $t['reff']) . " " . $dateStr;
+                                                ?>
+                                                <a href="javascript:void(0)" onclick="showDetails('<?= htmlspecialchars($title) ?>', '<?= htmlspecialchars($t['detail_trx'] ?? '') ?>')" class="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
+                                                    <?= $title ?>
+                                                </a>
+                                            <?php else: ?>
+                                                <?php 
+                                                    // Parse Description || Amount
+                                                    $rawDesc = $t['detail_trx'] ?: ($t['desc_trx'] ?? '-');
+                                                    if(strpos($rawDesc, '||') !== false) {
+                                                        $parts = explode('||', $rawDesc);
+                                                        echo $parts[0];
+                                                    } else {
+                                                        echo $rawDesc;
+                                                    }
+                                                ?>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </td>
@@ -191,30 +233,19 @@
                     <!-- Row 1 Right: Jenis Iuran / Tarif -->
                     <div>
                         <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Jenis Iuran</label>
-                        <?php 
-                            // Determine User's Tarif Code
-                            $userTarifCode = '';
-                            if (isset($userTarif) && $userTarif != 100) {
-                                foreach($tarif as $t) {
-                                    if ($t['id'] == $userTarif) {
-                                        $userTarifCode = $t['kode_tarif'];
-                                        $userTarifName = $t['nama_tarif'];
-                                        break;
-                                    }
-                                }
-                            }
-                        ?>
-                        
-                        <?php if(isset($userTarif) && $userTarif == 100): ?>
+                        <?php if (empty($tarif)): ?>
+                             <input type="text" class="w-full px-4 py-3.5 bg-slate-100 dark:bg-slate-800 border-none rounded-2xl text-sm italic text-rose-500" value="Anda tidak memiliki akses tarif." disabled>
+                        <?php else: ?>
                             <select name="kode_tarif" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white appearance-none" required>
-                                <option value="">Pilih Tarif</option>
+                                <?php if(count($tarif) > 1): ?>
+                                    <option value="">Pilih Tarif</option>
+                                <?php endif; ?>
                                 <?php foreach($tarif as $t): ?>
-                                    <option value="<?= $t['kode_tarif'] ?>"><?= $t['nama_tarif'] ?></option>
+                                    <option value="<?= $t['kode_tarif'] ?>" <?= (count($tarif) == 1) ? 'selected' : '' ?>>
+                                        <?= $t['nama_tarif'] ?>
+                                    </option>
                                 <?php endforeach; ?>
                             </select>
-                        <?php else: ?>
-                             <input type="hidden" name="kode_tarif" value="<?= $userTarifCode ?>">
-                             <input type="text" value="<?= $userTarifName ?? '-' ?>" class="w-full px-4 py-3.5 bg-slate-100 dark:bg-slate-700/50 border-none rounded-2xl text-sm text-slate-500 cursor-not-allowed" readonly>
                         <?php endif; ?>
                     </div>
 
@@ -251,15 +282,118 @@
                     <textarea name="keterangan" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white h-24 resize-none" placeholder="Deskripsi transaksi..."></textarea>
                 </div>
 
-                <button type="submit" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 active:scale-95 transition-all mt-6">
-                    Simpan Transaksi
+                <button type="submit" id="btnSimpan" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 active:scale-95 transition-all mt-6 flex items-center justify-center gap-2">
+                    <span id="btnText">Simpan Transaksi</span>
+                    <i id="btnLoader" class="fas fa-spinner fa-spin hidden"></i>
                 </button>
             </form>
+
+            <script>
+                document.querySelector('form[action="/keuangan/save_sub"]').addEventListener('submit', function(e) {
+                    const btn = document.getElementById('btnSimpan');
+                    const text = document.getElementById('btnText');
+                    const loader = document.getElementById('btnLoader');
+                    
+                    if (btn.disabled) {
+                        e.preventDefault();
+                        return;
+                    }
+
+                    // Disable button and show loader
+                    btn.disabled = true;
+                    btn.classList.add('opacity-75', 'cursor-not-allowed');
+                    text.textContent = 'Menyimpan...';
+                    loader.classList.remove('hidden');
+                });
+            </script>
 
         </div>
     </div>
 
+    <!-- Details Modal -->
+    <div id="detailsModal" class="fixed inset-0 z-[110] hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onclick="closeDetailsModal()"></div>
+        <div class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-2xl animate__animated animate__fadeInUp animate__faster flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
+                <h3 id="detailsTitle" class="text-lg font-bold dark:text-white">Detail Transaksi</h3>
+                <button onclick="closeDetailsModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="overflow-y-auto custom-scrollbar flex-1">
+                <table class="w-full text-sm text-left">
+                    <thead class="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-800 sticky top-0">
+                        <tr>
+                            <th class="px-4 py-2 rounded-l-lg">Keterangan</th>
+                            <th class="px-4 py-2 text-right rounded-r-lg">Nominal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailsList" class="divide-y divide-slate-100 dark:divide-slate-800">
+                        <!-- List items here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="flex justify-end items-center py-3 border-t border-slate-100 dark:border-slate-800 mt-2">
+                <span class="text-sm font-bold text-slate-500 mr-4">Total</span>
+                <span class="text-lg font-bold text-indigo-600 dark:text-indigo-400" id="detailsTotal">Rp 0</span>
+            </div>
+            
+            <div class="mt-2 text-right">
+                <button onclick="closeDetailsModal()" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        function showDetails(title, details) {
+            document.getElementById('detailsTitle').innerText = title;
+            const tbody = document.getElementById('detailsList');
+            tbody.innerHTML = '';
+            
+            // Details format: "Desc||Amount;;;Desc||Amount"
+            const items = details.split(';;;');
+            let total = 0;
+            
+            items.forEach(item => {
+                const parts = item.split('||');
+                const desc = parts[0] || '-';
+                const amount = parseFloat(parts[1]) || 0;
+                
+                // Check if it's a correction/deletion
+                const isCorrection = /koreksi|hapus/i.test(desc);
+                
+                if (isCorrection) {
+                     total -= amount;
+                } else {
+                     total += amount;
+                }
+                
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors';
+                
+                const amountClass = isCorrection ? 'text-rose-500' : 'text-slate-700 dark:text-slate-200';
+                const amountPrefix = isCorrection ? '- ' : '';
+                
+                tr.innerHTML = `
+                    <td class="px-4 py-2.5 dark:text-slate-300 ${isCorrection ? 'italic text-slate-400 line-through decoration-rose-400' : ''}">${desc}</td>
+                    <td class="px-4 py-2.5 text-right font-medium ${amountClass} whitespace-nowrap">${amountPrefix}Rp ${new Intl.NumberFormat('id-ID').format(amount)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            document.getElementById('detailsTotal').innerText = 'Rp ' + new Intl.NumberFormat('id-ID').format(total);
+            document.getElementById('detailsModal').classList.remove('hidden');
+        }
+
+        function closeDetailsModal() {
+            document.getElementById('detailsModal').classList.add('hidden');
+        }
+
+        // Existing functions...
         function openModal() {
             document.getElementById('modal').classList.remove('hidden');
         }

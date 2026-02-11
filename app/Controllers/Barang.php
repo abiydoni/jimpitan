@@ -18,9 +18,21 @@ class Barang extends BaseController
     {
         if (!session()->get('isLoggedIn')) return redirect()->to('/login');
         
+        // Check Access
+        if (session()->get('role') !== 's_admin' && session()->get('role') !== 'admin' && !$this->hasMenuAccess('barang')) {
+             return redirect()->to('/')->with('error', 'Akses ditolak.');
+        }
+
         $db = \Config\Database::connect();
         $profil = $db->table('tb_profil')->get()->getRowArray();
+
+        // Determine View Only
+        $accessType = $this->getMenuAccessType('barang');
+        $isViewOnly = ($accessType === 'view');
+        $role = session()->get('role');
         
+        $canManage = in_array($role, ['s_admin', 'admin']) || (!$isViewOnly && $this->hasMenuAccess('barang'));
+
         $keyword = $this->request->getGet('search');
         if ($keyword) {
             $this->barangModel->like('nama', $keyword)
@@ -35,7 +47,10 @@ class Barang extends BaseController
             'title' => 'Inventori Barang',
             'barang' => $barang,
             'pager' => $pager,
-            'search' => $keyword
+            'search' => $keyword,
+            'canManage' => $canManage,
+            'isViewOnly' => $isViewOnly,
+            'role' => $role
         ];
 
         return view('barang/index', $data);
@@ -44,9 +59,13 @@ class Barang extends BaseController
     public function store()
     {
         $role = session()->get('role');
-        $allowed = ['s_admin', 'admin', 'pengurus'];
-        if (!in_array($role, $allowed)) {
-             return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        $isAdmin = in_array($role, ['s_admin', 'admin']);
+
+        // Access Check
+        if (!$isAdmin) {
+             if (!$this->hasMenuAccess('barang') || $this->getMenuAccessType('barang') === 'view') {
+                  return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+             }
         }
 
         // Validation rules handled by Model, but we can do pre-validation here if needed
@@ -74,9 +93,13 @@ class Barang extends BaseController
     public function update()
     {
         $role = session()->get('role');
-        $allowed = ['s_admin', 'admin', 'pengurus'];
-        if (!in_array($role, $allowed)) {
-             return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        $isAdmin = in_array($role, ['s_admin', 'admin']);
+
+        // Access Check
+        if (!$isAdmin) {
+             if (!$this->hasMenuAccess('barang') || $this->getMenuAccessType('barang') === 'view') {
+                  return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+             }
         }
 
         $id = $this->request->getPost('id');
@@ -103,9 +126,13 @@ class Barang extends BaseController
     public function delete()
     {
         $role = session()->get('role');
-        $allowed = ['s_admin', 'admin', 'pengurus'];
-        if (!in_array($role, $allowed)) {
-             return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        $isAdmin = in_array($role, ['s_admin', 'admin']);
+
+        // Access Check
+        if (!$isAdmin) {
+             if (!$this->hasMenuAccess('barang') || $this->getMenuAccessType('barang') === 'view') {
+                  return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+             }
         }
 
         $id = $this->request->getPost('id');

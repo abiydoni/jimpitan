@@ -52,29 +52,122 @@ class Keuangan extends BaseController
             $userTarif = $user['tarif'] ?? 0;
 
             $builder = $this->kasSubModel
-                ->select('kas_sub.*, tb_coa.name as nama_akun, tb_coa.code as kode_akun')
+                ->select('kas_sub.date_trx, kas_sub.reff, kas_sub.coa_code, MAX(kas_sub.id_trx) as id_trx, SUM(kas_sub.debet) as debet, SUM(kas_sub.kredit) as kredit, COUNT(kas_sub.id_trx) as count_trx, GROUP_CONCAT(CONCAT(kas_sub.desc_trx, "||", GREATEST(kas_sub.debet, kas_sub.kredit)) SEPARATOR ";;;") as detail_trx, max(tb_coa.name) as nama_akun, max(tb_coa.code) as kode_akun, max(tb_tarif.nama_tarif) as nama_tarif')
                 ->join('tb_coa', 'tb_coa.code = kas_sub.coa_code', 'left')
+                ->join('tb_tarif', 'tb_tarif.kode_tarif = kas_sub.reff', 'left')
+                ->groupBy(['kas_sub.date_trx', 'kas_sub.reff', 'kas_sub.coa_code'])
                 ->orderBy('date_trx', 'DESC')
                 ->orderBy('id_trx', 'DESC');
+                
+            // Separate builder for calculating totals (ignoring pagination)
+            // Use db->table to ensure it's a fresh instance and doesn't conflict with Model's builder
+            $totalBuilder = $this->db->table('kas_sub'); 
 
-            // Apply Filter if not Super Admin (100)
+            // Apply Filter
             $selectedFilter = '';
-            if ($userTarif != 100 && $userTarif > 0) {
-                // Get kode_tarif for the assigned tarif id
-                $tarif = $this->tarifModel->find($userTarif);
-                if ($tarif) {
-                    $builder->like('reff', $tarif['kode_tarif'], 'after');
-                } else {
-                    // Assigned tarif ID not found, show nothing or handle error
-                    $builder->where('1=0'); 
-                }
-            } elseif ($userTarif == 100) {
-                // Admin can filter by dropdown
+            
+            // Scenario A: Super Admin (Legacy 100) or Role s_admin
+            if ($userTarif == 100 || session()->get('role') == 's_admin') {
                 $selectedFilter = $this->request->getGet('filter_tarif');
                 if ($selectedFilter) {
                      $builder->like('reff', $selectedFilter, 'after');
+                     $totalBuilder->like('reff', $selectedFilter, 'after');
                 }
             }
+            // Scenario B: Check Pengurus Access (Simplify: Use tb_pengurus.kode_tarif)
+            else {
+                $allowedCodes = [];
+                
+                // 1. Check if linked to Pengurus ID
+                $pengurus = $this->db->table('tb_pengurus')->where('id', $userTarif)->get()->getRowArray();
+
+                // 2. Priority 2: Check by Role Name (fallback) - Align with Home.php logic
+                if (!$pengurus) {
+                     $pengurus = $this->db->table('tb_pengurus')->where('nama_pengurus', session()->get('role'))->get()->getRowArray();
+                }
+
+                if($pengurus && !empty($pengurus['kode_tarif'])) {
+                     $allowedCodes[] = $pengurus['kode_tarif'];
+                }
+                // 2. Fallback: If tb_pengurus.kode_tarif is empty, maybe check legacy or menu assignments? 
+                // User said "biar gampang" using tb_pengurus.kode_tarif. 
+                // But let's keep the menu check as fallback OR just rely on this?
+                // Let's rely on this primarily. If empty, maybe no access or full access? 
+                // Safe default: If empty kode_tarif, try menu whitelist logic (previous logic) 
+                // OR if user implies STRICT usage, we show nothing.
+                // Assuming we keep the granular check as fallback ensures we don't break existing setup if kode_tarif is null.
+                elseif ($pengurus) {
+                     $assignments = $this->db->table('tb_pengurus_menu')
+                        ->where('id_pengurus', $pengurus['id'])
+                        ->like('akses_tarif', ',', 'both')
+                        ->orWhere('id_pengurus', $pengurus['id'])
+                        ->get()->getResultArray();
+
+                    $allowedIds = [];
+                    foreach ($assignments as $asm) {
+                        if (!empty($asm['akses_tarif'])) {
+                            $ids = explode(',', $asm['akses_tarif']);
+                            foreach($ids as $tid) $allowedIds[] = trim($tid);
+                        }
+                    }
+                    if(!empty($allowedIds)) {
+                        $allowedIds = array_unique($allowedIds);
+                        $tList = $this->tarifModel->whereIn('id', $allowedIds)->findAll();
+                        foreach($tList as $tl) $allowedCodes[] = $tl['kode_tarif'];
+                    }
+                }
+                
+                // 3. Legacy Fallback (Specific Tarif ID directly in user table)
+                if (empty($allowedCodes) && $userTarif > 0 && !$pengurus) {
+                     $t = $this->tarifModel->find($userTarif);
+                     if($t) $allowedCodes[] = $t['kode_tarif'];
+                }
+
+                // Apply Query Filter
+                if (!empty($allowedCodes)) {
+                    // Group Start for Multiple LIKE OR
+                    $builder->groupStart();
+                    $totalBuilder->groupStart();
+                    foreach ($allowedCodes as $code) {
+                        $builder->orLike('reff', $code, 'after');
+                        $totalBuilder->orLike('reff', $code, 'after');
+                    }
+                    $builder->groupEnd();
+                    $totalBuilder->groupEnd();
+                    
+                    // Filter the available Tariff Dropdown for View
+                    $data['tarif'] = $this->tarifModel->whereIn('kode_tarif', $allowedCodes)->findAll();
+                } else {
+                    // No access -> Show nothing
+                    $builder->where('1=0');
+                    $totalBuilder->where('1=0');
+                    $data['tarif'] = []; 
+                }
+            }
+
+            // CHECK MENU ACCESS TYPE (View Only vs Full)
+            // Use the centralized helper from BaseController
+            // Note: We need to know the exact menu code. 
+            // Based on previous edits, we assumed 'keuangan' or looked up by URL.
+            // Let's assume the menu code for "Arus Kas Khusus" is 'jurnal_sub' or find via query if needed.
+            // Safe approach: Query tb_menu by URL to get code, then check.
+            // CHECK MENU ACCESS TYPE (View Only vs Full)
+            // Strict check: We use the likely URL 'keuangan/jurnal_sub'
+            // This relies on BaseController resolving strictly by URL or Code.
+            $menuCode = 'keuangan/jurnal_sub'; 
+            
+            // Note: We don't need manual DB lookup here anymore if BaseController handles it.
+            // But if we want to be SAFE if 'keuangan/jurnal_sub' isn't the key, we rely on BaseController's strict fallback to URL lookup.
+            // So passing 'keuangan/jurnal_sub' is the correct "Real Data" approach (matching the URL).
+
+            $accessType = $this->getMenuAccessType($menuCode);
+            $data['isViewOnly'] = ($accessType === 'view');
+
+            // Calculate Totals
+            $totals = $totalBuilder->selectSum('debet')->selectSum('kredit')->get()->getRowArray();
+            $data['totalDebetAll'] = $totals['debet'] ?? 0;
+            $data['totalKreditAll'] = $totals['kredit'] ?? 0;
+            $data['saldoAll'] = $data['totalDebetAll'] - $data['totalKreditAll'];
 
             $data['transaksi'] = $builder->paginate(20);
             $data['pager'] = $this->kasSubModel->pager;
@@ -85,7 +178,11 @@ class Keuangan extends BaseController
         }
 
         $data['coa'] = $this->coaModel->findAll();
-        $data['tarif'] = $this->tarifModel->findAll();
+        // If not already set by specific filter above, load all (for admin)
+        if (!isset($data['tarif'])) {
+            $data['tarif'] = $this->tarifModel->findAll();
+        }
+
         $data['userTarif'] = $userTarif;
         $data['selectedFilter'] = $selectedFilter ?? '';
 

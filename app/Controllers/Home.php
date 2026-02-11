@@ -27,53 +27,97 @@ class Home extends BaseController
         $db = \Config\Database::connect();
         $profil = $db->table('tb_profil')->get()->getRowArray();
         
+        
         $role = session()->get('role');
-        $menus = $db->table('tb_menu')
-                    ->where('status', 1)
-                    ->groupStart()
-                        ->where("FIND_IN_SET('$role', role_access) >", 0)
-                        ->orWhere('role_access', '')
-                        ->orWhere('role_access', null)
-                    ->groupEnd()
-                    ->orderBy('nama', 'ASC')
-                    ->get()
-                    ->getResultArray();
+        $userId = session()->get('id_code');
+        
+        // Always fetch fresh user data to get the linked 'tarif' (Pengurus ID)
+        $userFresh = $db->table('users')->select('tarif')->where('id_code', $userId)->get()->getRowArray();
+        $linkedPengurusId = $userFresh['tarif'] ?? 0;
+        
+        $pengurusDef = null;
+        
+        // Priority 1: Check by Linked ID in tb_pengurus
+        if ($linkedPengurusId && $linkedPengurusId > 0) {
+            $pengurusDef = $db->table('tb_pengurus')->where('id', $linkedPengurusId)->get()->getRowArray();
+        }
+
+        // Priority 2: Check by Role Name (fallback) - Only if role matches exactly a Pengurus Name
+        if (!$pengurusDef) {
+            $pengurusDef = $db->table('tb_pengurus')->where('nama_pengurus', $role)->get()->getRowArray();
+        }
+        
+        if ($pengurusDef) {
+            // Role is a Pengurus -> Fetch explicitly assigned menus
+            $menus = $db->table('tb_menu')
+                        ->select('tb_menu.*, tb_pengurus_menu.tipe_akses, tb_pengurus_menu.akses_tarif')
+                        ->join('tb_pengurus_menu', 'tb_pengurus_menu.kode_menu = tb_menu.kode')
+                        ->where('tb_pengurus_menu.id_pengurus', $pengurusDef['id'])
+                        ->where('tb_menu.status', 1)
+                        ->orderBy('tb_menu.nama', 'ASC')
+                        ->get()
+                        ->getResultArray();
+            
+            // Optional: You might want to also Include public menus (role_access empty)
+            // But the user said "menu yang dipilih", so typically this overrides default logic.
+            // If we want to append public menus, we would need to merge results.
+            // Let's stick to EXPLICIT assignment for Pengurus as requested "berbeda beda sesuai dengan menu yang dipilih"
+            
+        } else {
+            // Normal Logic (Existing) - Admins/Super Admins or Unlinked Users
+            $menus = $db->table('tb_menu')
+                        ->select('*, "full" as tipe_akses') // Default to full access for admins/legacy
+                        ->where('status', 1)
+                        ->groupStart()
+                            ->where("FIND_IN_SET('$role', role_access) >", 0)
+                            ->orWhere('role_access', '')
+                            ->orWhere('role_access', null)
+                        ->groupEnd()
+                        ->orderBy('nama', 'ASC')
+                        ->get()
+                        ->getResultArray();
+        }
 
         // Filter Menu based on Tarif Logic
-        $userId = session()->get('id_code');
-        $user = $db->table('users')->select('tarif')->where('id_code', $userId)->get()->getRowArray();
-        $userTarif = $user['tarif'] ?? 0;
-
-        // Get Valid Tarif IDs
-        $validTarifIds = $db->table('tb_tarif')->select('id')->get()->getResultArray();
-        $validIds = array_column($validTarifIds, 'id');
-
-        $menus = array_filter($menus, function($m) use ($userTarif, $validIds) {
-            $url = $m['alamat_url'];
-            $isJurnalSub = strpos($url, 'jurnal_sub') !== false;
-            $isJurnalUmum = strpos($url, 'jurnal_umum') !== false;
-
-            // Only filter Jurnal menus
-            if (!$isJurnalSub && !$isJurnalUmum) return true;
-
-            // Rule 1: Tarif 100 (Super Admin) - Show Both
-            if ($userTarif == 100) return true;
-
-            // Rule 2: Tarif 99 (Bendahara Umum) - Only Show Jurnal Umum
-            if ($userTarif == 99) {
-                if ($isJurnalSub) return false;
-                return true;
-            }
-
-            // Rule 3: Valid Specific Tarif - Show Jurnal Sub, Hide Jurnal Umum (Refined Logic)
-            if (in_array($userTarif, $validIds)) {
-                if ($isJurnalUmum) return false; // Specific tariff users focus on their Sub Journal
-                return true;
-            }
-
-            // Rule 4: Invalid/Unknown Tarif - Hide Both
-            return false;
-        });
+        // Filter Menu based on Tarif Logic (Only for Non-Pengurus OR if needed)
+        // User request: "jika pengurus langsung mengacu ke tabel tb_pengurus_menu"
+        // So we skip this filter if $pengurusDef is found.
+        if (!$pengurusDef) {
+            $userId = session()->get('id_code');
+            $user = $db->table('users')->select('tarif')->where('id_code', $userId)->get()->getRowArray();
+            $userTarif = $user['tarif'] ?? 0;
+    
+            // Get Valid Tarif IDs
+            $validTarifIds = $db->table('tb_tarif')->select('id')->get()->getResultArray();
+            $validIds = array_column($validTarifIds, 'id');
+    
+            $menus = array_filter($menus, function($m) use ($userTarif, $validIds) {
+                $url = $m['alamat_url'];
+                $isJurnalSub = strpos($url, 'jurnal_sub') !== false;
+                $isJurnalUmum = strpos($url, 'jurnal_umum') !== false;
+    
+                // Only filter Jurnal menus
+                if (!$isJurnalSub && !$isJurnalUmum) return true;
+    
+                // Rule 1: Tarif 100 (Super Admin) - Show Both
+                if ($userTarif == 100) return true;
+    
+                // Rule 2: Tarif 99 (Bendahara Umum) - Only Show Jurnal Umum
+                if ($userTarif == 99) {
+                    if ($isJurnalSub) return false;
+                    return true;
+                }
+    
+                // Rule 3: Valid Specific Tarif - Show Jurnal Sub, Hide Jurnal Umum (Refined Logic)
+                if (in_array($userTarif, $validIds)) {
+                    if ($isJurnalUmum) return false; // Specific tariff users focus on their Sub Journal
+                    return true;
+                }
+    
+                // Rule 4: Invalid/Unknown Tarif - Hide Both
+                return false;
+            });
+        }
 
         // Get Bill Data
         $billData = $this->_getBillData();
@@ -389,12 +433,17 @@ class Home extends BaseController
                        ->findAll();
 
         $tarifs = $db->table('tb_tarif')->orderBy('nama_tarif', 'ASC')->get()->getResultArray();
+        
+        // Fetch Pengurus for the 'Akses Tarif' dropdown replacement
+        // User requested: "akses tarif ... ganti ambil dari tb_pengurus"
+        $pengurusList = $db->table('tb_pengurus')->orderBy('nama_pengurus', 'ASC')->get()->getResultArray();
 
         return view('users', [
             'profil' => $profil,
             'users' => $users,
             'roles' => $roles,
-            'tarifs' => $tarifs,
+            'tarifs' => $tarifs, // Keep specific tariffs if needed for other logic, but view will use pengurusList
+            'pengurusList' => $pengurusList,
             'currentUserRole' => $role,
             'roleWeights' => $this->_getRoleWeights()
         ]);

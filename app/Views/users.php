@@ -260,19 +260,20 @@
                         </select>
                     </div>
 
-                    <div class="col-span-2">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5 ml-1">Akses Tarif</label>
+                    <div class="col-span-2 hidden" id="pengurusAccessContainer">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5 ml-1">Akses Pengurus (Jabatan)</label>
                         <select name="tarif" id="tarif" 
                                 class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white appearance-none">
-                            <option value="0">-- Tidak Ada Akses --</option>
-                            <?php if(!empty($tarifs)): ?>
-                                <?php foreach($tarifs as $t): ?>
-                                    <option value="<?= $t['id'] ?>">Pengurus: <?= $t['nama_tarif'] ?></option>
+                            <option value="0">-- Pilih Jabatan --</option>
+                            <?php if(!empty($pengurusList)): ?>
+                                <?php foreach($pengurusList as $p): ?>
+                                    <option value="<?= $p['id'] ?>"><?= $p['nama_pengurus'] ?></option>
                                 <?php endforeach; ?>
                             <?php endif; ?>
-                            <option value="99">Bendahara Umum (Jurnal Umum)</option>
-                            <option value="100">Super Admin & Admin (Akses Penuh)</option>
+                            <!-- Legacy Options (Optional, keeping just in case) -->
+                            <!-- <option value="100">Super Admin (Legacy)</option> -->
                         </select>
+                        <p class="text-[10px] text-slate-400 mt-1 ml-1">*Pilih jabatan jika user ini adalah pengurus</p>
                     </div>
                 </div>
 
@@ -343,7 +344,28 @@
                     }
                 }
             });
+
+            // Role Change Listener
+            const roleSelect = document.getElementById('role');
+            if(roleSelect) {
+                roleSelect.addEventListener('change', togglePengurusAccess);
+            }
         });
+
+        function togglePengurusAccess() {
+            const roleSelect = document.getElementById('role');
+            const container = document.getElementById('pengurusAccessContainer');
+            const tarifSelect = document.getElementById('tarif');
+            
+            if (roleSelect && roleSelect.value === 'pengurus') {
+                container.classList.remove('hidden');
+                container.classList.add('block');
+            } else {
+                container.classList.add('hidden');
+                container.classList.remove('block');
+                if(!isEdit) tarifSelect.value = 0; // Reset if not in edit mode (or always reset? Let's be safe: only if manual change)
+            }
+        }
 
         function openAddModal() {
             isEdit = false;
@@ -362,6 +384,10 @@
             if(tsNikk) tsNikk.clear(); // Clear TomSelect
             generateId(); // Auto generate on open
             document.getElementById('tarif').value = 0; // Reset Tarif
+            
+            // Trigger role change to hiding/showing access field
+            document.getElementById('role').dispatchEvent(new Event('change'));
+
             modal.classList.remove('hidden');
         }
 
@@ -392,12 +418,18 @@
             setTimeout(() => {
                 const roleSelect = document.getElementById('role');
                 roleSelect.value = user.role;
+                togglePengurusAccess();
             }, 50);
             
             
             document.getElementById('shift').value = user.shift || '-';
             // Set Tarif
             document.getElementById('tarif').value = user.tarif || 0;
+            
+            // Trigger role change
+            const roleSelect = document.getElementById('role');
+            roleSelect.value = user.role;
+            togglePengurusAccess(); // Manually call to ensure correct visibility
 
             // Set NIKK
             if(tsNikk) {

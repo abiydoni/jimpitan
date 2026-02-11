@@ -11,18 +11,21 @@ class KK extends BaseController
      */
     public function index()
     {
-        // Permission Check (View access allowed for all authenticated, but buttons hidden in view)
-        // Strictly speaking, if view should also be restricted, we can add check here.
-        // Assuming 'pengurus'/'admin'/'s_admin' can view.
-        // Let's allow everyone to view for transparency, but only admins to edit.
-        
+        // Check Access
+        if (session()->get('role') !== 's_admin' && session()->get('role') !== 'admin' && !$this->hasMenuAccess('kk')) {
+             return redirect()->to('/')->with('error', 'Akses ditolak.');
+        }
+
         $db = \Config\Database::connect();
         $profil = $db->table('tb_profil')->get()->getRowArray();
         
         $role = session()->get('role');
         
         // Define who can manage (Create/Update/Delete)
-        $canManage = ($role === 's_admin' || $role === 'admin');
+        // Admin OR (Has Access AND Not View Only)
+        $accessType = $this->getMenuAccessType('kk');
+        $isViewOnly = ($accessType === 'view');
+        $canManage = in_array($role, ['s_admin', 'admin']) || (!$isViewOnly && $this->hasMenuAccess('kk'));
 
         // Fetch all data
         $dataKK = $db->table('master_kk')
@@ -34,6 +37,7 @@ class KK extends BaseController
             'profil' => $profil,
             'dataKK' => $dataKK,
             'canManage' => $canManage,
+            'isViewOnly' => $isViewOnly,
             'role' => $role
         ]);
     }
@@ -84,13 +88,6 @@ class KK extends BaseController
         }
 
         $id = $this->request->getPost('id'); // Primary Key (id or code_id distinct?)
-        // master_kk usually has 'id' (auto inc) and 'code_id' (QR string). 
-        // Let's assume 'id' column exists based on previous DebugSchema query showing "SELECT *". 
-        // If not, we might need to update by 'code_id'.
-        // Wait, standard practice is ID for update. 
-        // Let's use 'code_id' as key if 'id' is not reliable/exposed, but usually ID is best.
-        // Reading Scan.php lines 43-75: It joins on master_kk.code_id.
-        // DebugSchema output wasn't shown fully. I will assume 'id' exists.
         
         $rules = [
             'code_id' => 'required', // Unique check excluded for self (complex in CI4 validation string, easier manually if code changed)
@@ -147,7 +144,14 @@ class KK extends BaseController
     private function _checkAccess()
     {
         $role = session()->get('role');
-        return ($role === 's_admin' || $role === 'admin');
+        if (in_array($role, ['s_admin', 'admin'])) return true;
+        
+        // Check dynamic access
+        if ($this->hasMenuAccess('kk') && $this->getMenuAccessType('kk') !== 'view') {
+            return true;
+        }
+        
+        return false;
     }
 
     /**

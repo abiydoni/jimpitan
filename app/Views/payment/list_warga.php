@@ -42,7 +42,7 @@
     <!-- Header -->
     <nav class="glass sticky top-0 z-50 px-4 py-3 flex justify-between items-center shadow-sm">
         <div class="flex items-center space-x-2">
-            <a href="/payment" class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+            <a href="<?= $backUrl ?? '/payment' ?>" class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
                 <i class="fas fa-arrow-left"></i>
             </a>
             <div class="flex flex-col">

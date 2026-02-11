@@ -24,21 +24,8 @@ class Payment extends BaseController
         $this->kasSubModel = new \App\Models\KasSubModel();
         $this->db = \Config\Database::connect();
         
-        // Ensure coa_code column exists in tb_tarif (Auto-Migration)
-        $fields = $this->db->getFieldData('tb_tarif');
-        $hasCoa = false;
-        foreach($fields as $field) {
-            if ($field->name === 'coa_code') {
-                $hasCoa = true;
-                break;
-            }
-        }
-        
-        if (!$hasCoa) {
-            $forge = \Config\Database::forge();
-            $col = ['coa_code' => ['type' => 'VARCHAR', 'constraint' => 20, 'null' => true, 'after' => 'tarif']];
-            $forge->addColumn('tb_tarif', $col);
-        }
+        // Auto-migration removed for performance
+
     }
 
     public function index()
@@ -51,10 +38,53 @@ class Payment extends BaseController
 
         // 2. Determine Data Source
         $tarifs = [];
-        if ($userTarif == 100) {
+        
+        // Scenario A: Super Admin (Legacy 100) or explicitly 's_admin' role (check session role too if reliable)
+        if ($userTarif == 100 || session()->get('role') == 's_admin') {
             $tarifs = $this->tarifModel->where('status', 1)->where('metode !=', 0)->findAll();
-        } elseif ($userTarif > 0) {
-            $tarifs = $this->tarifModel->where('status', 1)->where('metode !=', 0)->where('id', $userTarif)->findAll();
+        } 
+        // Scenario B: Check if User ID maps to a Pengurus
+        else {
+            // Check tb_pengurus
+            $pengurus = $this->db->table('tb_pengurus')->where('id', $userTarif)->get()->getRowArray();
+            
+            if ($pengurus) {
+                // Fetch tariffs assigned to this Pengurus (aggregating from all menus or specific context?)
+                // Since this is the "Payment" controller, we ideally want tariffs for 'iuran' menus.
+                // But getting *all* assigned tariffs is a safe starting point for the index.
+                $assignments = $this->db->table('tb_pengurus_menu')
+                    ->where('id_pengurus', $pengurus['id'])
+                    ->like('akses_tarif', ',', 'both') // Optimize? No, regex or just get all non-empty
+                    ->orWhere('id_pengurus', $pengurus['id']) // Just get all for this pengurus
+                    ->get()->getResultArray();
+
+                $allowedIds = [];
+                foreach ($assignments as $asm) {
+                    if (!empty($asm['akses_tarif'])) {
+                        $ids = explode(',', $asm['akses_tarif']);
+                        foreach($ids as $tid) $allowedIds[] = trim($tid);
+                    }
+                }
+                
+                $allowedIds = array_unique($allowedIds);
+                
+                if (!empty($allowedIds)) {
+                     $tarifs = $this->tarifModel->where('status', 1)
+                                                ->where('metode !=', 0)
+                                                ->whereIn('id', $allowedIds)
+                                                ->findAll();
+                }
+            } 
+            // Scenario C: Legacy direct tariff ID (Fallback)
+            elseif ($userTarif > 0) {
+                 $tarifs = $this->tarifModel->where('status', 1)->where('metode !=', 0)->where('id', $userTarif)->findAll();
+            }
+        }
+
+        // 3. Auto-Redirect if only 1 Tariff
+        // User requested: "langsung menuju kode tersebut"
+        if (count($tarifs) === 1) {
+            return redirect()->to('/payment/warga/' . $tarifs[0]['kode_tarif']);
         }
 
         $data = [
@@ -68,10 +98,77 @@ class Payment extends BaseController
     {
         $tarif = $this->tarifModel->where('kode_tarif', $kode_tarif)->first();
         
+        // Fetch Profil for View
+        $profil = $this->db->table('tb_profil')->get()->getRowArray() ?? [];
+        // Use 'payment' or 'transaksi' depending on what code is used in tb_menu
+        // Let's assume 'payment' for now or 'iuran'
+        // Actually, let's allow if role is admin OR hasMenuAccess('payment')
+        $role = session()->get('role');
+        if ($role !== 's_admin' && $role !== 'admin' && !$this->hasMenuAccess('payment')) {
+             return redirect()->to('/')->with('error', 'Akses ditolak.');
+        }
+        
+        // Determine View Only status
+        $accessType = $this->getMenuAccessType('payment'); // Assuming 'payment' is the code
+        $isViewOnly = ($accessType === 'view');
+
         if (!$tarif) {
             return redirect()->to('/payment')->with('error', 'Tarif tidak ditemukan.');
         }
 
+        // Get User & Tariff for Access Check
+        $userId = session()->get('id_code');
+        $userModel = new \App\Models\UserModel();
+        $user = $userModel->find($userId);
+        $userTarif = $user['tarif'] ?? 0;
+        
+        // --- Access Check Logic ---
+        // Basic Role Check
+        $isPowerUser = ($role === 's_admin' || $role === 'admin');
+        
+        // If not power user, check if this specific tariff is allowed
+        if (!$isPowerUser) {
+             // 1. Direct Tariff Assignment (Legacy)
+             if ($userTarif == $tarif['id']) {
+                 // Allowed
+             } else {
+                 // 2. Check Pengurus Menu Assignment
+                 // We need to check if user has access to THIS tariff specifically via tb_pengurus_menu
+                 $db = \Config\Database::connect();
+                 
+                 // Get Pengurus ID
+                 $pengurus = $db->table('tb_pengurus')->where('id', $userTarif)->get()->getRowArray();
+                 if (!$pengurus) {
+                      $pengurus = $db->table('tb_pengurus')->where('nama_pengurus', $role)->get()->getRowArray();
+                 }
+                 
+                 $hasAccess = false;
+                 if ($pengurus) {
+                      // Check ALL menu assignments for this pengurus to see if this tariff ID is listed
+                      $assignments = $db->table('tb_pengurus_menu')
+                         ->where('id_pengurus', $pengurus['id'])
+                         ->like('akses_tarif', ',', 'both')
+                         ->orWhere('id_pengurus', $pengurus['id'])
+                         ->get()->getResultArray();
+
+                      foreach ($assignments as $asm) {
+                          if (!empty($asm['akses_tarif'])) {
+                              $ids = explode(',', $asm['akses_tarif']);
+                              if (in_array($tarif['id'], $ids)) {
+                                  $hasAccess = true;
+                                  break;
+                              }
+                          }
+                      }
+                 }
+                 
+                 if (!$hasAccess) {
+                      return redirect()->to('/payment')->with('error', 'Akses ditolak untuk tarif ini.');
+                 }
+             }
+        }
+        
+        // Fetch Warga List
         $builder = $this->db->table('tb_warga');
         $builder->select('tb_warga.*, master_kk.code_id as no_kk');
         $builder->join('master_kk', 'master_kk.code_id = tb_warga.nikk', 'left');
@@ -83,13 +180,90 @@ class Payment extends BaseController
             ->where('kode_tarif', $kode_tarif)
             ->get()
             ->getResultArray();
+        // Check if user has access to multiple tariffs to decide Back Button target
+        $singleTariff = false;
+        if (!$isPowerUser) {
+             // Re-check logic similar to index() or simplified
+             // If userTarif > 0 (Direct Assign), it's single.
+             // If Pengurus, might be multiple. 
+             // Ideally we shouldn't repeat the query.
+             // Let's just pass a safe guess or do a quick check.
+             // Actually, the easiest way is to check the REFERER or just provide a "Home" button for non-admins?
+             // No, let's be precise.
+             
+             if ($userTarif == $tarif['id']) {
+                 $singleTariff = true;
+             } elseif ($pengurus) {
+                  // Check count of assigned tariffs
+                  $asmCount = $db->table('tb_pengurus_menu')
+                     ->where('id_pengurus', $pengurus['id'])
+                     ->like('akses_tarif', ',', 'both')
+                     ->orWhere('id_pengurus', $pengurus['id'])
+                     ->countAllResults();
+                  // This is rough because comma separated. 
+                  // Let's assume if not 's_admin'/'admin', they might want to go to Dashboard 
+                  // OR we just link to /payment and let the controller handle it?
+                  // The controller redirects back. So we MUST link to /.
+                  // Let's passed 'backUrl'
+             }
+        }
+        
+        // BETTER APPROACH:
+        // Always link to `/payment`. 
+        // BUT modify `index()` to validly show the list if accessed explicitly? 
+        // No, `index()` auto-redirects.
+        // So we must direct to `/` if auto-redirect is active.
+        
+        // Let's Check if we should link to Dashboard
+        // If (User has 1 tariff permitted), Back -> Dashboard.
+        // If (User has > 1), Back -> Payment List.
+        
+        // Re-use logic from index() implies code duplication.
+        // Quick fix: If not admin, link to `/`. 
+        // Wait, some Pengurus manage 2 tariffs (e.g. Sampah & Sosial).
+        
+        // Let's pass $backUrl
+        $backUrl = '/payment';
+        if (!$isPowerUser) {
+             // Check how many they have
+             // We reuse the $assignments logic roughly? 
+             // Or just check if direct assignment
+             if ($userTarif > 0 && $userTarif != 100 && !$pengurus) {
+                 $backUrl = '/';
+             }
+             // If pengurus, we'd need to know count.
+             // Let's cheat: If we are here, and we accidentally go to /payment and get redirected back, it's annoying.
+             // Let's providing a "Home" link for everyone is safer? 
+             // No, admins need to switch tariffs.
+             
+             // Let's do the count check properly.
+             if ($pengurus) {
+                  $allIds = [];
+                  $assignments = $db->table('tb_pengurus_menu')
+                         ->where('id_pengurus', $pengurus['id'])
+                         ->get()->getResultArray();
+                  foreach($assignments as $a) {
+                      if($a['akses_tarif']) {
+                          foreach(explode(',', $a['akses_tarif']) as $i) $allIds[] = $i;
+                      }
+                  }
+                  $allIds = array_unique($allIds);
+                  if (count($allIds) <= 1) $backUrl = '/';
+             }
+        }
+
         $exemptNikk = array_column($exemptions, 'nikk');
 
         $data = [
+            'profil' => $profil,
             'title' => 'Pilih Warga - ' . $tarif['nama_tarif'],
             'tarif' => $tarif,
             'warga_list' => $wargaList,
-            'exempt_nikk' => $exemptNikk
+            'exempt_nikk' => $exemptNikk,
+            'userTarif' => $userTarif,
+            'isViewOnly' => $isViewOnly,
+            'canManage' => ($isPowerUser || !$isViewOnly),
+            'backUrl' => $backUrl
         ];
 
         return view('payment/list_warga', $data);

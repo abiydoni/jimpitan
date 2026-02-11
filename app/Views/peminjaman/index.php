@@ -58,7 +58,7 @@
                 <p class="text-xs text-slate-500 dark:text-slate-400">Kelola peminjaman inventori warga</p>
             </div>
             
-            <?php if(in_array(session()->get('role'), ['s_admin', 'admin', 'pengurus'])): ?>
+            <?php if(!empty($canManage)): ?>
             <button onclick="openModal()" class="w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 transition-all active:scale-95">
                 <i class="fas fa-plus"></i>
                 <span>Pinjam Barang</span>
@@ -129,7 +129,7 @@
                                     <?php endif; ?>
                                 </td>
                                 <td class="px-6 py-4 text-center">
-                                    <?php if($p['status'] == 'dipinjam' && in_array(session()->get('role'), ['s_admin', 'admin', 'pengurus'])): ?>
+                                    <?php if($p['status'] == 'dipinjam' && !empty($canManage)): ?>
                                         <button onclick="openReturnModal(<?= $p['id'] ?>, '<?= addslashes($p['nama_barang']) ?>', <?= $sisa ?>)" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg text-xs font-bold transition-colors dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50">
                                             Kembalikan
                                         </button>
@@ -168,37 +168,70 @@
                     
                     <form id="pinjamForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
                         
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Pilih Barang</label>
-                            <select name="barang_id" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 dark:text-white text-sm">
-                                <option value="">-- Pilih Barang --</option>
-                                <?php foreach($barangList as $b): ?>
-                                    <option value="<?= $b['kode'] ?>" <?= $b['jumlah'] <= 0 ? 'disabled' : '' ?>>
-                                        <?= $b['nama'] ?> (Stok: <?= $b['jumlah'] ?>)
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nama Peminjam</label>
-                            <input type="text" name="nama_peminjam" required 
-                                   class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 dark:text-white text-sm" placeholder="Nama Peminjam">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Jumlah</label>
-                            <input type="number" name="jumlah" required min="1" value="1"
-                                class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 dark:text-white text-sm">
-                        </div>
+                    <form id="pinjamForm" onsubmit="handleFormSubmit(event)" class="space-y-2">
                         
+                        <!-- Borrower Info -->
+                        <div class="grid grid-cols-1 gap-2">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Nama Peminjam</label>
+                                <input type="text" name="nama_peminjam" required 
+                                       class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border-none rounded-xl focus:ring-1 focus:ring-indigo-500 dark:text-white text-xs" placeholder="Nama Peminjam">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Keterangan (Opsional)</label>
+                                <textarea name="keterangan" rows="1" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border-none rounded-xl focus:ring-1 focus:ring-indigo-500 dark:text-white text-xs"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Inventory List -->
                         <div>
-                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Keterangan (Opsional)</label>
-                            <textarea name="keterangan" rows="2" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 dark:text-white text-sm"></textarea>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">Daftar Barang</label>
+                            <div class="border border-slate-100 dark:border-slate-700 rounded-xl overflow-hidden max-h-[350px] overflow-y-auto bg-slate-50 dark:bg-slate-900/50">
+                                <table class="w-full text-xs text-left">
+                                    <thead class="bg-slate-100 dark:bg-slate-800 text-[10px] uppercase font-bold text-slate-500 sticky top-0">
+                                        <tr>
+                                            <th class="px-3 py-2">Barang</th>
+                                            <th class="px-3 py-2 text-center w-20">Stok</th>
+                                            <th class="px-3 py-2 w-24">Jumlah</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+                                        <?php if(empty($barangList)): ?>
+                                            <tr><td colspan="3" class="px-3 py-4 text-center text-slate-500">Tidak ada barang</td></tr>
+                                        <?php else: ?>
+                                            <?php foreach($barangList as $b): ?>
+                                                <tr class="hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors">
+                                                    <td class="px-3 py-1.5">
+                                                        <span class="font-bold text-slate-700 dark:text-slate-200 block text-xs"><?= $b['nama'] ?></span>
+                                                        <span class="text-[9px] text-slate-400 font-mono"><?= $b['kode'] ?></span>
+                                                    </td>
+                                                    <td class="px-3 py-1.5 text-center">
+                                                        <?php if($b['jumlah'] > 0): ?>
+                                                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"><?= $b['jumlah'] ?></span>
+                                                        <?php else: ?>
+                                                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400">Habis</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td class="px-3 py-1.5">
+                                                        <input type="number" 
+                                                               name="items[<?= $b['kode'] ?>]" 
+                                                               min="0" 
+                                                               max="<?= $b['jumlah'] ?>"
+                                                               class="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-1 focus:ring-indigo-500 text-center font-bold text-slate-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed placeholder:font-normal text-xs"
+                                                               placeholder="0"
+                                                               <?= $b['jumlah'] <= 0 ? 'disabled' : '' ?>>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                         <div class="pt-2">
-                            <button type="submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/30 transition-all active:scale-[0.98]">
+                            <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all active:scale-[0.98] text-sm">
                                 Simpan Peminjaman
                             </button>
                         </div>

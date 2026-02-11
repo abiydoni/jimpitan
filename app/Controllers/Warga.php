@@ -19,6 +19,22 @@ class Warga extends BaseController
         $session = session();
         $role = $session->get('role') ?? 'warga';
         
+        // Check Access
+        if ($role !== 's_admin' && $role !== 'admin' && !$this->hasMenuAccess('warga')) {
+             return redirect()->to('/')->with('error', 'Akses ditolak.');
+        }
+
+        // Determine View Only
+        $accessType = $this->getMenuAccessType('warga');
+        $isViewOnly = ($accessType === 'view');
+        $isAdmin = in_array($role, ['s_admin', 'admin']);
+        
+        // canManage means they can Add/Edit/Delete
+        // If View Only, canManage is false regardless of other roles (unless admin)
+        // If Admin, canManage is true.
+        // If Pengurus (Full), canManage is true.
+        $canManage = $isAdmin || (!$isViewOnly && $this->hasMenuAccess('warga'));
+
         // Pagination & Search
         $keyword = $this->request->getGet('q');
         
@@ -35,7 +51,8 @@ class Warga extends BaseController
         $data = [
             'title'     => 'Data Warga',
             'warga'     => $dataWarga,
-            'canManage' => in_array($role, ['s_admin', 'admin']),
+            'canManage' => $canManage,
+            'isViewOnly'=> $isViewOnly,
             'keyword'   => $keyword
         ];
 
@@ -46,9 +63,13 @@ class Warga extends BaseController
     {
         $session = session();
         $role = $session->get('role');
-
-        if (!in_array($role, ['s_admin', 'admin'])) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        $isAdmin = in_array($role, ['s_admin', 'admin']);
+        
+        // Access Check: Must be Admin OR (Have Access AND Not View Only)
+        if (!$isAdmin) {
+            if (!$this->hasMenuAccess('warga') || $this->getMenuAccessType('warga') === 'view') {
+                 return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+            }
         }
 
         $rules = [
@@ -94,9 +115,13 @@ class Warga extends BaseController
     {
         $session = session();
         $role = $session->get('role');
+        $isAdmin = in_array($role, ['s_admin', 'admin']);
 
-        if (!in_array($role, ['s_admin', 'admin'])) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        // Access Check
+        if (!$isAdmin) {
+             if (!$this->hasMenuAccess('warga') || $this->getMenuAccessType('warga') === 'view') {
+                  return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+             }
         }
 
         $id = $this->request->getPost('id_warga');
@@ -159,9 +184,13 @@ class Warga extends BaseController
     {
         $session = session();
         $role = $session->get('role');
+        $isAdmin = in_array($role, ['s_admin', 'admin']);
 
-        if (!in_array($role, ['s_admin', 'admin'])) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        // Access Check
+        if (!$isAdmin) {
+             if (!$this->hasMenuAccess('warga') || $this->getMenuAccessType('warga') === 'view') {
+                  return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+             }
         }
 
         // Delete photo if exists

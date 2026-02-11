@@ -298,7 +298,9 @@
                 cancelButtonText: 'Batal',
                 confirmButtonColor: '#4f46e5',
                 showLoaderOnConfirm: true,
-                preConfirm: (value) => {
+                allowOutsideClick: () => !Swal.isLoading(),
+                backdrop: true,
+                preConfirm: async (value) => {
                     const val = parseInt(value);
                     if (!val || val <= 0) {
                         Swal.showValidationMessage('Nominal tidak valid');
@@ -308,38 +310,38 @@
                         Swal.showValidationMessage(`Nominal tidak boleh melebihi sisa tagihan (Rp ${new Intl.NumberFormat('id-ID').format(maxAmount)})`);
                         return false;
                     }
-                    return val;
-                },
-                allowOutsideClick: () => !Swal.isLoading()
+
+                    try {
+                        const payload = {
+                            kode_tarif: config.kode_tarif,
+                            nikk: config.nikk,
+                            tahun: config.year,
+                            nominal: val,
+                            bulan: month 
+                        };
+
+                        const response = await fetch('/payment/process', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+
+                        const res = await response.json();
+
+                        if(res.status !== 'success') {
+                            throw new Error(res.message || 'Terjadi kesalahan.');
+                        }
+                        return res;
+
+                    } catch (error) {
+                        Swal.showValidationMessage(`Request failed: ${error}`);
+                    }
+                }
             }).then((result) => {
                 if (result.isConfirmed) {
-                    sendPayment(month, result.value);
-                }
-            });
-        }
-
-        async function sendPayment(month, nominal) {
-            try {
-                const payload = {
-                    kode_tarif: config.kode_tarif,
-                    nikk: config.nikk,
-                    tahun: config.year,
-                    nominal: parseInt(nominal),
-                    bulan: month 
-                };
-
-                const response = await fetch('/payment/process', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                const res = await response.json();
-
-                if(res.status === 'success') {
                     Swal.fire({
                         icon: 'success',
                         title: 'Berhasil!',
@@ -347,16 +349,21 @@
                         timer: 1500,
                         showConfirmButton: false
                     }).then(() => {
-                        location.reload();
+                        // Show persistent loader before reload
+                        Swal.fire({
+                            title: 'Memuat Ulang...',
+                            text: 'Mohon tunggu sebentar',
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                            showConfirmButton: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                                location.reload();
+                            }
+                        });
                     });
-                } else {
-                    Swal.fire('Gagal', res.message || 'Terjadi kesalahan.', 'error');
                 }
-
-            } catch (error) {
-                console.error(error);
-                Swal.fire('Error', 'Gagal menghubungkan ke server.', 'error');
-            }
+            });
         }
 
         // History Functions
@@ -528,7 +535,7 @@
         }
 
         async function confirmDelete(id) {
-            const result = await Swal.fire({
+            Swal.fire({
                 title: 'Hapus Data?',
                 text: "Data pembayaran ini akan dihapus permanen.",
                 icon: 'warning',
@@ -536,31 +543,47 @@
                 confirmButtonColor: '#e11d48',
                 cancelButtonColor: '#94a3b8',
                 confirmButtonText: 'Ya, Hapus',
-                cancelButtonText: 'Batal'
-            });
+                cancelButtonText: 'Batal',
+                showLoaderOnConfirm: true,
+                allowOutsideClick: () => !Swal.isLoading(),
+                backdrop: true,
+                preConfirm: async () => {
+                    try {
+                        const formData = new FormData();
+                        formData.append('id', id);
 
-            if (result.isConfirmed) {
-                try {
-                    const formData = new FormData();
-                    formData.append('id', id);
-
-                    const response = await fetch('/payment/delete', {
-                        method: 'POST',
-                        body: formData,
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    
-                    const res = await response.json();
-                    
-                    if(res.status === 'success') {
-                        location.reload();
-                    } else {
-                        Swal.fire('Gagal', 'Tidak dapat menghapus data.', 'error');
+                        const response = await fetch('/payment/delete', {
+                            method: 'POST',
+                            body: formData,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+                        
+                        const res = await response.json();
+                        
+                        if(res.status !== 'success') {
+                            throw new Error(res.message || 'Tidak dapat menghapus data.');
+                        }
+                        return res;
+                    } catch (e) {
+                        Swal.showValidationMessage(`Request failed: ${e}`);
                     }
-                } catch (e) {
-                    Swal.fire('Error', 'Terjadi kesalahan server.', 'error');
                 }
-            }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show persistent loader before reload
+                    Swal.fire({
+                        title: 'Memuat Ulang...',
+                        text: 'Mohon tunggu sebentar',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                            location.reload();
+                        }
+                    });
+                }
+            });
         }
     </script>
     <!-- Global Loader -->

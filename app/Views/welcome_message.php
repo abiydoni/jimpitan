@@ -417,7 +417,17 @@
         <div class="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-12 gap-2 sm:gap-2 animate__animated animate__fadeInUp">
             <?php if(!empty($menus)): ?>
                 <?php foreach($menus as $menu): ?>
-                    <a href="<?= $menu['alamat_url'] ?>" class="group flex flex-col items-center relative">
+                    <?php
+                        // Check for 'akses_tarif' (comma separated IDs)
+                        // If present, append to URL so controller can contextually use it if needed
+                        // Although Payment controller mainly checks specific permissions now.
+                        $finalUrl = $menu['alamat_url'];
+                        if (!empty($menu['akses_tarif'])) {
+                             $separator = (strpos($finalUrl, '?') !== false) ? '&' : '?';
+                             $finalUrl .= $separator . 'tarif_ids=' . $menu['akses_tarif'];
+                        }
+                    ?>
+                    <a href="<?= $finalUrl ?>" class="group flex flex-col items-center relative">
                         <div class="w-16 h-16 sm:w-20 sm:h-20 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-center mb-2 group-hover:shadow-md group-hover:scale-105 transition-all duration-300 relative">
                             <ion-icon name="<?= $menu['ikon'] ?>" class="text-3xl sm:text-4xl text-indigo-600 dark:text-indigo-400 group-hover:text-indigo-500"></ion-icon>
                             

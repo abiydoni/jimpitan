@@ -27,6 +27,19 @@ class Peminjaman extends BaseController
     {
         if (!session()->get('isLoggedIn')) return redirect()->to('/login');
 
+        // Access check removed as per request to allow page access without filtering
+        // if (session()->get('role') !== 's_admin' && session()->get('role') !== 'admin' && !$this->hasMenuAccess('peminjaman')) {
+        //      return redirect()->to('/')->with('error', 'Akses ditolak.');
+        // }
+
+        // Determine View Only
+        // Assuming 'peminjaman' is the menu code
+        // $accessType = $this->getMenuAccessType('peminjaman'); 
+        $isViewOnly = false; // Always allow manage
+        $role = session()->get('role');
+        
+        $canManage = true; // No filtering asked
+
         // Join to get barang name
         $peminjaman = $this->peminjamanModel
             ->select('tb_peminjaman.*, tb_barang.nama as nama_barang, tb_barang.kode_brg')
@@ -40,7 +53,10 @@ class Peminjaman extends BaseController
         $data = [
             'title' => 'Peminjaman Barang',
             'peminjaman' => $peminjaman,
-            'barangList' => $barangList
+            'barangList' => $barangList,
+            'canManage' => $canManage,
+            'isViewOnly' => $isViewOnly,
+            'role' => $role
         ];
 
         return view('peminjaman/index', $data);
@@ -49,56 +65,90 @@ class Peminjaman extends BaseController
     public function store()
     {
         $role = session()->get('role');
-        $allowed = ['s_admin', 'admin', 'pengurus'];
-        if (!in_array($role, $allowed)) {
-             return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        $isAdmin = in_array($role, ['s_admin', 'admin']);
+
+        // Access Check removed
+        // if (!$isAdmin) {
+        //      if (!$this->hasMenuAccess('peminjaman') || $this->getMenuAccessType('peminjaman') === 'view') {
+        //           return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        //      }
+        // }
+
+        $items = $this->request->getPost('items'); // Array [kode => Qty]
+        $nama_peminjam = $this->request->getPost('nama_peminjam');
+        $keterangan = $this->request->getPost('keterangan');
+
+        if (empty($items) || !is_array($items)) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Tidak ada barang yang dipilih']);
         }
 
-        $barangId = $this->request->getPost('barang_id');
-        $jumlah = (int) $this->request->getPost('jumlah');
-
-        // Check Stock First
-        $barang = $this->barangModel->find($barangId);
-        if (!$barang) {
-            return $this->response->setJSON(['status' => 'error', 'message' => 'Barang tidak ditemukan']);
+        // Filter valid items (qty > 0)
+        $validItems = [];
+        foreach ($items as $kode => $qty) {
+            $qty = (int)$qty;
+            if ($qty > 0) {
+                $validItems[$kode] = $qty;
+            }
         }
 
-        if ($barang['jumlah'] < $jumlah) {
-             return $this->response->setJSON(['status' => 'error', 'message' => 'Stok tidak mencukupi']);
+        if (empty($validItems)) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Silakan isi jumlah barang minimal 1']);
         }
 
-        $data = [
-            'barang_id'     => $barangId,
-            'nama_peminjam' => $this->request->getPost('nama_peminjam'),
-            'jumlah'        => $jumlah,
-            'tanggal_pinjam'=> date('Y-m-d'),
-            'status'        => 'dipinjam',
-            'keterangan'    => $this->request->getPost('keterangan')
-        ];
+        $this->peminjamanModel->transStart();
 
-        if ($this->peminjamanModel->save($data)) {
+        foreach ($validItems as $kode => $jumlah) {
+            // Find by Code
+            $barang = $this->barangModel->where('kode', $kode)->first();
+            
+            if (!$barang) {
+                $this->peminjamanModel->transRollback();
+                return $this->response->setJSON(['status' => 'error', 'message' => "Barang dengan kode {$kode} tidak ditemukan"]);
+            }
+
+            if ($barang['jumlah'] < $jumlah) {
+                $this->peminjamanModel->transRollback();
+                return $this->response->setJSON(['status' => 'error', 'message' => "Stok {$barang['nama']} tidak mencukupi (Sisa: {$barang['jumlah']})"]);
+            }
+
+            $data = [
+                'barang_id'     => $kode, // Storing Code as Key
+                'nama_peminjam' => $nama_peminjam,
+                'jumlah'        => $jumlah,
+                'tanggal_pinjam'=> date('Y-m-d'),
+                'status'        => 'dipinjam',
+                'keterangan'    => $keterangan
+            ];
+
+            $this->peminjamanModel->save($data);
+            
             // Reduce Stock
             $newStock = $barang['jumlah'] - $jumlah;
-            $this->barangModel->update($barangId, ['jumlah' => $newStock]);
-
-            log_activity('PINJAM_BARANG', "Peminjaman {$barang['nama']} oleh {$data['nama_peminjam']} ({$jumlah} unit)");
-            return $this->response->setJSON(['status' => 'success', 'message' => 'Peminjaman berhasil dicatat']);
+            // Use 'kode' as primary key
+            $this->barangModel->update($barang['kode'], ['jumlah' => $newStock]);
         }
 
-        return $this->response->setJSON([
-            'status' => 'error', 
-            'message' => 'Gagal menyimpan data',
-            'errors' => $this->peminjamanModel->errors()
-        ]);
+        $this->peminjamanModel->transComplete();
+
+        if ($this->peminjamanModel->transStatus() === FALSE) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal menyimpan transaksi']);
+        }
+
+        log_activity('PINJAM_BARANG', "Peminjaman oleh {$nama_peminjam} (" . count($validItems) . " jenis barang)");
+        return $this->response->setJSON(['status' => 'success', 'message' => 'Peminjaman berhasil dicatat']);
     }
 
     public function returnItem()
     {
         $role = session()->get('role');
-        $allowed = ['s_admin', 'admin', 'pengurus'];
-        if (!in_array($role, $allowed)) {
-             return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
-        }
+        $isAdmin = in_array($role, ['s_admin', 'admin']);
+
+        // Access Check Removed
+        // if (!$isAdmin) {
+        //      if (!$this->hasMenuAccess('peminjaman') || $this->getMenuAccessType('peminjaman') === 'view') {
+        //           return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        //      }
+        // }
 
         $id = $this->request->getPost('id');
         $input_kembali = (int) $this->request->getPost('jumlah_kembali');
@@ -239,10 +289,14 @@ class Peminjaman extends BaseController
     public function delete()
     {
         $role = session()->get('role');
-        $allowed = ['s_admin', 'admin']; 
-        if (!in_array($role, $allowed)) {
-             return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
-        }
+        $isAdmin = in_array($role, ['s_admin', 'admin']);
+
+        // Access Check Removed
+        // if (!$isAdmin) {
+        //      if (!$this->hasMenuAccess('peminjaman') || $this->getMenuAccessType('peminjaman') === 'view') {
+        //           return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        //      }
+        // }
         
         $id = $this->request->getPost('id');
         if($this->peminjamanModel->delete($id)){

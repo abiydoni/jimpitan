@@ -57,9 +57,11 @@
                 <i class="fas fa-moon dark:hidden"></i>
                 <i class="fas fa-sun hidden dark:block text-amber-400"></i>
             </button>
+            <?php if(!$isViewOnly): ?>
             <button onclick="openModal()" class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg hover:bg-indigo-700 transition-all">
                 <i class="fas fa-plus"></i>
             </button>
+            <?php endif; ?>
         </div>
     </nav>
 
@@ -107,17 +109,14 @@
                                     <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center font-bold text-xs font-mono shrink-0">
                                         <?= $no++ ?>
                                     </div>
-                                    <div class="min-w-0">
-                                        <h4 class="font-bold text-slate-800 dark:text-white truncate text-sm leading-tight"><?= $item['kk_name'] ?></h4>
-                                        <div class="flex flex-wrap items-center gap-2 mt-0.5">
-                                            <span class="text-[10px] font-mono text-slate-500 dark:text-slate-400"><?= $item['nikk'] ?></span>
-                                        </div>
                                     </div>
                                 </div>
 
+                                <?php if(!$isViewOnly): ?>
                                 <button onclick="deleteItem(<?= $item['id'] ?>)" class="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-700/50 text-slate-400 hover:bg-rose-100 hover:text-rose-500 dark:hover:bg-rose-900/30 dark:hover:text-rose-400 transition-all flex items-center justify-center shrink-0 ml-2">
                                     <i class="fas fa-trash-alt text-xs"></i>
                                 </button>
+                                <?php endif; ?>
                             </div>
                             <?php endforeach; ?>
                         </div>
@@ -146,9 +145,13 @@
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Jenis Tarif</label>
                     <select name="kode_tarif" class="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 dark:text-white appearance-none" required>
-                        <option value="">-- Pilih Tarif --</option>
+                        <?php if(count($tariffs) > 1): ?>
+                            <option value="">-- Pilih Tarif --</option>
+                        <?php endif; ?>
                         <?php foreach($tariffs as $t): ?>
-                            <option value="<?= $t['kode_tarif'] ?>"><?= $t['nama_tarif'] ?> (Rp <?= number_format($t['tarif'],0,',','.') ?>)</option>
+                            <option value="<?= $t['kode_tarif'] ?>" <?= (count($tariffs) == 1) ? 'selected' : '' ?>>
+                                <?= $t['nama_tarif'] ?> (Rp <?= number_format($t['tarif'],0,',','.') ?>)
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
