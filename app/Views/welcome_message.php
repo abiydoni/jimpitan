@@ -962,6 +962,82 @@
         <?php endif; ?>
     </div>
 
+    <!-- PWA Install Prompt Logic -->
+    <script>
+        let deferredPrompt;
+        
+        // Check if app is already installed
+        const isAppInstalled = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent the mini-infobar from appearing on mobile
+            e.preventDefault();
+            // Stash the event so it can be triggered later.
+            deferredPrompt = e;
+            
+            if (isAppInstalled) return;
+
+            // Check if mobile (screen width < 768px matches Tailwind md breakpoint)
+            const isMobile = window.matchMedia('(max-width: 768px)').matches;
+            if (!isMobile) return;
+
+            // Check interval (1 hour = 3600000 ms)
+            const now = Date.now();
+            const lastPrompt = localStorage.getItem('last_pwa_prompt');
+            
+            // If never shown or shown more than 1 hour ago
+            if (!lastPrompt || (now - parseInt(lastPrompt) > 3600000)) {
+                // Add a small delay so it doesn't pop up immediately on load
+                setTimeout(showPwaInstallPrompt, 3000);
+            }
+        });
+
+        function showPwaInstallPrompt() {
+            Swal.fire({
+                title: 'Pasang Aplikasi?',
+                text: 'Pasang Jimpitan App di layar utama HP Anda agar lebih mudah diakses!',
+                imageUrl: '<?= base_url("favicon.ico") ?>',
+                imageWidth: 50,
+                imageHeight: 50,
+                imageAlt: 'App Icon',
+                showCancelButton: true,
+                confirmButtonColor: '#6366f1',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: 'Ya, Pasang!',
+                cancelButtonText: 'Nanti Saja',
+                reverseButtons: true,
+                customClass: {
+                    popup: 'rounded-[2rem] glass dark:bg-slate-900/90 dark:border dark:border-slate-700',
+                    title: 'text-xl font-bold text-slate-800 dark:text-white',
+                    htmlContainer: 'text-slate-600 dark:text-slate-300 text-sm',
+                    confirmButton: 'rounded-xl px-5 py-2.5 font-bold shadow-lg shadow-indigo-500/30',
+                    cancelButton: 'rounded-xl px-5 py-2.5 font-bold text-slate-600 bg-slate-200 hover:bg-slate-300'
+                }
+            }).then((result) => {
+                // Record prompt time regardless of choice to prevent spamming
+                localStorage.setItem('last_pwa_prompt', Date.now());
+                
+                if (result.isConfirmed) {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        deferredPrompt.userChoice.then((choiceResult) => {
+                            if (choiceResult.outcome === 'accepted') {
+                                console.log('User accepted the PWA install');
+                            }
+                            deferredPrompt = null;
+                        });
+                    }
+                }
+            });
+        }
+        
+        // Optional: Listen for app installed event to clean up
+        window.addEventListener('appinstalled', () => {
+             deferredPrompt = null;
+             console.log('PWA was installed');
+        });
+    </script>
+
     <!-- Global Loader -->
     <?= $this->include('partials/loader') ?>
 
