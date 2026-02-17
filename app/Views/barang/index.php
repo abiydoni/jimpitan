@@ -165,9 +165,9 @@
 
                         <div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Kode Barang</label>
-                                <input type="text" name="kode_brg" id="formKode" required 
-                                    class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 dark:text-white text-sm font-mono placeholder-slate-300" placeholder="BRG-001">
+                                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Kode Barang <span class="text-indigo-500 normal-case tracking-normal">(Otomatis)</span></label>
+                                <input type="text" name="kode_brg" id="formKode" required readonly
+                                    class="w-full px-4 py-3 bg-slate-100 dark:bg-slate-800 border-none rounded-2xl focus:ring-0 cursor-not-allowed text-slate-500 dark:text-slate-400 text-sm font-mono placeholder-slate-300" placeholder="Otomatis">
                             </div>
                         </div>
 
@@ -230,9 +230,22 @@
             }, 200);
         }
 
+        // Auto-generate Code
+        document.getElementById('formNama').addEventListener('input', function(e) {
+            const nama = e.target.value;
+            if (nama.length >= 3) {
+                const prefix = nama.substring(0, 3).toUpperCase();
+                const random = Math.floor(10000 + Math.random() * 90000);
+                document.getElementById('formKode').value = prefix + random;
+            }
+        });
+
         function editBarang(data) {
             modalTitle.innerText = 'Edit Barang';
             document.getElementById('formId').value = data.kode;
+            // Existing code is filled, but editing name will overwrite it based on logic above.
+            // If we want to preserve old code on edit unless name completely changes, 
+            // we'd need to store old name. But requested behavior is auto-generate.
             document.getElementById('formKode').value = data.kode_brg;
             document.getElementById('formNama').value = data.nama;
             document.getElementById('formJumlah').value = data.jumlah;
