@@ -87,42 +87,45 @@
         <!-- Grid View -->
         <!-- Grid View -->
         <?php if(!empty($barang)): ?>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
-            <?php foreach ($barang as $b): ?>
-                <div class="bg-white dark:bg-slate-800 rounded-2xl p-3 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-lg transition-all group flex flex-col h-full relative overflow-hidden">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 mb-8">
+            <?php 
+            $page = $pager->getCurrentPage('barang') ?? 1;
+            $perPage = 12;
+            foreach ($barang as $key => $b): 
+                $no = ($page - 1) * $perPage + $key + 1;
+            ?>
+                <div class="bg-white dark:bg-slate-800 rounded-xl p-2 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
                     
-                    <div class="flex items-center gap-3">
-                        <!-- Image / Icon -->
-                        <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-slate-700/50 flex-shrink-0 flex items-center justify-center border border-indigo-100 dark:border-slate-600">
-                             <i class="fas fa-box text-sm text-indigo-500 dark:text-indigo-400"></i>
+                    <div class="flex items-center gap-2">
+                        <!-- Number -->
+                        <div class="text-[10px] font-mono text-slate-400 min-w-[16px] shrink-0">
+                            <?= $no ?>.
                         </div>
 
-                        <div class="flex-1 min-w-0">
-                            <h3 class="font-bold text-sm text-slate-800 dark:text-white truncate leading-tight">
+                        <!-- Content: Code - Name - Qty -->
+                        <div class="flex-1 min-w-0 flex flex-wrap items-center gap-x-1.5 leading-none">
+                            <span class="bg-slate-100 dark:bg-slate-700 px-1 py-px rounded text-[9px] font-mono text-slate-500 dark:text-slate-400 shrink-0">
+                                <?= $b['kode_brg'] ?>
+                            </span>
+                            <h3 class="font-bold text-xs text-slate-800 dark:text-white truncate">
                                 <?= $b['nama'] ?>
                             </h3>
-                            <div class="flex items-center justify-between mt-0.5">
-                                <div class="flex items-center gap-2">
-                                    <span class="bg-slate-100 dark:bg-slate-700 px-1.5 py-px rounded text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                                        <?= $b['kode_brg'] ?>
-                                    </span>
-                                    <span class="text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                                        <?= $b['jumlah'] ?> Unit
-                                    </span>
-                                </div>
-                                
-                                <?php if(!empty($canManage)): ?>
-                                <div class="flex gap-1">
-                                     <button onclick="editBarang(<?= htmlspecialchars(json_encode($b)) ?>)" class="w-5 h-5 rounded bg-indigo-50 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 dark:hover:text-white flex items-center justify-center transition-all">
-                                        <i class="fas fa-pencil-alt text-[9px]"></i>
-                                    </button>
-                                    <button onclick="deleteBarang(<?= $b['kode'] ?>, '<?= $b['nama'] ?>')" class="w-5 h-5 rounded bg-rose-50 dark:bg-slate-700 text-rose-500 hover:bg-rose-500 hover:text-white dark:hover:bg-rose-600 flex items-center justify-center transition-all">
-                                        <i class="fas fa-trash-alt text-[9px]"></i>
-                                    </button>
-                                </div>
-                                <?php endif; ?>
-                            </div>
+                            <span class="text-[9px] font-bold text-slate-600 dark:text-slate-300 shrink-0">
+                                (<?= $b['jumlah'] ?> Unit)
+                            </span>
                         </div>
+
+                        <!-- Buttons (Icons Only) -->
+                        <?php if(!empty($canManage)): ?>
+                        <div class="flex gap-1 shrink-0">
+                            <button onclick="editBarang(<?= htmlspecialchars(json_encode($b)) ?>)" class="w-5 h-5 rounded bg-indigo-50 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 dark:hover:text-white flex items-center justify-center transition-all" title="Edit">
+                                <i class="fas fa-pencil-alt text-[9px]"></i>
+                            </button>
+                            <button onclick="deleteBarang(<?= $b['kode'] ?>, '<?= $b['nama'] ?>')" class="w-5 h-5 rounded bg-rose-50 dark:bg-slate-700 text-rose-500 hover:bg-rose-500 hover:text-white dark:hover:bg-rose-600 flex items-center justify-center transition-all" title="Hapus">
+                                <i class="fas fa-trash-alt text-[9px]"></i>
+                            </button>
+                        </div>
+                        <?php endif; ?>
                     </div>
 
                 </div>
