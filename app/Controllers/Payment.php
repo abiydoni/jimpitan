@@ -40,39 +40,49 @@ class Payment extends BaseController
         $tarifs = [];
         
         // Scenario A: Super Admin (Legacy 100) or explicitly 's_admin' role (check session role too if reliable)
+        // Scenario A: Super Admin (Legacy 100) or explicitly 's_admin' role
         if ($userTarif == 100 || session()->get('role') == 's_admin') {
             $tarifs = $this->tarifModel->where('status', 1)->where('metode !=', 0)->findAll();
         } 
         // Scenario B: Check if User ID maps to a Pengurus
         else {
-            // Check tb_pengurus
             $pengurus = $this->db->table('tb_pengurus')->where('id', $userTarif)->get()->getRowArray();
-            
+            if (!$pengurus) {
+                $pengurus = $this->db->table('tb_pengurus')->where('nama_pengurus', session()->get('role'))->get()->getRowArray();
+            }
+
             if ($pengurus) {
-                // Fetch tariffs assigned to this Pengurus (aggregating from all menus or specific context?)
-                // Since this is the "Payment" controller, we ideally want tariffs for 'iuran' menus.
-                // But getting *all* assigned tariffs is a safe starting point for the index.
+                // Collect IDs from tb_pengurus.kode_tarif (global primary) and tb_pengurus_menu.akses_tarif (granular)
+                $allowedIds = [];
+                
+                // From primary tarif ID if stored in kode_tarif field (assuming it might store ID or Code?) 
+                // Actually looking at tb_pengurus.kode_tarif it seems to be a code. 
+                // But Payment.php uses IDs in the menu assignments.
+                
                 $assignments = $this->db->table('tb_pengurus_menu')
                     ->where('id_pengurus', $pengurus['id'])
-                    ->like('akses_tarif', ',', 'both') // Optimize? No, regex or just get all non-empty
-                    ->orWhere('id_pengurus', $pengurus['id']) // Just get all for this pengurus
                     ->get()->getResultArray();
 
-                $allowedIds = [];
                 foreach ($assignments as $asm) {
                     if (!empty($asm['akses_tarif'])) {
                         $ids = explode(',', $asm['akses_tarif']);
-                        foreach($ids as $tid) $allowedIds[] = trim($tid);
+                        foreach($ids as $tid) {
+                             $tid = trim($tid);
+                             if(!empty($tid)) $allowedIds[] = $tid;
+                        }
                     }
                 }
                 
                 $allowedIds = array_unique($allowedIds);
                 
                 if (!empty($allowedIds)) {
-                     $tarifs = $this->tarifModel->where('status', 1)
-                                                ->where('metode !=', 0)
-                                                ->whereIn('id', $allowedIds)
-                                                ->findAll();
+                    $tarifs = $this->tarifModel->where('status', 1)
+                                               ->where('metode !=', 0)
+                                               ->whereIn('id', $allowedIds)
+                                               ->findAll();
+                } else {
+                    // IF no specific restrictions found for this pengurus, ALLOW ALL
+                    $tarifs = $this->tarifModel->where('status', 1)->where('metode !=', 0)->findAll();
                 }
             } 
             // Scenario C: Legacy direct tariff ID (Fallback)
@@ -125,39 +135,47 @@ class Payment extends BaseController
             $isPowerUser = ($role === 's_admin' || $role === 'admin');
             
             if (!$isPowerUser) {
-                 if ($userTarif == $tarif['id']) {
-                     // Allowed
-                 } else {
-                     $db = \Config\Database::connect();
-                     
-                     $pengurus = $db->table('tb_pengurus')->where('id', $userTarif)->get()->getRowArray();
-                     if (!$pengurus) {
-                          $pengurus = $db->table('tb_pengurus')->where('nama_pengurus', $role)->get()->getRowArray();
-                     }
-                     
-                     $hasAccess = false;
-                     if ($pengurus) {
-                          $assignments = $db->table('tb_pengurus_menu')
-                             ->where('id_pengurus', $pengurus['id'])
-                             ->like('akses_tarif', ',', 'both')
-                             ->orWhere('id_pengurus', $pengurus['id'])
-                             ->get()->getResultArray();
+                if ($userTarif == $tarif['id']) {
+                    // Allowed (Direct via user.tarif)
+                } else {
+                    $db = \Config\Database::connect();
+                    
+                    $pengurus = $db->table('tb_pengurus')->where('id', $userTarif)->get()->getRowArray();
+                    if (!$pengurus) {
+                        $pengurus = $db->table('tb_pengurus')->where('nama_pengurus', $role)->get()->getRowArray();
+                    }
+                    
+                    if ($pengurus) {
+                        // Check if there are ANY specific tariff restrictions for this pengurus across all menus
+                        $assignments = $db->table('tb_pengurus_menu')
+                            ->where('id_pengurus', $pengurus['id'])
+                            ->get()->getResultArray();
 
-                          foreach ($assignments as $asm) {
-                              if (!empty($asm['akses_tarif'])) {
-                                  $ids = explode(',', $asm['akses_tarif']);
-                                  if (in_array($tarif['id'], $ids)) {
-                                      $hasAccess = true;
-                                      break;
-                                  }
-                              }
-                          }
-                     }
-                     
-                     if (!$hasAccess) {
-                          return redirect()->to('/payment')->with('error', 'Akses ditolak untuk tarif ini.');
-                     }
-                 }
+                        $allRestrictions = [];
+                        foreach ($assignments as $asm) {
+                            if (!empty($asm['akses_tarif'])) {
+                                foreach (explode(',', $asm['akses_tarif']) as $tid) {
+                                    $tid = trim($tid);
+                                    if (!empty($tid)) $allRestrictions[] = $tid;
+                                }
+                            }
+                        }
+
+                        if (empty($allRestrictions)) {
+                            // NO restrictions found -> FULL authority (Access Allowed)
+                            $hasAccess = true;
+                        } else {
+                            // Restrictions found -> Check if current tariff is in allowed list
+                            $hasAccess = in_array($tarif['id'], $allRestrictions);
+                        }
+                    } else {
+                        $hasAccess = false;
+                    }
+                    
+                    if (!$hasAccess) {
+                        return redirect()->to('/payment')->with('error', 'Akses ditolak untuk tarif ini.');
+                    }
+                }
             }
             
             // Fetch Warga List

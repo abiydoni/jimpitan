@@ -138,10 +138,9 @@ class Keuangan extends BaseController
                     // Filter the available Tariff Dropdown for View
                     $data['tarif'] = $this->tarifModel->whereIn('kode_tarif', $allowedCodes)->findAll();
                 } else {
-                    // No access -> Show nothing
-                    $builder->where('1=0');
-                    $totalBuilder->where('1=0');
-                    $data['tarif'] = []; 
+                    // IF no specific restrictions found for this pengurus, ALLOW ALL
+                    // (Ensure they have menu access via lower check which we rely on)
+                    $data['tarif'] = $this->tarifModel->findAll();
                 }
             }
 

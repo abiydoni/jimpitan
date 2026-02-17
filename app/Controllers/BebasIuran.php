@@ -25,58 +25,54 @@ class BebasIuran extends BaseController
         $userId = session()->get('id_code');
         $userTarif = session()->get('tarif') ?? 0;
         
-        // 1. Admin / Super Admin view all
-        if ($userTarif == 100 || session()->get('role') == 's_admin' || session()->get('role') == 'admin') {
-             // Allowed all
-        } else {
+        $isAdmin = ($userTarif == 100 || session()->get('role') == 's_admin' || session()->get('role') == 'admin');
+
+        if (!$isAdmin) {
             // 2. Check Pengurus Assignment
             $pengurus = $db->table('tb_pengurus')->where('id', $userTarif)->get()->getRowArray();
             if (!$pengurus) {
-                 $pengurus = $db->table('tb_pengurus')->where('nama_pengurus', session()->get('role'))->get()->getRowArray();
+                $pengurus = $db->table('tb_pengurus')->where('nama_pengurus', session()->get('role'))->get()->getRowArray();
             }
 
-            if($pengurus && !empty($pengurus['kode_tarif'])) {
-                 $allowedCodes[] = $pengurus['kode_tarif'];
-            }
-            elseif ($pengurus) {
-                 // Check tb_pengurus_menu for granular access
-                 // We look for 'akses_tarif' in ANY menu assignment for this pengurus, 
-                 // OR specifically for this menu if we want to be strict. 
-                 // Let's use the same logic as Keuangan.php: gather ALL accessible tariffs from all menus.
-                 $assignments = $db->table('tb_pengurus_menu')
+            if ($pengurus) {
+                // Priority 1: Direct Assignment in tb_pengurus
+                if (!empty($pengurus['kode_tarif'])) {
+                    $allowedCodes[] = $pengurus['kode_tarif'];
+                }
+
+                // Priority 2: Check tb_pengurus_menu for granular access (CSV of tariff IDs)
+                $assignments = $db->table('tb_pengurus_menu')
                     ->where('id_pengurus', $pengurus['id'])
-                    ->like('akses_tarif', ',', 'both') // Simple check
-                    ->orWhere('id_pengurus', $pengurus['id'])
                     ->get()->getResultArray();
 
                 foreach ($assignments as $asm) {
                     if (!empty($asm['akses_tarif'])) {
                         $ids = explode(',', $asm['akses_tarif']);
-                        // Convert IDs to Codes
-                        if(!empty($ids)) {
-                             $tList = $db->table('tb_tarif')->whereIn('id', $ids)->get()->getResultArray();
-                             foreach($tList as $tl) $allowedCodes[] = $tl['kode_tarif'];
+                        $ids = array_filter(array_map('trim', $ids));
+                        if (!empty($ids)) {
+                            $tList = $db->table('tb_tarif')->whereIn('id', $ids)->get()->getResultArray();
+                            foreach ($tList as $tl) $allowedCodes[] = $tl['kode_tarif'];
                         }
                     }
                 }
             }
             
-            // 3. Fallback (Direct assignment in users table if not 100)
+            // 3. Fallback (Direct assignment in users table)
             if (empty($allowedCodes) && $userTarif > 0 && $userTarif != 100 && !$pengurus) {
-                 $t = $db->table('tb_tarif')->where('id', $userTarif)->get()->getRowArray();
-                 if($t) $allowedCodes[] = $t['kode_tarif'];
+                $t = $db->table('tb_tarif')->where('id', $userTarif)->get()->getRowArray();
+                if ($t) $allowedCodes[] = $t['kode_tarif'];
             }
         }
         
         // Fetch Tariffs based on filter
         $tariffBuilder = $db->table('tb_tarif')->where('status', 1);
-        if (!empty($allowedCodes)) {
+        if (!$isAdmin && !empty($allowedCodes)) {
             $allowedCodes = array_unique($allowedCodes);
             $tariffBuilder->whereIn('kode_tarif', $allowedCodes);
-        } elseif (!($userTarif == 100 || session()->get('role') == 's_admin' || session()->get('role') == 'admin')) {
-            // If not admin and no allowed codes found -> Empty
-            $tariffBuilder->where('1=0');
         }
+        // If !isAdmin but allowedCodes is empty, we DON'T add 1=0 anymore 
+        // to allow full access for pengurus with no specific constraints.
+        
         $tariffs = $tariffBuilder->get()->getResultArray();
         // --- END TARIFF FILTER LOGIC ---
 
@@ -88,10 +84,8 @@ class BebasIuran extends BaseController
             ->join('tb_tarif', 'tb_tarif.kode_tarif = tb_bebas_iuran.kode_tarif', 'left')
             ->orderBy('tb_bebas_iuran.created_at', 'DESC');
             
-        if (!empty($allowedCodes)) {
+        if (!$isAdmin && !empty($allowedCodes)) {
              $exemptionBuilder->whereIn('tb_bebas_iuran.kode_tarif', $allowedCodes);
-        } elseif (!($userTarif == 100 || session()->get('role') == 's_admin' || session()->get('role') == 'admin')) {
-             $exemptionBuilder->where('1=0');
         }
         
         $exemptions = $exemptionBuilder->get()->getResultArray();
