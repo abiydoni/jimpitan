@@ -13,7 +13,7 @@ class ProfilModel extends Model
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
     protected $allowedFields    = [
-        'nama', 'alamat', 'cp', 'hp', 'logo', 'gambar', 'catatan'
+        'nama', 'alamat', 'cp', 'hp', 'logo', 'gambar', 'catatan', 'jimpitan_start_date'
     ];
 
     // Dates

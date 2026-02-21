@@ -132,9 +132,12 @@ $routes->post('/profil/updatePhoto', 'Home::updateMemberPhoto', ['filter' => 'au
 // Keuangan (Jurnal)
 $routes->group('keuangan', ['filter' => 'authFilter'], function($routes) {
     $routes->get('jurnal_sub', 'Keuangan::jurnal_sub');
+    $routes->get('jurnal_jimpitan', 'Keuangan::jurnal_jimpitan');
     $routes->get('jurnal_umum', 'Keuangan::jurnal_umum');
     $routes->post('save_sub', 'Keuangan::save_sub');
     $routes->post('save_umum', 'Keuangan::save_umum');
+    $routes->get('get_unsettled_jimpitan', 'Keuangan::get_unsettled_jimpitan');
+    $routes->post('setor_jimpitan', 'Keuangan::setor_jimpitan');
 });
 
 // Inventori Barang

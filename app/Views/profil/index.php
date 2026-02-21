@@ -111,6 +111,16 @@
                             </div>
                         </div>
 
+                        <!-- Jimpitan Effective Date -->
+                        <div class="col-span-1 sm:col-span-2">
+                            <label class="block text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase mb-2">Tanggal Efektif Setoran Jimpitan</label>
+                             <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400"><i class="fas fa-calendar-alt"></i></span>
+                                <input type="date" name="jimpitan_start_date" value="<?= esc($profil['jimpitan_start_date']) ?>" class="w-full pl-10 pr-4 py-3 bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/50 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:text-white font-bold" title="Data scan sebelum tanggal ini tidak akan muncul di daftar setoran.">
+                            </div>
+                            <p class="text-[10px] text-slate-500 mt-1 italic">Data scan sebelum tanggal ini tidak akan muncul di daftar "Setor Jimpitan".</p>
+                        </div>
+
                         <!-- Alamat -->
                         <div class="col-span-1 sm:col-span-2">
                             <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Alamat Lengkap</label>

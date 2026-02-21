@@ -185,6 +185,137 @@ class Keuangan extends BaseController
         return view('keuangan/jurnal_sub', $data);
     }
 
+    public function jurnal_jimpitan()
+    {
+        if (!session()->get('isLoggedIn')) return redirect()->to('/login');
+
+        $data = $this->getCommonData('Jurnal Jimpitan');
+        
+        try {
+            $builder = $this->kasSubModel
+                ->select('kas_sub.date_trx, kas_sub.reff, kas_sub.coa_code, MAX(kas_sub.id_trx) as id_trx, SUM(kas_sub.debet) as debet, SUM(kas_sub.kredit) as kredit, COUNT(kas_sub.id_trx) as count_trx, GROUP_CONCAT(CONCAT(kas_sub.desc_trx, "||", GREATEST(kas_sub.debet, kas_sub.kredit)) SEPARATOR ";;;") as detail_trx, max(tb_coa.name) as nama_akun, max(tb_coa.code) as kode_akun')
+                ->join('tb_coa', 'tb_coa.code = kas_sub.coa_code', 'left')
+                ->join('tb_setoran_jimpitan', 'tb_setoran_jimpitan.id_kas_sub = kas_sub.id_trx', 'left')
+                ->where('kas_sub.reff', 'JMP')
+                ->groupBy('IF(tb_setoran_jimpitan.id IS NOT NULL, CAST(kas_sub.date_trx AS CHAR), CONCAT("manual_", kas_sub.id_trx))')
+                ->orderBy('date_trx', 'DESC')
+                ->orderBy('id_trx', 'DESC');
+                
+            $totalBuilder = $this->db->table('kas_sub')->where('reff', 'JMP'); 
+
+            $accessType = $this->getMenuAccessType('jurnal_jimpitan');
+            $data['isViewOnly'] = ($accessType === 'view');
+
+            // Calculate Totals
+            $totals = $totalBuilder->selectSum('debet')->selectSum('kredit')->get()->getRowArray();
+            $data['totalDebetAll'] = $totals['debet'] ?? 0;
+            $data['totalKreditAll'] = $totals['kredit'] ?? 0;
+            $data['saldoAll'] = $data['totalDebetAll'] - $data['totalKreditAll'];
+
+            $data['transaksi'] = $builder->paginate(20, 'jimpitan');
+            $data['pager'] = $this->kasSubModel->pager;
+            
+        } catch (\Exception $e) {
+             $data['error'] = 'Database Error: ' . $e->getMessage();
+             $data['transaksi'] = [];
+        }
+
+        $data['coa'] = $this->coaModel->findAll();
+        $data['userTarif'] = session()->get('id_code'); 
+
+        return view('keuangan/jurnal_jimpitan', $data);
+    }
+
+    public function get_unsettled_jimpitan()
+    {
+        if (!is_cli() && !session()->get('isLoggedIn')) return $this->response->setJSON([]);
+
+        $profil = $this->db->table('tb_profil')->get()->getRowArray();
+        // Temporarily broaden to see if ANY data exists
+        $startDate = !empty($profil['jimpitan_start_date']) ? $profil['jimpitan_start_date'] : '2024-01-01';
+
+        // Use array for whereNotIn to be safe
+        $setoran = $this->db->table('tb_setoran_jimpitan')->select('tanggal_jimpitan')->get()->getResultArray();
+        $alreadySetor = array_column($setoran, 'tanggal_jimpitan');
+        
+        $builder = $this->db->table('report')
+                    ->select('jimpitan_date as tanggal, SUM(nominal) as total, COUNT(id) as jml_scan')
+                    ->where('status', 1)
+                    ->where('jimpitan_date >=', $startDate)
+                    ->where('nominal >', 0);
+
+        if (!empty($alreadySetor)) {
+            $builder->whereNotIn('jimpitan_date', $alreadySetor);
+        }
+
+        $dates = $builder->groupBy('jimpitan_date')
+                    ->orderBy('jimpitan_date', 'DESC')
+                    ->get()
+                    ->getResultArray();
+
+        // Result
+        return $this->response->setJSON([
+            'status' => 'success',
+            'data' => $dates
+        ]);
+    }
+
+    public function setor_jimpitan()
+    {
+        if (!session()->get('isLoggedIn')) return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        
+        if ($this->getMenuAccessType('jurnal_jimpitan') !== 'full') {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Akses ditolak. Anda hanya memiliki akses lihat.']);
+        }
+
+        $tanggal = $this->request->getPost('tanggal');
+        if (!$tanggal) return $this->response->setJSON(['status' => 'error', 'message' => 'Tanggal wajib diisi']);
+
+        $existing = $this->db->table('tb_setoran_jimpitan')->where('tanggal_jimpitan', $tanggal)->get()->getRowArray();
+        if ($existing) return $this->response->setJSON(['status' => 'error', 'message' => 'Data untuk tanggal ini sudah disetor.']);
+
+        $reportData = $this->db->table('report')
+                         ->selectSum('nominal', 'total')
+                         ->where('jimpitan_date', $tanggal)
+                         ->get()
+                         ->getRowArray();
+        
+        $total = $reportData['total'] ?? 0;
+        if ($total <= 0) return $this->response->setJSON(['status' => 'error', 'message' => 'Tidak ada nominal jimpitan untuk disetor pada tanggal tersebut.']);
+
+        $coa = $this->db->table('tb_coa')->like('name', 'Jimpitan')->get()->getRowArray();
+        $coaCode = $coa['code'] ?? '41101'; 
+
+        $this->db->transStart();
+
+        $jurnalData = [
+            'date_trx' => $tanggal, 
+            'coa_code' => $coaCode,
+            'desc_trx' => "Setoran Jimpitan Bersih Tgl " . date('d/m/Y', strtotime($tanggal)),
+            'debet'    => $total,
+            'kredit'   => 0,
+            'reff'     => 'JMP'
+        ];
+        $this->kasSubModel->insert($jurnalData);
+        $idTrx = $this->db->insertID();
+
+        $this->db->table('tb_setoran_jimpitan')->insert([
+            'tanggal_jimpitan' => $tanggal,
+            'total_nominal'    => $total,
+            'id_kas_sub'       => $idTrx,
+            'created_at'       => date('Y-m-d H:i:s')
+        ]);
+
+        $this->db->transComplete();
+
+        if ($this->db->transStatus() === FALSE) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal memproses setoran.']);
+        }
+
+        return $this->response->setJSON(['status' => 'success', 'message' => 'Setoran jimpitan berhasil diproses.']);
+    }
+
+
     public function jurnal_umum()
     {
         if (!session()->get('isLoggedIn')) return redirect()->to('/login');
@@ -252,8 +383,10 @@ class Keuangan extends BaseController
         ];
 
         $this->kasSubModel->save($data);
-        return redirect()->to('/keuangan/jurnal_sub')->with('success', 'Data berhasil disimpan');
+        $redirectUrl = $this->request->getPost('redirect_url') ?: '/keuangan/jurnal_sub';
+        return redirect()->to($redirectUrl)->with('success', 'Data berhasil disimpan');
     }
+
 
     public function save_umum()
     {

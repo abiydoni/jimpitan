@@ -98,6 +98,7 @@ class Profil extends BaseController
             'cp'      => $this->request->getPost('cp'),
             'hp'      => $this->request->getPost('hp'),
             'catatan' => $this->request->getPost('catatan'),
+            'jimpitan_start_date' => $this->request->getPost('jimpitan_start_date'),
         ];
 
         // Handle File Uploads
