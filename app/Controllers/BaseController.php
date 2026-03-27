@@ -125,6 +125,10 @@ abstract class BaseController extends Controller
         } else {
              // precise match on alamat_url (e.g. 'warga' or 'warga/index')
              $menuItem = $db->table('tb_menu')->where('alamat_url', $menuCode)->get()->getRowArray();
+             if (!$menuItem) {
+                 // Fallback to like match for submenus like keuangan/jurnal_sub
+                 $menuItem = $db->table('tb_menu')->like('alamat_url', $menuCode, 'both')->get()->getRowArray();
+             }
              if ($menuItem) {
                  $realMenuCode = $menuItem['kode'];
              }

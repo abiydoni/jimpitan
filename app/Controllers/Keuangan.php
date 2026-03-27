@@ -86,8 +86,8 @@ class Keuangan extends BaseController
                      $pengurus = $this->db->table('tb_pengurus')->where('nama_pengurus', session()->get('role'))->get()->getRowArray();
                 }
 
-                if($pengurus && !empty($pengurus['kode_tarif'])) {
-                     $allowedCodes[] = $pengurus['kode_tarif'];
+                if($pengurus && !empty(trim($pengurus['kode_tarif'] ?? ''))) {
+                     $allowedCodes[] = trim($pengurus['kode_tarif']);
                 }
                 // 2. Fallback: If tb_pengurus.kode_tarif is empty, maybe check legacy or menu assignments? 
                 // User said "biar gampang" using tb_pengurus.kode_tarif. 
@@ -157,6 +157,11 @@ class Keuangan extends BaseController
             // Note: BaseController resolves by kode or alamat_url.
 
             $accessType = $this->getMenuAccessType($menuCode);
+
+            // If null, it means no access at all. We should redirect rather than giving false hope
+            if ($accessType === null) {
+                return redirect()->to('/')->with('error', 'Akses ditolak. Anda tidak memiliki akses ke menu ini.');
+            }
             $data['isViewOnly'] = ($accessType === 'view');
 
             // Calculate Totals
