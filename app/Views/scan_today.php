@@ -209,6 +209,13 @@
             if (el.dataset.sig === signature) return; // Skip update if identical
             el.dataset.sig = signature;
 
+            const isSystem = (item.collector === 'System' || item.collector.toLowerCase() === 'system');
+            
+            const badgeClass = isSystem 
+                ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/50' 
+                : 'text-slate-400 bg-slate-100 dark:bg-slate-700 border border-transparent';
+            const badgeText = isSystem ? 'By System' : 'Berhasil';
+
             el.innerHTML = `
                 <div class="flex items-center gap-2 min-w-0">
                     <div class="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center text-[10px] font-bold font-mono shrink-0">
@@ -219,14 +226,14 @@
                         <div class="flex items-center gap-1 text-[9px] text-slate-400 leading-none">
                             <span>${item.waktu}</span>
                             <span class="w-0.5 h-0.5 rounded-full bg-slate-300"></span>
-                            <span class="truncate">${item.collector}</span>
+                            <span class="truncate ${isSystem ? 'text-amber-500 font-medium' : ''}">${item.collector}</span>
                         </div>
                     </div>
                 </div>
                 <div class="text-right shrink-0">
                     <div class="font-bold text-emerald-500 text-xs leading-none">${formatRupiah(item.nominal)}</div>
-                    <div class="text-[8px] font-bold text-slate-400 mt-0.5 bg-slate-100 dark:bg-slate-700 px-1 py-px rounded inline-block leading-none">
-                        Berhasil
+                    <div class="text-[8px] font-bold mt-0.5 px-1 py-px rounded inline-block leading-none ${badgeClass}">
+                        ${badgeText}
                     </div>
                 </div>
             `;

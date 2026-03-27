@@ -577,14 +577,23 @@
         }
 
         function updateElementContent(el, item, number) {
+            const isSystem = (item.collector === 'System' || item.collector.toLowerCase() === 'system');
+            
+            const badgeItem = isSystem 
+                ? `<span class="px-1 py-0.5 rounded text-[8px] font-bold bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 ml-1 uppercase leading-none border border-amber-200 dark:border-amber-800/50 inline-block">Manual/Sys</span>`
+                : '';
+
             el.innerHTML = `
                 <div class="flex gap-2 items-center min-w-0">
                     <div class="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center text-[10px] font-bold font-mono shrink-0">
                         ${number}
                     </div>
                     <div class="min-w-0 truncate">
-                        <p class="text-xs font-bold text-slate-800 dark:text-white leading-none truncate">${item.nama}</p>
-                        <p class="text-[9px] text-slate-400 dark:text-slate-500 leading-none mt-0.5 truncate">
+                        <div class="flex items-center">
+                            <p class="text-xs font-bold text-slate-800 dark:text-white leading-none truncate">${item.nama}</p>
+                            ${badgeItem}
+                        </div>
+                        <p class="text-[9px] ${isSystem ? 'text-amber-500 font-medium' : 'text-slate-400 dark:text-slate-500'} leading-none mt-1 truncate">
                            ${item.collector}
                         </p>
                     </div>

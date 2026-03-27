@@ -191,6 +191,7 @@
                                 <table class="w-full text-xs text-left">
                                     <thead class="bg-slate-100 dark:bg-slate-800 text-[10px] uppercase font-bold text-slate-500 sticky top-0">
                                         <tr>
+                                            <th class="px-3 py-2 text-center w-10">No</th>
                                             <th class="px-3 py-2">Barang</th>
                                             <th class="px-3 py-2 text-center w-20">Stok</th>
                                             <th class="px-3 py-2 w-24">Jumlah</th>
@@ -198,13 +199,15 @@
                                     </thead>
                                     <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
                                         <?php if(empty($barangList)): ?>
-                                            <tr><td colspan="3" class="px-3 py-4 text-center text-slate-500">Tidak ada barang</td></tr>
+                                            <tr><td colspan="4" class="px-3 py-4 text-center text-slate-500">Tidak ada barang</td></tr>
                                         <?php else: ?>
-                                            <?php foreach($barangList as $b): ?>
+                                            <?php $no = 1; foreach($barangList as $b): ?>
                                                 <tr class="hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors">
+                                                    <td class="px-3 py-1.5 text-center text-slate-500 font-medium text-[10px]">
+                                                        <?= $no++ ?>
+                                                    </td>
                                                     <td class="px-3 py-1.5">
                                                         <span class="font-bold text-slate-700 dark:text-slate-200 block text-xs"><?= $b['nama'] ?></span>
-                                                        <span class="text-[9px] text-slate-400 font-mono"><?= $b['kode'] ?></span>
                                                     </td>
                                                     <td class="px-3 py-1.5 text-center">
                                                         <?php if($b['jumlah'] > 0): ?>
