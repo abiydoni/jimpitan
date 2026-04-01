@@ -92,10 +92,10 @@ class Home extends BaseController
             $validIds = array_column($validTarifIds, 'id');
     
             $menus = array_filter($menus, function($m) use ($userTarif, $validIds) {
-                $url = $m['alamat_url'];
+                $url = $m['alamat_url'] ?? '';
                 $isJurnalSub = strpos($url, 'jurnal_sub') !== false;
                 $isJurnalUmum = strpos($url, 'jurnal_umum') !== false;
-    
+
                 // Only filter Jurnal menus
                 if (!$isJurnalSub && !$isJurnalUmum) return true;
     
@@ -265,6 +265,17 @@ class Home extends BaseController
         $totalObligation = 0;
         $billDetails = []; 
 
+        // Helper for item naming
+        $yesterdayStr = date('d M Y', strtotime('-1 day'));
+        $getItemName = function($name, $year, $code, $months = null) use ($yesterdayStr) {
+            $base = "$name $year";
+            if ($months !== null) $base .= " ($months bln)";
+            if ($code === 'TR001') {
+                $base .= " (Harian s/d $yesterdayStr)";
+            }
+            return $base;
+        };
+
         foreach ($tariffs as $t) {
             $nominal = $t['tarif'];
             $method = $t['metode'];
@@ -324,16 +335,8 @@ class Home extends BaseController
                     }
                 };
 
-                // Helper for item naming
-                $yesterdayStr = date('d M Y', strtotime('-1 day'));
-                $getItemName = function($name, $year, $code, $months = null) use ($yesterdayStr) {
-                    $base = "$name $year";
-                    if ($months !== null) $base .= " ($months bln)";
-                    if ($code === 'TR001') {
-                        $base .= " (Harian s/d $yesterdayStr)";
-                    }
-                    return $base;
-                };
+                // Helper for item naming was moved to outside the loop
+
 
                 // Last Year
                 if ($lastYear >= 2026) {
@@ -407,7 +410,7 @@ class Home extends BaseController
     
                         $totalObligation += $amountLastYear;
                         $billDetails[] = [
-                            'item' => $getItemName($name, $lastYear, $code),
+                            'item' => $getItemName($name, $lastYear, $code, null),
                             'amount' => $amountLastYear,
                             'paid' => $paidLastYear,
                             'remaining' => $remLastYear
@@ -424,7 +427,7 @@ class Home extends BaseController
     
                         $totalObligation += $amountThisYear;
                         $billDetails[] = [
-                            'item' => $getItemName($name, $currentYear, $code),
+                            'item' => $getItemName($name, $currentYear, $code, null),
                             'amount' => $amountThisYear,
                             'paid' => $paidThisYear,
                             'remaining' => $remThisYear
@@ -439,7 +442,7 @@ class Home extends BaseController
 
                       $totalObligation += $nominal;
                       $billDetails[] = [
-                         'item' => $getItemName($name, $currentYear, $code),
+                         'item' => $getItemName($name, $currentYear, $code, null),
                          'amount' => $nominal,
                          'paid' => $paidThisYear,
                          'remaining' => $remThisYear

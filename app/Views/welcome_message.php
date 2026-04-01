@@ -421,7 +421,7 @@
                         // Check for 'akses_tarif' (comma separated IDs)
                         // If present, append to URL so controller can contextually use it if needed
                         // Although Payment controller mainly checks specific permissions now.
-                        $finalUrl = $menu['alamat_url'];
+                        $finalUrl = $menu['alamat_url'] ?? '';
                         if (!empty($menu['akses_tarif'])) {
                              $separator = (strpos($finalUrl, '?') !== false) ? '&' : '?';
                              $finalUrl .= $separator . 'tarif_ids=' . $menu['akses_tarif'];
