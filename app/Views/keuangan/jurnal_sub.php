@@ -30,9 +30,7 @@
     <style>
         .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
         .dark .glass { background: rgba(30, 41, 59, 0.9); }
-        .input-field {
-            @apply w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all;
-        }
+
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-dark text-slate-800 dark:text-slate-200 min-h-screen pb-20">
@@ -136,9 +134,14 @@
                                 <td class="px-3 py-1.5 align-top">
                                     <div class="flex flex-col gap-1">
                                         <div class="flex items-center gap-2">
-                                            <span class="font-bold text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-1.5 rounded whitespace-nowrap"><?= date('d/m/y', strtotime($t['date_trx'])) ?></span>
-                                            <div class="font-bold text-slate-700 dark:text-slate-200 text-xs flex items-center gap-1">
-                                                <?= $t['nama_akun'] ?>
+                                            <span class="font-bold text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-1.5 rounded whitespace-nowrap"><?=date('d/m/y', strtotime($t['date_trx'] ?? 'today'))?></span>
+                                            
+                                            <?php if (!empty($t['sub_reff'])): ?>
+                                                <span class="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded text-[9px] font-bold shadow-sm"><?= $t['sub_reff'] ?></span>
+                                            <?php endif; ?>
+
+                                            <div class="font-bold text-slate-700 dark:text-white text-xs">
+                                                <?=$t['nama_akun']?>
                                                 <?php if($isAuto): ?>
                                                     <span class="text-[8px] bg-indigo-600 text-white px-1.5 py-0.5 rounded shadow-sm shadow-indigo-500/30 uppercase tracking-widest font-bold flex items-center gap-1" title="Otomatis dari Sistem">
                                                         <i class="fas fa-robot text-[8px]"></i> AUTO
@@ -348,6 +351,7 @@
                 const parts = item.split('||');
                 const desc = parts[0] || '-';
                 const amount = parseFloat(parts[1]) || 0;
+                const subReff = parts[2] || '';
                 
                 // Check if it's a correction/deletion
                 const isCorrection = /koreksi|hapus/i.test(desc);
@@ -365,7 +369,12 @@
                 const amountPrefix = isCorrection ? '- ' : '';
                 
                 tr.innerHTML = `
-                    <td class="px-4 py-2.5 dark:text-slate-300 ${isCorrection ? 'italic text-slate-400 line-through decoration-rose-400' : ''}">${desc}</td>
+                    <td class="px-4 py-2.5 dark:text-slate-300 ${isCorrection ? 'italic text-slate-400 line-through decoration-rose-400' : ''}">
+                        <div class="flex items-center gap-2">
+                            <span>${desc}</span>
+                            ${subReff ? `<span class="px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-500 rounded text-[9px] font-bold border border-indigo-100/50 dark:border-indigo-800/50 shrink-0 capitalize">${subReff}</span>` : ''}
+                        </div>
+                    </td>
                     <td class="px-4 py-2.5 text-right font-medium ${amountClass} whitespace-nowrap">${amountPrefix}Rp ${new Intl.NumberFormat('id-ID').format(amount)}</td>
                 `;
                 tbody.appendChild(tr);

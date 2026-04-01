@@ -30,9 +30,7 @@
     <style>
         .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
         .dark .glass { background: rgba(30, 41, 59, 0.9); }
-        .input-field {
-            @apply w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all;
-        }
+
         .fancy-scrollbar::-webkit-scrollbar { width: 5px; }
         .fancy-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .fancy-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -51,7 +49,10 @@
         </div>
         
         <?php if (empty($isViewOnly)): ?>
-        <div class="flex gap-2">
+            <a href="/keuangan/hutang_jimpitan" class="px-4 py-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center text-xs font-bold shadow-sm hover:scale-105 transition-transform gap-2">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <span>Hutang</span>
+            </a>
             <button onclick="openSetorModal()" class="px-4 py-2 bg-emerald-600 rounded-xl flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-emerald-500/30 hover:scale-105 transition-transform gap-2">
                 <i class="fas fa-hand-holding-usd"></i>
                 <span>Setor</span>
@@ -113,7 +114,12 @@
                                     <div class="flex flex-col gap-1">
                                         <div class="flex items-center gap-2">
                                             <span class="font-bold text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-1.5 rounded whitespace-nowrap"><?=date('d/m/y', strtotime($t['date_trx']))?></span>
-                                            <div class="font-bold text-slate-700 dark:text-slate-200 text-xs">
+                                            
+                                            <?php if (!empty($t['sub_reff'])): ?>
+                                                <span class="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded text-[9px] font-bold shadow-sm"><?= $t['sub_reff'] ?></span>
+                                            <?php endif; ?>
+
+                                            <div class="font-bold text-slate-700 dark:text-slate-200 text-xs truncate max-w-[150px]">
                                                 <?=$t['nama_akun']?>
                                             </div>
                                         </div>
@@ -192,7 +198,7 @@
 
             <form action="/keuangan/save_sub" method="POST" class="space-y-4">
                 <?=csrf_field()?>
-                <input type="hidden" name="kode_tarif" value="JMP">
+                <input type="hidden" name="kode_tarif" value="TR001">
                 <input type="hidden" name="redirect_url" value="/keuangan/jurnal_jimpitan">
                 
                 <div class="grid grid-cols-2 gap-4">

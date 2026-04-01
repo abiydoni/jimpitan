@@ -154,7 +154,6 @@ class Scan extends BaseController
                 // Perform Deletion
                 try {
                     $db->table('report')->where('id', $existing['id'])->delete();
-                    log_activity('DELETE_JIMPITAN', 'Deleted Jimpitan for Report ID: ' . $warga['code_id']);
                     return $this->response->setJSON([
                         'status' => 'deleted',
                         'message' => 'Data jimpitan dihapus.',
@@ -201,7 +200,6 @@ class Scan extends BaseController
 
         try {
             $db->table('report')->insert($data);
-            log_activity('SCAN_JIMPITAN', 'Scanned Jimpitan for: ' . $warga['kk_name'] . ' (' . $warga['code_id'] . ')');
             return $this->response->setJSON([
                 'status' => 'success', 
                 'message' => 'Jimpitan berhasil dicatat!',
@@ -275,9 +273,8 @@ class Scan extends BaseController
         if ($existing) {
              // Logic similar to Scan Camera: Confirm Delete
              if ($confirmDelete === 'true' || $confirmDelete === true) {
-                 try {
+                try {
                     $db->table('report')->where('id', $existing['id'])->delete();
-                    log_activity('DELETE_JIMPITAN_MANUAL', 'Deleted Manual Jimpitan for: ' . $warga['kk_name']);
                     return $this->response->setJSON([
                         'status' => 'success',
                         'message' => 'Data jimpitan berhasil dibatalkan/dihapus.',
@@ -312,7 +309,6 @@ class Scan extends BaseController
 
         try {
             $db->table('report')->insert($data);
-            log_activity('MANUAL_SCAN_JIMPITAN', 'Manual Jimpitan for: ' . $warga['kk_name'] . ' Date: ' . $date);
             return $this->response->setJSON(['status' => 'success', 'message' => 'Data jimpitan manual berhasil disimpan.']);
         } catch (\Exception $e) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal menyimpan: ' . $e->getMessage()]);

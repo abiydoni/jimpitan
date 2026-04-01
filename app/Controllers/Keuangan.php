@@ -52,7 +52,7 @@ class Keuangan extends BaseController
             $userTarif = $user['tarif'] ?? 0;
 
             $builder = $this->kasSubModel
-                ->select('kas_sub.date_trx, kas_sub.reff, kas_sub.coa_code, MAX(kas_sub.id_trx) as id_trx, SUM(kas_sub.debet) as debet, SUM(kas_sub.kredit) as kredit, COUNT(kas_sub.id_trx) as count_trx, GROUP_CONCAT(CONCAT(kas_sub.desc_trx, "||", GREATEST(kas_sub.debet, kas_sub.kredit)) SEPARATOR ";;;") as detail_trx, max(tb_coa.name) as nama_akun, max(tb_coa.code) as kode_akun, max(tb_tarif.nama_tarif) as nama_tarif')
+                ->select('kas_sub.date_trx, kas_sub.reff, kas_sub.coa_code, MAX(kas_sub.sub_reff) as sub_reff, MAX(kas_sub.id_trx) as id_trx, SUM(kas_sub.debet) as debet, SUM(kas_sub.kredit) as kredit, COUNT(kas_sub.id_trx) as count_trx, GROUP_CONCAT(CONCAT(kas_sub.desc_trx, "||", GREATEST(kas_sub.debet, kas_sub.kredit), "||", IFNULL(kas_sub.sub_reff, "")) SEPARATOR ";;;") as detail_trx, max(tb_coa.name) as nama_akun, max(tb_coa.code) as kode_akun, max(tb_tarif.nama_tarif) as nama_tarif')
                 ->join('tb_coa', 'tb_coa.code = kas_sub.coa_code', 'left')
                 ->join('tb_tarif', 'tb_tarif.kode_tarif = kas_sub.reff', 'left')
                 ->groupBy(['kas_sub.date_trx', 'kas_sub.reff', 'kas_sub.coa_code'])
@@ -201,12 +201,12 @@ class Keuangan extends BaseController
                 ->select('kas_sub.date_trx, kas_sub.reff, kas_sub.coa_code, MAX(kas_sub.id_trx) as id_trx, SUM(kas_sub.debet) as debet, SUM(kas_sub.kredit) as kredit, COUNT(kas_sub.id_trx) as count_trx, GROUP_CONCAT(CONCAT(kas_sub.desc_trx, "||", GREATEST(kas_sub.debet, kas_sub.kredit)) SEPARATOR ";;;") as detail_trx, max(tb_coa.name) as nama_akun, max(tb_coa.code) as kode_akun')
                 ->join('tb_coa', 'tb_coa.code = kas_sub.coa_code', 'left')
                 ->join('tb_setoran_jimpitan', 'tb_setoran_jimpitan.id_kas_sub = kas_sub.id_trx', 'left')
-                ->where('kas_sub.reff', 'JMP')
+                ->where('kas_sub.reff', 'TR001')
                 ->groupBy('IF(tb_setoran_jimpitan.id IS NOT NULL, CAST(kas_sub.date_trx AS CHAR), CONCAT("manual_", kas_sub.id_trx))')
                 ->orderBy('date_trx', 'DESC')
                 ->orderBy('id_trx', 'DESC');
                 
-            $totalBuilder = $this->db->table('kas_sub')->where('reff', 'JMP'); 
+            $totalBuilder = $this->db->table('kas_sub')->where('reff', 'TR001'); 
 
             $accessType = $this->getMenuAccessType('jurnal_jimpitan');
             $data['isViewOnly'] = ($accessType === 'view');
@@ -299,7 +299,7 @@ class Keuangan extends BaseController
             'desc_trx' => "Setoran Jimpitan Bersih Tgl " . date('d/m/Y', strtotime($tanggal)),
             'debet'    => $total,
             'kredit'   => 0,
-            'reff'     => 'JMP'
+            'reff'     => 'TR001'
         ];
         $this->kasSubModel->insert($jurnalData);
         $idTrx = $this->db->insertID();
@@ -427,5 +427,358 @@ class Keuangan extends BaseController
 
         $this->kasUmumModel->save($data);
         return redirect()->to('/keuangan/jurnal_umum')->with('success', 'Data berhasil disimpan');
+    }
+
+    public function hutang_jimpitan()
+    {
+        if (!session()->get('isLoggedIn')) return redirect()->to('/login');
+
+        $data = $this->getCommonData('Hutang Jimpitan');
+        
+        $search = $this->request->getGet('search');
+        $builder = $this->db->table('master_kk');
+        
+        if ($search) {
+            $builder->like('kk_name', $search)->orLike('code_id', $search);
+        }
+        
+        $data['dataKK'] = $builder->orderBy('kk_name', 'ASC')->get()->getResultArray();
+        $data['search'] = $search;
+
+        return view('keuangan/hutang_jimpitan_list', $data);
+    }
+
+    public function detail_hutang_jimpitan($code_id)
+    {
+        if (!session()->get('isLoggedIn')) return redirect()->to('/login');
+
+        $builder = $this->db->table('master_kk');
+        $builder->where('code_id', $code_id);
+        $kk = $builder->get()->getRowArray();
+        
+        if (!$kk) return redirect()->to('/keuangan/hutang_jimpitan')->with('error', 'Data KK tidak ditemukan');
+
+        // Fetch Photo from tb_warga
+        $warga = $this->db->table('tb_warga')
+                          ->where(['nikk' => $kk['nikk'], 'hubungan' => 'Kepala Keluarga'])
+                          ->get()->getRowArray();
+        $kk['foto'] = $warga['foto'] ?? null;
+
+        $year = $this->request->getGet('year') ?? date('Y');
+        $data = $this->getCommonData('Detail Hutang - ' . $kk['kk_name']);
+        
+        // Get Jimpitan Tariff
+        $tarif = $this->db->table('tb_tarif')->where('kode_tarif', 'TR001')->get()->getRowArray();
+        $nominalTarif = $tarif['tarif'] ?? 500;
+
+        $monthlyData = [];
+        $currentMonth = (int)date('n');
+        $currentYear = (int)date('Y');
+
+        for ($m = 1; $m <= 12; $m++) {
+            $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $m, $year);
+            $target = $daysInMonth * $nominalTarif;
+
+            // Get Scans (from report table)
+            $scans = $this->db->table('report')
+                        ->where('report_id', $code_id)
+                        ->where('YEAR(jimpitan_date)', $year)
+                        ->where('MONTH(jimpitan_date)', $m)
+                        ->where('status', 1)
+                        ->countAllResults();
+            $scannedAmount = $scans * $nominalTarif;
+
+            // Get Manual Payments (from tb_iuran)
+            $payments = $this->db->table('tb_iuran')
+                        ->selectSum('jml_bayar')
+                        ->where('nikk', $kk['nikk'])
+                        ->where('kode_tarif', 'TR001')
+                        ->where('tahun', $year)
+                        ->where('bulan', $m)
+                        ->get()
+                        ->getRowArray();
+            $paidAmount = $payments['jml_bayar'] ?? 0;
+
+            $totalPaid = $scannedAmount + $paidAmount;
+            $debt = $target - $totalPaid;
+
+            // Logic: Pay button only for past months
+            $isPast = ($year < $currentYear) || ($year == $currentYear && $m < $currentMonth);
+
+            $monthlyData[] = [
+                'bulan' => $m,
+                'nama_bulan' => date('F', mktime(0, 0, 0, $m, 10)),
+                'target' => $target,
+                'total_paid' => $totalPaid,
+                'paid_manual' => $paidAmount,
+                'debt' => $debt > 0 ? $debt : 0,
+                'status' => $totalPaid >= $target ? 'Lunas' : 'Hutang',
+                'is_past' => $isPast
+            ];
+        }
+
+        $data['kk'] = $kk;
+        $data['year'] = $year;
+        $data['monthlyData'] = $monthlyData;
+        $data['nominalTarif'] = $nominalTarif;
+
+        return view('keuangan/hutang_jimpitan_detail', $data);
+    }
+
+    public function get_hutang_summary($code_id)
+    {
+        if (!session()->get('isLoggedIn')) return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+
+        $kk = $this->db->table('master_kk')->where('code_id', $code_id)->get()->getRowArray();
+        if (!$kk) return $this->response->setJSON(['status' => 'error', 'message' => 'Data KK tidak ditemukan']);
+
+        $year = $this->request->getGet('year') ?? date('Y');
+        
+        // Get Jimpitan Tariff
+        $tarif = $this->db->table('tb_tarif')->where('kode_tarif', 'TR001')->get()->getRowArray();
+        $nominalTarif = $tarif['tarif'] ?? 500;
+
+        $monthlyData = [];
+        $currentMonth = (int)date('n');
+        $currentYear = (int)date('Y');
+
+        for ($m = 1; $m <= 12; $m++) {
+            $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $m, $year);
+            $target = $daysInMonth * $nominalTarif;
+
+            // Get Scans (from report table)
+            $scans = $this->db->table('report')
+                        ->where('report_id', $code_id)
+                        ->where('YEAR(jimpitan_date)', $year)
+                        ->where('MONTH(jimpitan_date)', $m)
+                        ->where('status', 1)
+                        ->countAllResults();
+            $scannedAmount = $scans * $nominalTarif;
+
+            // Get Manual Payments (from tb_iuran)
+            $payments = $this->db->table('tb_iuran')
+                        ->selectSum('jml_bayar')
+                        ->where('nikk', $kk['nikk'])
+                        ->where('kode_tarif', 'TR001')
+                        ->where('tahun', $year)
+                        ->where('bulan', $m)
+                        ->get()
+                        ->getRowArray();
+            $paidAmount = $payments['jml_bayar'] ?? 0;
+
+            $totalPaid = $scannedAmount + $paidAmount;
+            $debt = $target - $totalPaid;
+
+            // Logic: Pay button only for past months
+            $isPast = ($year < $currentYear) || ($year == $currentYear && $m < $currentMonth);
+
+            $monthlyData[] = [
+                'bulan' => $m,
+                'nama_bulan' => date('F', mktime(0, 0, 0, $m, 10)),
+                'target' => $target,
+                'total_paid' => $totalPaid,
+                'debt' => $debt > 0 ? $debt : 0,
+                'status' => $totalPaid >= $target ? 'Lunas' : 'Hutang',
+                'is_past' => $isPast
+            ];
+        }
+
+        return $this->response->setJSON([
+            'status' => 'success',
+            'kk' => $kk,
+            'year' => $year,
+            'summary' => $monthlyData,
+            'nominalTarif' => $nominalTarif
+        ]);
+    }
+
+    public function get_daily_detail($code_id, $bulan, $tahun)
+    {
+        if (!session()->get('isLoggedIn')) return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+
+        $kk = $this->db->table('master_kk')->where('code_id', $code_id)->get()->getRowArray();
+        if (!$kk) return $this->response->setJSON(['status' => 'error', 'message' => 'Data KK tidak ditemukan']);
+
+        // Get Jimpitan Tariff
+        $tarif = $this->db->table('tb_tarif')->where('kode_tarif', 'TR001')->get()->getRowArray();
+        $nominalTarif = $tarif['tarif'] ?? 500;
+
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $bulan, $tahun);
+        $scans = $this->db->table('report')
+                    ->where('report_id', $code_id)
+                    ->where('YEAR(jimpitan_date)', $tahun)
+                    ->where('MONTH(jimpitan_date)', $bulan)
+                    ->get()
+                    ->getResultArray();
+        
+        $scanMap = [];
+        foreach ($scans as $s) {
+            $day = (int)date('j', strtotime($s['jimpitan_date']));
+            $scanMap[$day] = $s;
+        }
+
+        $dailyData = [];
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $hasScan = isset($scanMap[$d]) && $scanMap[$d]['status'] == 1;
+            $dailyData[] = [
+                'tgl' => $d,
+                'date' => sprintf('%04d-%02d-%02d', $tahun, $bulan, $d),
+                'scanned' => $hasScan,
+                'collector' => $hasScan ? $scanMap[$d]['collector'] : '-',
+                'scan_time' => $hasScan ? $scanMap[$d]['scan_time'] : '-'
+            ];
+        }
+
+        // Get Manual Payments for this specific month
+        $payments = $this->db->table('tb_iuran')
+                    ->where('nikk', $kk['nikk'])
+                    ->where('kode_tarif', 'TR001')
+                    ->where('tahun', $tahun)
+                    ->where('bulan', $bulan)
+                    ->get()
+                    ->getResultArray();
+
+        return $this->response->setJSON([
+            'status' => 'success',
+            'kk_name' => $kk['kk_name'],
+            'month_name' => date('F', mktime(0, 0, 0, $bulan, 10)),
+            'year' => $tahun,
+            'daily' => $dailyData,
+            'payments' => $payments,
+            'nominalTarif' => $nominalTarif
+        ]);
+    }
+
+    public function bayar_hutang_jimpitan()
+    {
+        if (!session()->get('isLoggedIn')) return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+
+        $code_id = $this->request->getPost('code_id');
+        $bulan   = $this->request->getPost('bulan');
+        $tahun   = $this->request->getPost('tahun');
+        $nominal = $this->request->getPost('nominal');
+
+        $kk = $this->db->table('master_kk')->where('code_id', $code_id)->get()->getRowArray();
+        if (!$kk) return $this->response->setJSON(['status' => 'error', 'message' => 'Data KK tidak ditemukan']);
+
+        $this->db->transStart();
+
+        $dataPayment = [
+            'kode_tarif'  => 'TR001',
+            'nikk'        => $kk['nikk'],
+            'jenis_iuran' => 'wajib',
+            'bulan'       => $bulan,
+            'tahun'       => $tahun,
+            'jumlah'      => $nominal,
+            'jml_bayar'   => $nominal,
+            'status'      => 'Lunas',
+            'tgl_bayar'   => date('Y-m-d H:i:s'),
+            'keterangan'  => 'Pelunasan Hutang Jimpitan',
+            'created_at'  => date('Y-m-d H:i:s')
+        ];
+        $this->db->table('tb_iuran')->insert($dataPayment);
+
+        // Auto-Journal
+        $tarif = $this->db->table('tb_tarif')->where('kode_tarif', 'TR001')->get()->getRowArray();
+        $coaCode = $tarif['coa_code'] ?? '41101';
+        
+        $journalData = [
+            'date_trx' => date('Y-m-d'),
+            'coa_code' => $coaCode,
+            'desc_trx' => "Bayar Hutang Jimpitan - {$kk['kk_name']} (Bln {$bulan}/{$tahun})",
+            'debet'    => $nominal,
+            'kredit'   => 0,
+            'reff'     => 'TR001_AUTO',
+            'sub_reff' => $code_id
+        ];
+        $this->kasSubModel->insert($journalData);
+
+        $this->db->transComplete();
+
+        if ($this->db->transStatus() === FALSE) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal memproses pembayaran']);
+        }
+
+        return $this->response->setJSON(['status' => 'success', 'message' => 'Pembayaran berhasil dicatat']);
+    }
+
+    public function batal_bayar_hutang_jimpitan()
+    {
+        if (!session()->get('isLoggedIn')) return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+
+        $code_id = $this->request->getPost('code_id');
+        $bulan   = $this->request->getPost('bulan');
+        $tahun   = $this->request->getPost('tahun');
+
+        $kk = $this->db->table('master_kk')->where('code_id', $code_id)->get()->getRowArray();
+        if (!$kk) return $this->response->setJSON(['status' => 'error', 'message' => 'Data KK tidak ditemukan']);
+
+        $this->db->transStart();
+
+        // 1. Remove from tb_iuran (Manual Payments)
+        $this->db->table('tb_iuran')
+            ->where('nikk', $kk['nikk'])
+            ->where('kode_tarif', 'TR001')
+            ->where('bulan', $bulan)
+            ->where('tahun', $tahun)
+            ->where('keterangan', 'Pelunasan Hutang Jimpitan')
+            ->delete();
+
+        // 2. Remove from kas_sub (Journal)
+        $this->db->table('kas_sub')
+            ->where('sub_reff', $code_id)
+            ->like('desc_trx', "Hutang Jimpitan", 'both')
+            ->like('desc_trx', "Bln {$bulan}/{$tahun}", 'both')
+            ->delete();
+
+        $this->db->transComplete();
+
+        if ($this->db->transStatus() === FALSE) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal membatalkan pembayaran']);
+        }
+
+        return $this->response->setJSON(['status' => 'success', 'message' => 'Pembayaran berhasil dibatalkan']);
+    }
+
+    public function hapus_pembayaran_item()
+    {
+        if (!session()->get('isLoggedIn')) return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+
+        $id = $this->request->getPost('id');
+        if (!$id) return $this->response->setJSON(['status' => 'error', 'message' => 'ID Pembayaran tidak valid']);
+
+        $payment = $this->db->table('tb_iuran')->where('id_iuran', $id)->get()->getRowArray();
+        if (!$payment) return $this->response->setJSON(['status' => 'error', 'message' => 'Data pembayaran tidak ditemukan']);
+
+        // Only allow deletion of manual payments
+        if ($payment['keterangan'] !== 'Pelunasan Hutang Jimpitan') {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Hanya pembayaran manual yang dapat dihapus secara individual']);
+        }
+
+        $kk = $this->db->table('master_kk')->where('nikk', $payment['nikk'])->get()->getRowArray();
+        if (!$kk) return $this->response->setJSON(['status' => 'error', 'message' => 'Data KK tidak ditemukan']);
+
+        $this->db->transStart();
+
+        // 1. Identify and remove matching journal entry in kas_sub
+        // Description pattern: "Bayar Hutang Jimpitan - [Name] (Bln [Month]/[Year])"
+        $descPattern = "Bln {$payment['bulan']}/{$payment['tahun']}";
+        
+        $this->db->table('kas_sub')
+            ->where('sub_reff', $kk['code_id'])
+            ->where('debet', $payment['jml_bayar'])
+            ->like('desc_trx', 'Hutang Jimpitan', 'both')
+            ->delete();
+
+        // 2. Remove the payment from tb_iuran
+        $this->db->table('tb_iuran')->where('id_iuran', $id)->delete();
+
+        $this->db->transComplete();
+
+        if ($this->db->transStatus() === FALSE) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal menghapus pembayaran']);
+        }
+
+        return $this->response->setJSON(['status' => 'success', 'message' => 'Pembayaran berhasil dihapus']);
     }
 }

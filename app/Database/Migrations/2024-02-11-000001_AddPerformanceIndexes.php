@@ -19,6 +19,10 @@ class AddPerformanceIndexes extends Migration
 
         // Index for tb_pengurus_menu
         $this->db->query("ALTER TABLE `tb_pengurus_menu` ADD INDEX IF NOT EXISTS `idx_perf_id_pengurus` (`id_pengurus`)");
+
+        // Index for report
+        $this->db->query("ALTER TABLE `report` ADD INDEX IF NOT EXISTS `idx_perf_report_date` (`report_id`, `jimpitan_date`)");
+        $this->db->query("ALTER TABLE `report` ADD INDEX IF NOT EXISTS `idx_perf_date` (`jimpitan_date`)");
     }
 
     public function down()
@@ -33,5 +37,8 @@ class AddPerformanceIndexes extends Migration
         $this->db->query("ALTER TABLE `tb_warga` DROP INDEX `idx_perf_hubungan`");
 
         $this->db->query("ALTER TABLE `tb_pengurus_menu` DROP INDEX `idx_perf_id_pengurus`");
+
+        $this->db->query("ALTER TABLE `report` DROP INDEX `idx_perf_report_date`");
+        $this->db->query("ALTER TABLE `report` DROP INDEX `idx_perf_date`");
     }
 }

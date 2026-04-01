@@ -138,6 +138,15 @@ $routes->group('keuangan', ['filter' => 'authFilter'], function($routes) {
     $routes->post('save_umum', 'Keuangan::save_umum');
     $routes->get('get_unsettled_jimpitan', 'Keuangan::get_unsettled_jimpitan');
     $routes->post('setor_jimpitan', 'Keuangan::setor_jimpitan');
+    
+    // Hutang Jimpitan
+    $routes->get('hutang_jimpitan', 'Keuangan::hutang_jimpitan');
+    $routes->get('hutang_jimpitan/detail/(:segment)', 'Keuangan::detail_hutang_jimpitan/$1');
+    $routes->get('get_hutang_summary/(:segment)', 'Keuangan::get_hutang_summary/$1');
+    $routes->get('get_daily_detail/(:segment)/(:num)/(:num)', 'Keuangan::get_daily_detail/$1/$2/$3');
+    $routes->post('hutang_jimpitan/bayar', 'Keuangan::bayar_hutang_jimpitan');
+    $routes->post('hutang_jimpitan/batal', 'Keuangan::batal_bayar_hutang_jimpitan');
+    $routes->post('hutang_jimpitan/hapus_item', 'Keuangan::hapus_pembayaran_item');
 });
 
 // Inventori Barang

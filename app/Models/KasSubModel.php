@@ -14,6 +14,6 @@ class KasSubModel extends Model
     // protected $createdField     = 'created_at'; 
     // protected $updatedField     = 'updated_at';
     protected $allowedFields    = [
-        'date_trx', 'coa_code', 'desc_trx', 'reff', 'debet', 'kredit', 'timestamp'
+        'date_trx', 'coa_code', 'desc_trx', 'reff', 'sub_reff', 'debet', 'kredit', 'timestamp'
     ];
 }
