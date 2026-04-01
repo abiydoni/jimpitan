@@ -65,6 +65,7 @@ $routes->get('warga', 'Warga::index', ['filter' => 'authFilter']);
 $routes->post('warga/store', 'Warga::store', ['filter' => 'authFilter']);
 $routes->post('warga/update', 'Warga::update', ['filter' => 'authFilter']);
 $routes->post('warga/delete/(:num)', 'Warga::delete/$1', ['filter' => 'authFilter']);
+$routes->post('warga/mark_deceased', 'Warga::markDeceased', ['filter' => 'authFilter']);
 
 // Logs
 $routes->get('/logs', 'Log::index', ['filter' => 'authFilter']);

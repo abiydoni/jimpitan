@@ -17,7 +17,7 @@ class WargaModel extends Model
         'tpt_lahir', 'tgl_lahir', 'alamat', 'rt', 'rw', 
         'kelurahan', 'kecamatan', 'kota', 'propinsi', 
         'negara', 'agama', 'status', 'pekerjaan', 'hp', 
-        'foto', 'tgl_warga'
+        'foto', 'tgl_warga', 'is_active', 'tgl_meninggal'
     ];
 
     // Dates

@@ -49,6 +49,8 @@
             background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+        .is-deceased { filter: grayscale(1); opacity: 0.7; }
+        .is-deceased:hover { filter: grayscale(0.5); opacity: 0.9; }
     </style>
 </head>
 <body class="min-h-screen bg-slate-50 dark:bg-dark transition-colors duration-300">
@@ -110,12 +112,9 @@
 
             <?php foreach($warga as $w): ?>
             <?php 
-                // Server-side check to prevent 404s
-                // if(!empty($w['foto']) && !file_exists(FCPATH . 'img/warga/' . $w['foto'])) {
-                //    $w['foto'] = ''; // Reset if file not found
-                // }
+                $isDeceased = isset($w['is_active']) && $w['is_active'] == 0;
             ?>
-            <div class="bg-white dark:bg-slate-800 rounded-xl px-4 py-2 flex items-center justify-between border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group">
+            <div class="bg-white dark:bg-slate-800 rounded-xl px-4 py-2 flex items-center justify-between border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group <?= $isDeceased ? 'is-deceased' : '' ?>">
                 <div class="flex items-center gap-3 overflow-hidden">
                     <div class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center shrink-0 overflow-hidden relative">
                         <?php if(!empty($w['foto'])): ?>
@@ -126,6 +125,9 @@
                     <div class="min-w-0 flex flex-col justify-center">
                         <div class="flex items-baseline gap-2">
                             <h4 class="font-bold text-slate-700 dark:text-slate-200 text-sm truncate"><?= esc($w['nama']) ?></h4>
+                            <?php if($isDeceased): ?>
+                                <span class="px-1.5 py-0.5 rounded text-[8px] font-bold bg-slate-200 dark:bg-slate-700 text-slate-500 uppercase tracking-tighter shrink-0">MENINGGAL</span>
+                            <?php endif; ?>
                         </div>
                         <div class="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
                             <span class="tracking-wider font-mono"><?= esc($w['nik']) ?></span>
@@ -142,6 +144,11 @@
                     <button onclick='openEditModal(<?= json_encode($w) ?>)' class="w-8 h-8 rounded-lg text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center justify-center transition-colors">
                         <i class="fas fa-pencil-alt text-xs"></i>
                     </button>
+                    <?php if(!$isDeceased): ?>
+                    <button onclick="confirmMeninggal(<?= $w['id_warga'] ?>, '<?= esc($w['nama']) ?>')" class="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 flex items-center justify-center transition-colors" title="Warga Meninggal Dunia">
+                        <i class="fas fa-cross text-xs"></i>
+                    </button>
+                    <?php endif; ?>
                     <button onclick="confirmDelete(<?= $w['id_warga'] ?>, '<?= esc($w['nama']) ?>')" class="w-8 h-8 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center justify-center transition-colors">
                         <i class="fas fa-trash-alt text-xs"></i>
                     </button>
@@ -444,6 +451,60 @@
                             Swal.fire('Gagal', res.message, 'error');
                         }
                     });
+                }
+            });
+        }
+
+        function confirmMeninggal(id, name) {
+            Swal.fire({
+                title: 'Warga Meninggal Dunia',
+                html: `Apakah benar warga <b>${name}</b> telah meninggal dunia?<br><br>
+                       <div class="text-left"><label class="text-xs font-bold text-slate-400 uppercase">Tanggal Kematian:</label></div>
+                       <input type="date" id="tgl_meninggal_swal" class="swal2-input !mt-1" value="<?= date('Y-m-d') ?>">
+                       <p class="text-[10px] text-rose-500 mt-2 font-medium italic">*Jika warga ini adalah Kepala Keluarga, pengganti akan ditunjuk otomatis dari anggota keluarga lain yang masih aktif.</p>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#6366f1',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Konfirmasi',
+                cancelButtonText: 'Batal',
+                preConfirm: () => {
+                    const tgl = document.getElementById('tgl_meninggal_swal').value;
+                    if (!tgl) {
+                        Swal.showValidationMessage('Tanggal kematian wajib diisi');
+                    }
+                    return tgl;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Memproses...',
+                        allowOutsideClick: false,
+                        didOpen: () => Swal.showLoading()
+                    });
+
+                    const formData = new FormData();
+                    formData.append('id_warga', id);
+                    formData.append('tgl_meninggal', result.value);
+
+                    fetch('/warga/mark_deceased', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(res => res.json())
+                    .then(res => {
+                        if(res.status === 'success') {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil',
+                                text: res.message,
+                                timer: 2000
+                            }).then(() => location.reload());
+                        } else {
+                            Swal.fire('Gagal', res.message, 'error');
+                        }
+                    })
+                    .catch(err => Swal.fire('Error', 'Terjadi kesalahan sistem', 'error'));
                 }
             });
         }

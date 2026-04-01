@@ -207,6 +207,93 @@ class Warga extends BaseController
         }
     }
 
+    public function markDeceased()
+    {
+        $session = session();
+        $role = $session->get('role');
+        $isAdmin = in_array($role, ['s_admin', 'admin']);
+
+        // Access Check
+        if (!$isAdmin) {
+             if (!$this->hasMenuAccess('warga') || $this->getMenuAccessType('warga') === 'view') {
+                  return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+             }
+        }
+
+        $id = $this->request->getPost('id_warga');
+        $tgl_meninggal = $this->request->getPost('tgl_meninggal');
+
+        if (!$id || !$tgl_meninggal) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Data tidak lengkap.']);
+        }
+
+        $warga = $this->wargaModel->find($id);
+        if (!$warga) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Warga tidak ditemukan.']);
+        }
+
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        try {
+            // 1. Update Warga Status
+            $this->wargaModel->update($id, [
+                'is_active' => 0,
+                'tgl_meninggal' => $tgl_meninggal
+            ]);
+
+            // 2. Jika Kepala Keluarga, cari pengganti
+            if ($warga['hubungan'] === 'Kepala Keluarga') {
+                $nikk = $warga['nikk'];
+                
+                // Cari anggota keluarga lain yang masih aktif
+                $anggotaLain = $this->wargaModel->where('nikk', $nikk)
+                                               ->where('id_warga !=', $id)
+                                               ->where('is_active', 1)
+                                               ->findAll();
+
+                if (!empty($anggotaLain)) {
+                    // Pilih pengganti (Urutan: Istri, lalu tertua)
+                    // Sort order: Istri first, then by birthday/id
+                    usort($anggotaLain, function($a, $b) {
+                        if ($a['hubungan'] === 'Istri') return -1;
+                        if ($b['hubungan'] === 'Istri') return 1;
+                        return strcmp($a['tgl_lahir'], $b['tgl_lahir']); // Oldest first
+                    });
+
+                    $pengganti = $anggotaLain[0];
+                    
+                    // Update pengganti jadi KK
+                    $this->wargaModel->update($pengganti['id_warga'], ['hubungan' => 'Kepala Keluarga']);
+                    
+                    // Update master_kk
+                    $db->table('master_kk')->where('nikk', $nikk)->update(['kk_name' => $pengganti['nama']]);
+                    
+                    $msg = "Warga ditandai meninggal. KK baru: " . $pengganti['nama'];
+                } else {
+                    // Tidak ada anggota lain, hapus dari master_kk agar tidak muncul di Scan/Jimpitan
+                    $db->table('master_kk')->where('nikk', $nikk)->delete();
+                    $msg = "Warga ditandai meninggal. Data KK dihapus dari daftar Scan (tidak ada ahli waris).";
+                }
+            } else {
+                $msg = "Warga ditandai meninggal.";
+            }
+
+            $db->transComplete();
+
+            if ($db->transStatus() === false) {
+                 throw new \Exception("Database Transaction Failed");
+            }
+
+            log_activity('MARK_DECEASED', 'Warga marked as deceased: ' . $warga['nama'] . ' (ID: ' . $id . ')');
+            return $this->response->setJSON(['status' => 'success', 'message' => $msg]);
+
+        } catch (\Exception $e) {
+            $db->transRollback();
+            return $this->response->setJSON(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+    }
+
     private function _compressImage($fileName)
     {
         if (!extension_loaded('gd')) return;
