@@ -195,18 +195,6 @@
                     </div>
                 </div>
 
-                <!-- Action Section -->
-                <div class="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-2xl">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div class="flex-1">
-                            <h4 class="text-sm font-bold text-amber-700 dark:text-amber-400">Pembaruan Struktur Database</h4>
-                            <p class="text-xs text-amber-600 dark:text-amber-500/70 mt-1">Jalankan migrasi jika Anda baru saja mengunggah perubahan file (update script). Proses ini akan menyesuaikan tabel database tanpa menghapus data.</p>
-                        </div>
-                        <button type="button" onclick="handleMigrate()" class="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-amber-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
-                            <i class="fas fa-database"></i> Jalankan Update
-                        </button>
-                    </div>
-                </div>
 
                 <div class="pt-6 border-t border-slate-100 dark:border-slate-700 flex justify-end">
                     <button type="submit" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all active:scale-95 flex items-center gap-2">
@@ -306,51 +294,6 @@
             sessionStorage.setItem('activeProfileTab', tabId);
         }
 
-        // Migration logic
-        async function handleMigrate() {
-            const { value: password } = await Swal.fire({
-                title: 'Konfirmasi Pembaruan',
-                text: 'Silakan masukkan password akun Anda untuk menjalankan migrasi database.',
-                input: 'password',
-                inputPlaceholder: 'Password Anda',
-                inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
-                showCancelButton: true,
-                confirmButtonText: 'Lanjutkan',
-                cancelButtonText: 'Batal',
-                confirmButtonColor: '#d97706', // amber-600
-            });
-
-            if (password) {
-                try {
-                    window.showLoader();
-                    const formData = new FormData();
-                    formData.append('password', password);
-
-                    const res = await fetch('/profil/migrate', {
-                        method: 'POST',
-                        body: formData,
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    const json = await res.json();
-
-                    if (json.status === 'success') {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Berhasil',
-                            text: json.message,
-                            confirmButtonColor: '#4f46e5'
-                        }).then(() => location.reload());
-                    } else {
-                        Swal.fire({ icon: 'error', title: 'Gagal', text: json.message });
-                    }
-                } catch (err) {
-                    console.error(err);
-                    Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
-                } finally {
-                    window.hideLoader();
-                }
-            }
-        }
 
         // Theme Toggle
         const themeToggle = document.getElementById('themeToggle');
