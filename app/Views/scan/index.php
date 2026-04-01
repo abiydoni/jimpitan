@@ -270,7 +270,7 @@
                             </div>
                         `,
                         showConfirmButton: false,
-                        timer: 2000,
+                        timer: 1000,
                         background: '#fff',
                         customClass: {
                             popup: 'rounded-3xl shadow-xl'
@@ -329,7 +329,7 @@
                             </div>
                         `,
                         showConfirmButton: false,
-                        timer: 2000,
+                        timer: 1000,
                         customClass: {
                             popup: 'rounded-3xl shadow-xl'
                         }
