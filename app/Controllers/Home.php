@@ -185,37 +185,63 @@ class Home extends BaseController
 
             // Verify if NIKK exists in master_kk
             if ($targetNikk) {
-                $existsInMaster = $db->table('master_kk')->where('nikk', $targetNikk)->countAllResults();
-                if ($existsInMaster > 0) {
+                $kk = $db->table('master_kk')->where('nikk', $targetNikk)->get()->getRowArray();
+                if ($kk) {
                     $showBill = true;
+                    $codeId = $kk['code_id'];
                     
-                    $userPayments = $db->table('tb_iuran')
+                    $iuranResults = $db->table('tb_iuran')
                         ->select('tb_iuran.*, tb_tarif.nama_tarif')
                         ->join('tb_tarif', 'tb_tarif.kode_tarif = tb_iuran.kode_tarif', 'left')
                         ->where('nikk', $targetNikk)
                         ->whereIn('tahun', [$lastYear, $currentYear])
-                        ->where('tahun >=', 2026) // Billing starts from 2026
-                        ->orderBy('tb_tarif.nama_tarif', 'ASC')
-                        ->orderBy('tgl_bayar', 'DESC')
+                        ->where('tahun >=', 2026) 
                         ->get()
                         ->getResultArray();
                     
-                    foreach ($userPayments as $p) {
+                    $userPayments = $iuranResults;
+                    foreach ($iuranResults as $p) {
                         $totalPaid += $p['jml_bayar'];
+                    }
+
+                    // Special: Add scans from report table for Jimpitan (TR001)
+                    $tarifJimpitanData = $db->table('tb_tarif')->where('kode_tarif', 'TR001')->get()->getRowArray();
+                    $tarifJimpitan = $tarifJimpitanData['tarif'] ?? 500;
+
+                    for ($y = $lastYear; $y <= $currentYear; $y++) {
+                        if ($y < 2026) continue;
+                        $scanCount = $db->table('report')
+                            ->where('report_id', $codeId)
+                            ->where('YEAR(jimpitan_date)', $y)
+                            ->where('status', 1)
+                            ->countAllResults();
+                        
+                        if ($scanCount > 0) {
+                            $scanAmount = $scanCount * $tarifJimpitan;
+                            $totalPaid += $scanAmount;
+                            // Add a virtual entry to userPayments for the closure to find
+                            $userPayments[] = [
+                                'kode_tarif' => 'TR001',
+                                'tahun' => $y,
+                                'bulan' => 'Total', // Yearly sum for scans
+                                'jml_bayar' => $scanAmount,
+                                'nama_tarif' => 'Scan Jagaan',
+                                'tgl_bayar' => date('Y-m-d H:i:s')
+                            ];
+                        }
                     }
                 }
             }
         }
         
-        // Group payments by Tariff Name
+        // Group payments by Tariff Name (keeping individual entries for history)
         $groupedPayments = [];
         foreach ($userPayments as $p) {
             $groupName = $p['nama_tarif'] ?? 'Lain-lain';
             $groupedPayments[$groupName][] = $p;
         }
 
-
-            // Fetch active tariffs
+        // Fetch active tariffs
         $tariffs = $db->table('tb_tarif')
             ->where('status', 1)
             ->get()
@@ -231,6 +257,10 @@ class Home extends BaseController
                 ->getResultArray();
             $exemptions = array_column($exResult, 'kode_tarif');
         }
+
+        // Get Jimpitan Start Date for effective months calculation
+        $profil = $db->table('tb_profil')->get()->getRowArray();
+        $startDate = $profil['jimpitan_start_date'] ?? '0000-00-00';
 
         $totalObligation = 0;
         $billDetails = []; 
@@ -258,63 +288,148 @@ class Home extends BaseController
             };
 
             if ($method == 1) { // Bulanan
-                // Last Year
-                if ($lastYear >= 2026) {
-                    $amountLastYear = $nominal * 12;
-                    $paidLastYear = $getPaid($lastYear);
-                    $remLastYear = max(0, $amountLastYear - $paidLastYear);
+                // Helper to calculate annual target
+                $calculateTarget = function($year) use ($code, $nominal, $startDate) {
+                    $startY = (int)date('Y', strtotime($startDate));
+                    $startM = (int)date('n', strtotime($startDate));
                     
-                    $totalObligation += $amountLastYear;
-                    $billDetails[] = [
-                        'item' => "$name $lastYear (12 Bulan)",
-                        'amount' => $amountLastYear,
-                        'paid' => $paidLastYear,
-                        'remaining' => $remLastYear
-                    ];
-                }
-                
-                // This Year (Full 12 months)
-                if ($currentYear >= 2026) {
-                    $amountThisYear = $nominal * 12;
-                    $paidThisYear = $getPaid($currentYear);
-                    $remThisYear = max(0, $amountThisYear - $paidThisYear);
+                    if ($year < $startY) return ['amount' => 0, 'months' => 0];
+                    
+                    if ($code === 'TR001') {
+                        $sum = 0;
+                        $count = 0;
+                        
+                        $monthStart = strtotime("$year-01-01"); // We'll loop through 12 months below
+                        $sysStart = strtotime($startDate);
+                        $yesterday = strtotime('-1 day', strtotime(date('Y-m-d')));
 
-                    $totalObligation += $amountThisYear;
-                    $billDetails[] = [
-                        'item' => "$name $currentYear (12 Bulan)",
-                        'amount' => $amountThisYear,
-                        'paid' => $paidThisYear,
-                        'remaining' => $remThisYear
-                    ];
-                }
+                        for ($m = 1; $m <= 12; $m++) {
+                            $mStart = strtotime("$year-$m-01");
+                            $mEnd = strtotime(date('Y-m-t', $mStart));
 
-            } elseif ($method == 2) { // Tahunan
+                            $effectiveStart = max($mStart, $sysStart);
+                            $effectiveEnd = min($mEnd, $yesterday);
+
+                            if ($effectiveStart <= $effectiveEnd) {
+                                $days = ($effectiveEnd - $effectiveStart) / 86400 + 1;
+                                $sum += (round($days) * $nominal);
+                                $count++;
+                            }
+                        }
+                        return ['amount' => $sum, 'months' => $count];
+                    } else {
+                        // For non-daily monthly tariffs
+                        $actualMonths = ($year > $startY) ? 12 : (12 - $startM + 1);
+                        return ['amount' => $nominal * $actualMonths, 'months' => $actualMonths];
+                    }
+                };
+
+                // Helper for item naming
+                $yesterdayStr = date('d M Y', strtotime('-1 day'));
+                $getItemName = function($name, $year, $code, $months = null) use ($yesterdayStr) {
+                    $base = "$name $year";
+                    if ($months !== null) $base .= " ($months bln)";
+                    if ($code === 'TR001') {
+                        $base .= " (Harian s/d $yesterdayStr)";
+                    }
+                    return $base;
+                };
+
                 // Last Year
                 if ($lastYear >= 2026) {
-                    $paidLastYear = $getPaid($lastYear);
-                    $remLastYear = max(0, $nominal - $paidLastYear);
-
-                    $totalObligation += $nominal;
-                    $billDetails[] = [
-                        'item' => "$name $lastYear",
-                        'amount' => $nominal,
-                        'paid' => $paidLastYear,
-                        'remaining' => $remLastYear
-                    ];
+                    $targetData = $calculateTarget($lastYear);
+                    if ($targetData['months'] > 0) {
+                        $amountLastYear = $targetData['amount'];
+                        $paidLastYear = $getPaid($lastYear);
+                        $remLastYear = max(0, $amountLastYear - $paidLastYear);
+                        
+                        $totalObligation += $amountLastYear;
+                        $billDetails[] = [
+                            'item' => $getItemName($name, $lastYear, $code, $targetData['months']),
+                            'amount' => $amountLastYear,
+                            'paid' => $paidLastYear,
+                            'remaining' => $remLastYear
+                        ];
+                    }
                 }
                 
                 // This Year
                 if ($currentYear >= 2026) {
-                    $paidThisYear = $getPaid($currentYear);
-                    $remThisYear = max(0, $nominal - $paidThisYear);
+                    $targetData = $calculateTarget($currentYear);
+                    if ($targetData['months'] > 0) {
+                        $amountThisYear = $targetData['amount'];
+                        $paidThisYear = $getPaid($currentYear);
+                        $remThisYear = max(0, $amountThisYear - $paidThisYear);
 
-                    $totalObligation += $nominal;
-                    $billDetails[] = [
-                        'item' => "$name $currentYear",
-                        'amount' => $nominal,
-                        'paid' => $paidThisYear,
-                        'remaining' => $remThisYear
-                    ];
+                        $totalObligation += $amountThisYear;
+                        $billDetails[] = [
+                            'item' => $getItemName($name, $currentYear, $code, $targetData['months']),
+                            'amount' => $amountThisYear,
+                            'paid' => $paidThisYear,
+                            'remaining' => $remThisYear
+                        ];
+                    }
+                }
+
+            } elseif ($method == 2) { // Tahunan
+                // Helper for annual target (using intersection logic)
+                $calculateAnnual = function($year) use ($code, $nominal, $startDate) {
+                    if ($code === 'TR001') {
+                        $sum = 0;
+                        $sysStart = strtotime($startDate);
+                        $yesterday = strtotime('-1 day', strtotime(date('Y-m-d')));
+
+                        for ($m = 1; $m <= 12; $m++) {
+                            $mStart = strtotime("$year-$m-01");
+                            $mEnd = strtotime(date('Y-m-t', $mStart));
+
+                            $effectiveStart = max($mStart, $sysStart);
+                            $effectiveEnd = min($mEnd, $yesterday);
+
+                            if ($effectiveStart <= $effectiveEnd) {
+                                $days = ($effectiveEnd - $effectiveStart) / 86400 + 1;
+                                $sum += (round($days) * $nominal);
+                            }
+                        }
+                        return $sum;
+                    }
+                    
+                    $startY = (int)date('Y', strtotime($startDate));
+                    return ($year >= $startY) ? $nominal : 0;
+                };
+
+                // Last Year
+                if ($lastYear >= 2026) {
+                    $amountLastYear = $calculateAnnual($lastYear);
+                    if ($amountLastYear > 0) {
+                        $paidLastYear = $getPaid($lastYear);
+                        $remLastYear = max(0, $amountLastYear - $paidLastYear);
+    
+                        $totalObligation += $amountLastYear;
+                        $billDetails[] = [
+                            'item' => $getItemName($name, $lastYear, $code),
+                            'amount' => $amountLastYear,
+                            'paid' => $paidLastYear,
+                            'remaining' => $remLastYear
+                        ];
+                    }
+                }
+                
+                // This Year
+                if ($currentYear >= 2026) {
+                    $amountThisYear = $calculateAnnual($currentYear);
+                    if ($amountThisYear > 0) {
+                        $paidThisYear = $getPaid($currentYear);
+                        $remThisYear = max(0, $amountThisYear - $paidThisYear);
+    
+                        $totalObligation += $amountThisYear;
+                        $billDetails[] = [
+                            'item' => $getItemName($name, $currentYear, $code),
+                            'amount' => $amountThisYear,
+                            'paid' => $paidThisYear,
+                            'remaining' => $remThisYear
+                        ];
+                    }
                 }
 
             } elseif ($method == 3) { // Satu Kali
@@ -322,13 +437,13 @@ class Home extends BaseController
                      $paidThisYear = $getPaid($currentYear);
                      $remThisYear = max(0, $nominal - $paidThisYear);
 
-                     $totalObligation += $nominal;
-                     $billDetails[] = [
-                        'item' => "$name",
-                        'amount' => $nominal,
-                        'paid' => $paidThisYear,
-                        'remaining' => $remThisYear
-                    ];
+                      $totalObligation += $nominal;
+                      $billDetails[] = [
+                         'item' => $getItemName($name, $currentYear, $code),
+                         'amount' => $nominal,
+                         'paid' => $paidThisYear,
+                         'remaining' => $remThisYear
+                     ];
                  }
             }
         }
@@ -340,7 +455,7 @@ class Home extends BaseController
         return [
             'bill' => $bill,
             'totalObligation' => $totalObligation,
-            'paid' => $totalPaid, // Only correct if we fetch payments correctly
+            'paid' => $totalPaid, 
             'billDetails' => $billDetails,
             'groupedPayments' => $groupedPayments,
             'currentYear' => $currentYear,

@@ -128,6 +128,7 @@ $routes->post('/pengurus/delete', 'Pengurus::delete', ['filter' => 'authFilter']
 $routes->get('/profil', 'Profil::index', ['filter' => 'authFilter']);
 $routes->post('/profil/update', 'Profil::update', ['filter' => 'authFilter']);
 $routes->post('/profil/updatePhoto', 'Home::updateMemberPhoto', ['filter' => 'authFilter']);
+$routes->post('/profil/migrate', 'Profil::migrate', ['filter' => 'authFilter']);
 
 // Keuangan (Jurnal)
 $routes->group('keuangan', ['filter' => 'authFilter'], function($routes) {

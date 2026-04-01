@@ -4,6 +4,8 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use App\Models\ProfilModel;
+use App\Models\UserModel;
+use Config\Services;
 
 class Profil extends BaseController
 {
@@ -123,5 +125,45 @@ class Profil extends BaseController
         }
 
         return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal memperbarui profil']);
+    }
+
+    public function migrate()
+    {
+        $session = session();
+        $role = $session->get('role');
+        
+        // 1. Authorization Check
+        if ($role !== 's_admin' && $role !== 'admin') {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Hanya Admin yang dapat menjalankan migrasi.']);
+        }
+
+        // 2. Password Verification
+        $password = $this->request->getPost('password');
+        if (!$password) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Konfirmasi password diperlukan.']);
+        }
+
+        $userModel = new UserModel();
+        $user = $userModel->find($session->get('id_code'));
+
+        if (!$user || !password_verify($password, $user['password'])) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Password salah.']);
+        }
+
+        // 3. Run Migration
+        try {
+            $migrations = Services::migrations();
+            
+            // This runs all new migrations
+            if ($migrations->latest()) {
+                log_activity('SYSTEM_MIGRATE', 'Database migration executed successfully via UI.');
+                return $this->response->setJSON(['status' => 'success', 'message' => 'Migrasi database berhasil dijalankan. Struktur tabel sudah terbaru.']);
+            } else {
+                return $this->response->setJSON(['status' => 'success', 'message' => 'Database sudah menggunakan versi terbaru (tidak ada perubahan).']);
+            }
+        } catch (\Throwable $e) {
+            log_activity('SYSTEM_MIGRATE_ERROR', 'Migration failed: ' . $e->getMessage());
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal menjalankan migrasi: ' . $e->getMessage()]);
+        }
     }
 }

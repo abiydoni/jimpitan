@@ -471,13 +471,29 @@ class Keuangan extends BaseController
         $tarif = $this->db->table('tb_tarif')->where('kode_tarif', 'TR001')->get()->getRowArray();
         $nominalTarif = $tarif['tarif'] ?? 500;
 
+        // Get Jimpitan Start Date
+        $profil = $this->db->table('tb_profil')->get()->getRowArray();
+        $startDate = $profil['jimpitan_start_date'] ?? '0000-00-00';
+
         $monthlyData = [];
         $currentMonth = (int)date('n');
         $currentYear = (int)date('Y');
 
         for ($m = 1; $m <= 12; $m++) {
-            $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $m, $year);
-            $target = $daysInMonth * $nominalTarif;
+            // Precise Range Intersection Logic: [Max(MonthStart, StartDate), Min(MonthEnd, Today)]
+            $monthStart = strtotime("$year-$m-01");
+            $monthEnd = strtotime(date('Y-m-t', $monthStart));
+            $sysStart = strtotime($startDate);
+            $yesterday = strtotime('-1 day', strtotime(date('Y-m-d')));
+
+            $effectiveStart = max($monthStart, $sysStart);
+            $effectiveEnd = min($monthEnd, $yesterday);
+
+            $target = 0;
+            if ($effectiveStart <= $effectiveEnd) {
+                $days = ($effectiveEnd - $effectiveStart) / 86400 + 1;
+                $target = round($days) * $nominalTarif;
+            }
 
             // Get Scans (from report table)
             $scans = $this->db->table('report')
@@ -502,8 +518,10 @@ class Keuangan extends BaseController
             $totalPaid = $scannedAmount + $paidAmount;
             $debt = $target - $totalPaid;
 
-            // Logic: Pay button only for past months
-            $isPast = ($year < $currentYear) || ($year == $currentYear && $m < $currentMonth);
+            // Logic: Pay button for months that have elapsed OR the current month (daily debt)
+            $mStart = strtotime("$year-$m-01");
+            $yesterday = strtotime('-1 day', strtotime(date('Y-m-d')));
+            $isPast = $mStart <= $yesterday;
 
             $monthlyData[] = [
                 'bulan' => $m,
@@ -538,13 +556,29 @@ class Keuangan extends BaseController
         $tarif = $this->db->table('tb_tarif')->where('kode_tarif', 'TR001')->get()->getRowArray();
         $nominalTarif = $tarif['tarif'] ?? 500;
 
+        // Get Jimpitan Start Date
+        $profil = $this->db->table('tb_profil')->get()->getRowArray();
+        $startDate = $profil['jimpitan_start_date'] ?? '0000-00-00';
+
         $monthlyData = [];
         $currentMonth = (int)date('n');
         $currentYear = (int)date('Y');
 
         for ($m = 1; $m <= 12; $m++) {
-            $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $m, $year);
-            $target = $daysInMonth * $nominalTarif;
+            // Precise Range Intersection Logic: [Max(MonthStart, StartDate), Min(MonthEnd, Today)]
+            $monthStart = strtotime("$year-$m-01");
+            $monthEnd = strtotime(date('Y-m-t', $monthStart));
+            $sysStart = strtotime($startDate);
+            $yesterday = strtotime('-1 day', strtotime(date('Y-m-d')));
+
+            $effectiveStart = max($monthStart, $sysStart);
+            $effectiveEnd = min($monthEnd, $yesterday);
+
+            $target = 0;
+            if ($effectiveStart <= $effectiveEnd) {
+                $days = ($effectiveEnd - $effectiveStart) / 86400 + 1;
+                $target = round($days) * $nominalTarif;
+            }
 
             // Get Scans (from report table)
             $scans = $this->db->table('report')
@@ -569,8 +603,10 @@ class Keuangan extends BaseController
             $totalPaid = $scannedAmount + $paidAmount;
             $debt = $target - $totalPaid;
 
-            // Logic: Pay button only for past months
-            $isPast = ($year < $currentYear) || ($year == $currentYear && $m < $currentMonth);
+            // Logic: Include current month as payable
+            $mStart = strtotime("$year-$m-01");
+            $yesterday = strtotime('-1 day', strtotime(date('Y-m-d')));
+            $isPast = $mStart <= $yesterday;
 
             $monthlyData[] = [
                 'bulan' => $m,

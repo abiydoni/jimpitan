@@ -55,7 +55,19 @@
 
     <main class="max-w-4xl mx-auto px-4 py-6">
         
-        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-700 animate__animated animate__fadeInUp">
+        <!-- Tab Navigation -->
+        <div class="flex items-center p-1 bg-slate-200/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl mb-6 border border-slate-200 dark:border-slate-700 w-fit mx-auto sm:mx-0">
+            <button onclick="switchTab('profil')" id="btn-tab-profil" class="tab-btn px-6 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-2">
+                <i class="fas fa-building"></i> Profil Organisasi
+            </button>
+            <button onclick="switchTab('system')" id="btn-tab-system" class="tab-btn px-6 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-2">
+                <i class="fas fa-microchip"></i> Sistem & Update
+            </button>
+        </div>
+
+            <form id="profilForm" onsubmit="handleUpdate(event)" class="relative">
+        <div id="content-profil" class="tab-content hidden">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-700 animate__animated animate__fadeInUp">
             
             <!-- Banner/Cover Preview -->
             <div class="relative h-32 sm:h-48 bg-slate-200 dark:bg-slate-700 overflow-hidden group">
@@ -66,7 +78,7 @@
                 </label>
             </div>
 
-            <form id="profilForm" onsubmit="handleUpdate(event)" class="p-6 sm:p-8 relative">
+            <div class="p-6 sm:p-8 relative">
                 
                 <!-- Logo Upload -->
                 <div class="absolute -top-16 left-6 sm:left-8">
@@ -111,16 +123,6 @@
                             </div>
                         </div>
 
-                        <!-- Jimpitan Effective Date -->
-                        <div class="col-span-1 sm:col-span-2">
-                            <label class="block text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase mb-2">Tanggal Efektif Setoran Jimpitan</label>
-                             <div class="relative">
-                                <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400"><i class="fas fa-calendar-alt"></i></span>
-                                <input type="date" name="jimpitan_start_date" value="<?= esc($profil['jimpitan_start_date']) ?>" class="w-full pl-10 pr-4 py-3 bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/50 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:text-white font-bold" title="Data scan sebelum tanggal ini tidak akan muncul di daftar setoran.">
-                            </div>
-                            <p class="text-[10px] text-slate-500 mt-1 italic">Data scan sebelum tanggal ini tidak akan muncul di daftar "Setor Jimpitan".</p>
-                        </div>
-
                         <!-- Alamat -->
                         <div class="col-span-1 sm:col-span-2">
                             <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Alamat Lengkap</label>
@@ -134,6 +136,9 @@
                         </div>
                     </div>
 
+            </div>
+                    </div>
+
                     <div class="pt-6 border-t border-slate-100 dark:border-slate-700 flex justify-end">
                         <button type="submit" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all active:scale-95 flex items-center gap-2">
                             <i class="fas fa-save"></i> Simpan Perubahan
@@ -141,8 +146,83 @@
                     </div>
 
                 </div>
-            </form>
+            </div>
+            </div>
         </div>
+        
+        <div id="content-system" class="tab-content hidden">
+        <!-- System & Maintenance (Admin Only) -->
+        <?php if(session()->get('role') === 's_admin' || session()->get('role') === 'admin'): ?>
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-700 animate__animated animate__fadeInUp">
+            <div class="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20">
+                <h3 class="font-bold text-slate-700 dark:text-white flex items-center gap-2">
+                    <i class="fas fa-cogs text-indigo-500"></i> System & Update
+                </h3>
+            </div>
+            <div class="p-6 sm:p-8 space-y-8">
+                <!-- Info Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div class="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Environment</span>
+                        <span class="text-sm font-semibold dark:text-white"><?= ENVIRONMENT ?></span>
+                    </div>
+                    <div class="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase mb-1">CI Version</span>
+                        <span class="text-sm font-semibold dark:text-white"><?= \CodeIgniter\CodeIgniter::CI_VERSION ?></span>
+                    </div>
+                    <div class="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                        <span class="block text-[10px] font-bold text-slate-400 uppercase mb-1">PHP Version</span>
+                        <span class="text-sm font-semibold dark:text-white"><?= phpversion() ?></span>
+                    </div>
+                </div>
+
+                <!-- Config Section -->
+                <div>
+                    <h4 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-4 flex items-center gap-2">
+                        <i class="fas fa-sliders-h text-indigo-500"></i> Konfigurasi Operasional
+                    </h4>
+                    
+                    <!-- Jimpitan Effective Date -->
+                    <div class="p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl">
+                        <label class="block text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase mb-2">Tanggal Efektif Setoran Jimpitan</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400"><i class="fas fa-calendar-alt"></i></span>
+                            <input type="date" name="jimpitan_start_date" value="<?= esc($profil['jimpitan_start_date']) ?>" class="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:text-white font-bold" title="Data scan sebelum tanggal ini tidak akan muncul di daftar setoran.">
+                        </div>
+                        <p class="text-[10px] text-slate-500 mt-2 italic flex items-center gap-1">
+                            <i class="fas fa-info-circle"></i> Data scan sebelum tanggal ini tidak akan muncul di daftar "Setor Jimpitan".
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Action Section -->
+                <div class="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-2xl">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div class="flex-1">
+                            <h4 class="text-sm font-bold text-amber-700 dark:text-amber-400">Pembaruan Struktur Database</h4>
+                            <p class="text-xs text-amber-600 dark:text-amber-500/70 mt-1">Jalankan migrasi jika Anda baru saja mengunggah perubahan file (update script). Proses ini akan menyesuaikan tabel database tanpa menghapus data.</p>
+                        </div>
+                        <button type="button" onclick="handleMigrate()" class="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-amber-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
+                            <i class="fas fa-database"></i> Jalankan Update
+                        </button>
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+                    <button type="submit" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all active:scale-95 flex items-center gap-2">
+                        <i class="fas fa-save"></i> Simpan Perubahan
+                    </button>
+                </div>
+            </div>
+        </div>
+        <?php else: ?>
+            <div class="p-20 text-center glass rounded-2xl">
+                <i class="fas fa-lock text-4xl text-slate-300 mb-4"></i>
+                <p class="text-slate-500">Anda tidak memiliki akses ke pengaturan sistem.</p>
+            </div>
+        <?php endif; ?>
+        </div>
+        </form>
 
     </main>
 
@@ -163,10 +243,9 @@
             }
         }
 
-        // Form Submit
+        // Form Submit for Profile Update
         async function handleUpdate(e) {
             e.preventDefault();
-            
             const form = e.target;
             const formData = new FormData(form);
 
@@ -204,6 +283,75 @@
             }
         }
 
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            // Hide all contents
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            // Remove active classes from all buttons
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('bg-indigo-600', 'text-white', 'shadow-indigo-500/20', 'shadow-lg');
+                b.classList.add('text-slate-500', 'hover:bg-slate-300/30');
+            });
+
+            // Show target content
+            document.getElementById('content-' + tabId).classList.remove('hidden');
+            // Style target button
+            const activeBtn = document.getElementById('btn-tab-' + tabId);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-slate-500', 'hover:bg-slate-300/30');
+                activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-indigo-500/20', 'shadow-lg');
+            }
+
+            // Save state
+            sessionStorage.setItem('activeProfileTab', tabId);
+        }
+
+        // Migration logic
+        async function handleMigrate() {
+            const { value: password } = await Swal.fire({
+                title: 'Konfirmasi Pembaruan',
+                text: 'Silakan masukkan password akun Anda untuk menjalankan migrasi database.',
+                input: 'password',
+                inputPlaceholder: 'Password Anda',
+                inputAttributes: { autocapitalize: 'off', autocorrect: 'off' },
+                showCancelButton: true,
+                confirmButtonText: 'Lanjutkan',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#d97706', // amber-600
+            });
+
+            if (password) {
+                try {
+                    window.showLoader();
+                    const formData = new FormData();
+                    formData.append('password', password);
+
+                    const res = await fetch('/profil/migrate', {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const json = await res.json();
+
+                    if (json.status === 'success') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: json.message,
+                            confirmButtonColor: '#4f46e5'
+                        }).then(() => location.reload());
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Gagal', text: json.message });
+                    }
+                } catch (err) {
+                    console.error(err);
+                    Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+                } finally {
+                    window.hideLoader();
+                }
+            }
+        }
+
         // Theme Toggle
         const themeToggle = document.getElementById('themeToggle');
         if (themeToggle) {
@@ -213,6 +361,12 @@
             };
         }
         if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+
+        // Initialize Tab on Load
+        document.addEventListener('DOMContentLoaded', () => {
+            const activeTab = sessionStorage.getItem('activeProfileTab') || 'profil';
+            switchTab(activeTab);
+        });
     </script>
 </body>
 </html>

@@ -47,6 +47,7 @@
         .gradient-text {
             background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         /* Custom Scrollbar */
@@ -120,6 +121,12 @@
                 
                 <div class="p-1 flex-1 overflow-y-auto max-h-[350px] custom-scrollbar">
                     <?php if (!empty($billDetails)): ?>
+                        <!-- Table Header -->
+                        <div class="px-2 py-1 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center border-b border-slate-100 dark:border-slate-800 mb-1">
+                            <span class="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nama Iuran / Rincian</span>
+                            <span class="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Sisa (IDR)</span>
+                        </div>
+                        
                         <div class="space-y-px">
                             <?php $i = 1; foreach ($billDetails as $item): ?>
                                 <div class="group flex justify-between items-center px-1 py-0.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded transition-all">
@@ -127,21 +134,25 @@
                                         <span class="text-[9px] text-slate-300 font-mono"><?= $i++ ?>.</span>
                                         <div class="flex flex-col">
                                             <span class="text-[10px] font-semibold text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors"><?= $item['item'] ?></span>
-                                            <?php if ($item['remaining'] > 0): ?>
-                                                <span class="text-[8px] text-rose-500 font-bold flex items-center gap-1 mt-px">
-                                                    Kurang Rp <?= number_format($item['remaining'], 0, ',', '.') ?>
+                                            <div class="flex items-center gap-2 mt-px">
+                                                <span class="text-[8px] text-slate-500 dark:text-slate-400">
+                                                    Tagihan: Rp <?= number_format($item['amount'], 0, ',', '.') ?>
                                                 </span>
-                                            <?php else: ?>
-                                                <span class="text-[8px] text-emerald-500 font-bold flex items-center gap-1 mt-px">
-                                                    Lunas
+                                                <span class="text-[8px] text-slate-500 dark:text-slate-400">
+                                                    Bayar: Rp <?= number_format($item['paid'], 0, ',', '.') ?>
                                                 </span>
-                                            <?php endif; ?>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="text-right leading-none">
-                                        <span class="block text-[10px] font-bold text-slate-800 dark:text-white">Rp <?= number_format($item['amount'], 0, ',', '.') ?></span>
-                                        <?php if ($item['remaining'] > 0 && $item['remaining'] != $item['amount']): ?>
-                                             <span class="text-[8px] text-slate-400">Bayar: <?= number_format($item['paid'], 0, ',', '.') ?></span>
+                                        <?php if ($item['remaining'] > 0): ?>
+                                            <span class="text-[10px] font-bold text-rose-500">
+                                                Rp <?= number_format($item['remaining'], 0, ',', '.') ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-[10px] font-bold text-emerald-500">
+                                                Lunas
+                                            </span>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -187,7 +198,8 @@
                                     </div>
                                     <div class="divide-y divide-slate-50 dark:divide-slate-800">
                                         <?php $j = 1; foreach ($payments as $p): 
-                                            $monthName = (is_numeric($p['bulan']) && isset($months[$p['bulan']])) ? $months[$p['bulan']] : $p['bulan'];
+                                            $bulan_raw = $p['bulan'] ?? '-';
+                                            $monthName = (is_numeric($bulan_raw) && isset($months[$bulan_raw])) ? $months[$bulan_raw] : $bulan_raw;
                                         ?>
                                             <div class="flex justify-between items-center px-1 py-0.5 hover:bg-white dark:hover:bg-slate-700/50 rounded transition-colors cursor-default">
                                                 <div class="flex items-start gap-1.5 leading-none">
