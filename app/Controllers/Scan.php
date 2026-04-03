@@ -45,7 +45,7 @@ class Scan extends BaseController
         $today = $request->getGet('date') ?? date('Y-m-d');
         
         $data = $db->table('report')
-                   ->select('report.id, report.nominal, report.collector, report.scan_time, master_kk.kk_name as nama_warga')
+                   ->select('report.id, report.nominal, report.collector, report.nama_u, report.scan_time, master_kk.kk_name as nama_warga')
                    ->join('master_kk', 'master_kk.code_id = report.report_id', 'left')
                    ->where('report.jimpitan_date', $today)
                    ->orderBy('report.scan_time', 'DESC')
@@ -62,7 +62,7 @@ class Scan extends BaseController
                 'id' => $row['id'],
                 'nama' => $row['nama_warga'] ?? 'Warga Tidak Dikenal', // Fallback if join fails
                 'nominal' => $row['nominal'],
-                'collector' => $row['collector'],
+                'collector' => $row['nama_u'] ?? $row['collector'], // Use nama_u (full name) as requested
                 'waktu' => date('H:i', strtotime($row['scan_time']))
             ];
         }, $data);
