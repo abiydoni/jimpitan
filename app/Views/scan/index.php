@@ -156,7 +156,7 @@
         }
         // --- End Theme Logic ---
 
-        const beep = new Audio("https://cdn.freesound.org/previews/335/335908_5865517-lq.mp3"); // Generic beep online
+        const beep = new Audio("data:audio/wav;base64,UklGRl9vT1JGVVRYV0FWRWZtdCAAEAAAAAEAAQB8AAAAQB8AAAEACABkYXRhY19vT1JC9vT1J/"); // Short embedded beep
         let isProcessing = false;
 
         // Check for Secure Context (HTTPS or Localhost) first
@@ -228,15 +228,8 @@
 
         // Separated process function to handle recursive delete confirmation
         function processScan(codeId, confirmDelete = false) {
-             // IMMEDIATE FEEDBACK: Show Loading
-             Swal.fire({
-                title: 'Memproses...',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                background: '#fff',
-                customClass: { popup: 'rounded-2xl' },
-                didOpen: () => { Swal.showLoading(); }
-             });
+             // IMMEDIATE FEEDBACK: Show Standard Loader
+             if (window.showLoader) window.showLoader();
 
              const payload = { code_id: codeId };
              if (confirmDelete) payload.confirm_delete = true;
@@ -252,6 +245,8 @@
             })
             .then(response => response.json())
             .then(data => {
+                if (window.hideLoader) window.hideLoader();
+                
                 if(data.status === 'success') {
                     // Update Stats Immediately
                     updateStats();

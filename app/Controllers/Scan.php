@@ -85,9 +85,16 @@ class Scan extends BaseController
         }
 
         $db = \Config\Database::connect();
+        $today = date('Y-m-d');
 
-        // 1. Validate QR Code against Master KK
-        $warga = $db->table('master_kk')->where('code_id', $codeId)->get()->getRowArray();
+        // 1. Validate QR Code against Master KK & Check Already Scanned Today (Optimized Join)
+        // We join report to see if they already scanned today in one database trip.
+        $warga = $db->table('master_kk')
+                    ->select('master_kk.*, report.id as existing_report_id')
+                    ->join('report', "report.report_id = master_kk.code_id AND report.jimpitan_date = '$today'", 'left')
+                    ->where('master_kk.code_id', $codeId)
+                    ->get()
+                    ->getRowArray();
 
         if (!$warga) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'Data KK tidak ditemukan.']);
@@ -97,7 +104,7 @@ class Scan extends BaseController
         $userId = session()->get('id_code');
         $userRole = session()->get('role'); // Get role from session
         
-        $today = date('Y-m-d'); // Default to actual today
+        // $today already defined above
 
         // Only enforce shift validation if NOT Admin/Super Admin
         if ($userRole !== 's_admin' && $userRole !== 'admin') {
@@ -136,24 +143,17 @@ class Scan extends BaseController
         $tariff = $db->table('tb_tarif')->where('kode_tarif', 'TR001')->get()->getRowArray();
         $nominal = $tariff['tarif'] ?? 500;
 
-        // 3. Check for Existing Record Today (Using Adjusted or Actual $today)
+        // 3. Check for Existing Record Today (Using result from optimized join above)
+        $existingId = $warga['existing_report_id'] ?? null;
 
-        // NOTE: User requested 'report_id' to hold the Resident Code (master_kk.code_id)
-        // so we must check for duplicates using 'report_id' now, not 'kode_u'.
-        $existing = $db->table('report')
-                       ->where('report_id', $warga['code_id']) 
-                       ->where('jimpitan_date', $today)
-                       ->get()
-                       ->getRowArray();
-
-        if ($existing) {
+        if ($existingId) {
             // Check if client confirmed deletion
             $confirmDelete = $request->getJsonVar('confirm_delete');
 
             if ($confirmDelete === true) {
                 // Perform Deletion
                 try {
-                    $db->table('report')->where('id', $existing['id'])->delete();
+                    $db->table('report')->where('id', $existingId)->delete();
                     return $this->response->setJSON([
                         'status' => 'deleted',
                         'message' => 'Data jimpitan dihapus.',
@@ -453,5 +453,87 @@ class Scan extends BaseController
             'status' => 'success', 
             'message' => 'Leaderboard berhasil di-reset.'
         ]);
+    }
+
+    // --- Not Scanned Bulk for Manual Input ---
+    public function getNotScannedBulk()
+    {
+        $request = service('request');
+        $date = $request->getGet('date') ?? date('Y-m-d');
+        
+        $db = \Config\Database::connect();
+        
+        // Logic: Get All Warga NOT IN Report(date)
+        $subquery = $db->table('report')
+                       ->select('report_id')
+                       ->where('jimpitan_date', $date);
+                       
+        $notScanned = $db->table('master_kk')
+                         ->select('code_id as value, nikk, kk_name as nama')
+                         ->whereNotIn('code_id', $subquery)
+                         ->orderBy('kk_name', 'ASC')
+                         ->get()
+                         ->getResultArray();
+
+        return $this->response->setJSON([
+            'status' => 'success',
+            'data' => $notScanned
+        ]);
+    }
+
+    public function storeBatchManual()
+    {
+        $request = service('request');
+        $codeIds = $request->getPost('code_ids'); // Expecting array
+        $date    = $request->getPost('jimpitan_date');
+        $alasan  = $request->getPost('alasan') ?: 'Input Masal via Manual';
+
+        if (empty($codeIds) || !$date) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Pilih warga dan tanggal terlebih dahulu.']);
+        }
+
+        $db = \Config\Database::connect();
+        
+        // Get Nominal
+        $tariff = $db->table('tb_tarif')->where('kode_tarif', 'TR001')->get()->getRowArray();
+        $nominal = $tariff['tarif'] ?? 500;
+
+        $batchData = [];
+        foreach ($codeIds as $codeId) {
+            $batchData[] = [
+                'report_id'     => $codeId,
+                'jimpitan_date' => $date,
+                'nominal'       => $nominal,
+                'collector'     => 'System',
+                'kode_u'        => 'SYSTEM',
+                'nama_u'        => 'System',
+                'alasan'        => $alasan,
+                'status'        => 1,
+                'scan_time'     => date('Y-m-d H:i:s')
+            ];
+        }
+
+        try {
+            if (!empty($batchData)) {
+                $db->table('report')->insertBatch($batchData);
+            }
+            return $this->response->setJSON(['status' => 'success', 'message' => count($batchData) . ' data jimpitan berhasil disimpan.']);
+        } catch (\Exception $e) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal menyimpan: ' . $e->getMessage()]);
+        }
+    }
+
+    public function deleteScan()
+    {
+        $id = $this->request->getPost('id');
+        if (!$id) return $this->response->setJSON(['status' => 'error', 'message' => 'ID tidak valid.']);
+
+        $db = \Config\Database::connect();
+        try {
+            $db->table('report')->where('id', $id)->delete();
+            return $this->response->setJSON(['status' => 'success', 'message' => 'Data berhasil dihapus.']);
+        } catch (\Exception $e) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal menghapus: ' . $e->getMessage()]);
+        }
     }
 }

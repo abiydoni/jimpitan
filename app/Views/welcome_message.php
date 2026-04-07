@@ -402,7 +402,7 @@
                                 <?php else: ?>
                                     <span class="px-2 py-0.5 rounded-full bg-emerald-500/80 text-white text-[9px] font-bold border border-emerald-400/50">LUNAS</span>
                                 <?php endif; ?>
-                                <button onclick="window.location.href='/bill-details'" class="w-6 h-6 rounded-full bg-white/20 hover:bg-white text-white hover:text-indigo-600 flex items-center justify-center transition-colors border border-white/10 ml-1" title="Lihat Rincian">
+                                <button onclick="showBillDetails()" class="w-6 h-6 rounded-full bg-white/20 hover:bg-white text-white hover:text-indigo-600 flex items-center justify-center transition-colors border border-white/10 ml-1" title="Lihat Rincian">
                                     <i class="fas fa-chevron-right text-[10px]"></i>
                                 </button>
                             </div>
@@ -1029,6 +1029,13 @@
                     }
                 }
             });
+        }
+        
+        function showBillDetails() {
+            if (typeof window.showLoader === 'function') {
+                window.showLoader();
+            }
+            window.location.href = '/bill-details';
         }
         
         // Optional: Listen for app installed event to clean up

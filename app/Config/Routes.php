@@ -45,6 +45,9 @@ $routes->get('/scan/leaderboard', 'Scan::leaderboard', ['filter' => 'authFilter'
 $routes->get('/scan/Leaderboard', 'Scan::leaderboard', ['filter' => 'authFilter']); // Case Fix
 $routes->post('/scan/reset', 'Scan::resetLeaderboard', ['filter' => 'authFilter']); // Reset Leaderboard
 $routes->get('/leaderboard', 'Scan::leaderboard', ['filter' => 'authFilter']); // Alias Shortcut
+$routes->get('/scan/getNotScannedBulk', 'Scan::getNotScannedBulk', ['filter' => 'authFilter']); // Bulk Manual List
+$routes->post('/scan/storeBatchManual', 'Scan::storeBatchManual', ['filter' => 'authFilter']); // Bulk Manual Store
+$routes->post('/scan/deleteScan', 'Scan::deleteScan', ['filter' => 'authFilter']); // Delete Single Scan
 
 // Announcements
 $routes->get('announcement', 'Announcement::index', ['filter' => 'authFilter']);

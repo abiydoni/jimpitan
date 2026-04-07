@@ -42,25 +42,26 @@
     <!-- Navbar -->
     <nav class="sticky top-0 z-40 glass border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex justify-between items-center">
         <div class="flex items-center gap-3">
-            <a href="/" class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+            <a href="/" onclick="if(window.showLoader) window.showLoader()" class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
                 <i class="fas fa-arrow-left"></i>
             </a>
             <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Jurnal Jimpitan</h1>
         </div>
         
         <?php if (empty($isViewOnly)): ?>
-            <a href="/keuangan/hutang_jimpitan" class="px-4 py-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center text-xs font-bold shadow-sm hover:scale-105 transition-transform gap-2">
-                <i class="fas fa-file-invoice-dollar"></i>
-                <span>Hutang</span>
-            </a>
-            <button onclick="openSetorModal()" class="px-4 py-2 bg-emerald-600 rounded-xl flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-emerald-500/30 hover:scale-105 transition-transform gap-2">
-                <i class="fas fa-hand-holding-usd"></i>
-                <span>Setor</span>
-            </button>
-            <button onclick="openModal()" class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 hover:scale-105 transition-transform">
-                <i class="fas fa-plus"></i>
-            </button>
-        </div>
+            <div class="flex items-center gap-2">
+                <a href="/keuangan/hutang_jimpitan" onclick="if(window.showLoader) window.showLoader()" class="px-4 py-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center text-xs font-bold shadow-sm hover:scale-105 transition-transform gap-2">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>Hutang</span>
+                </a>
+                <button onclick="openSetorModal()" class="px-4 py-2 bg-emerald-600 rounded-xl flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-emerald-500/30 hover:scale-105 transition-transform gap-2">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    <span>Setor</span>
+                </button>
+                <button onclick="openModal()" class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 hover:scale-105 transition-transform">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
         <?php endif; ?>
     </nav>
 
@@ -348,5 +349,8 @@
             Swal.fire({ icon: 'error', title: 'Gagal', text: '<?=esc(session()->getFlashdata('error'), 'js')?>' });
         <?php endif; ?>
     </script>
+    <!-- Global Loader -->
+    <?= $this->include('partials/loader') ?>
+
 </body>
 </html>

@@ -134,43 +134,54 @@
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity opacity-0" id="modalBackdrop"></div>
         
         <!-- Modal Content -->
-        <div class="w-full max-w-md bg-white dark:bg-slate-800 rounded-[2rem] p-6 shadow-2xl transform transition-all scale-90 opacity-0 relative" id="modalContent">
+        <div class="w-full max-w-md bg-white dark:bg-slate-800 rounded-[2rem] p-6 shadow-2xl transform transition-all scale-90 opacity-0 relative flex flex-col max-h-[90vh]" id="modalContent">
             
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-lg font-bold text-slate-800 dark:text-white">Input Manual</h3>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-800 dark:text-white">Input Masal</h3>
                 <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
-            <form id="manualForm" class="space-y-4">
-                <!-- Warga Search -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Cari Warga</label>
-                    <select id="code_id" name="code_id" placeholder="Ketik Nama atau NIKK..." required></select>
-                </div>
-
+            <div class="space-y-4 flex-1 overflow-hidden flex flex-col">
                 <!-- Tanggal -->
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Tanggal Jimpitan</label>
                     <input type="date" name="jimpitan_date" id="inputDate" value="<?= date('Y-m-d') ?>" required
-                           class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white dark:[color-scheme:dark]">
+                           class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white dark:[color-scheme:dark]">
                 </div>
 
-                <!-- Alasan -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Keterangan / Alasan</label>
-                    <textarea name="alasan" id="alasan" rows="2" placeholder="Contoh: QR Code Rusak" required
-                              class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white"></textarea>
+                <!-- Resident Search & List -->
+                <div class="flex-1 flex flex-col overflow-hidden">
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Pilih Warga (Belum Scan)</label>
+                    
+                    <div class="relative mb-2">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="modalSearch" placeholder="Cari Nama Warga..." 
+                               class="w-full pl-10 pr-10 py-2 bg-slate-50 dark:bg-slate-900 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all dark:text-white">
+                        <button id="clearSearch" class="hidden absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 text-[10px] items-center justify-center hover:bg-slate-300 transition-all">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center justify-between px-1 mb-2">
+                        <button type="button" onclick="toggleSelectAll()" id="selectAllBtn" class="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Pilih Semua</button>
+                        <span id="selectedCount" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">0 Terpilih</span>
+                    </div>
+
+                    <div id="residentList" class="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-700 p-2 space-y-1 min-h-[200px]">
+                        <!-- Resident items with checkboxes -->
+                        <div class="text-center py-10 text-slate-400 text-xs italic">Memuat daftar warga...</div>
+                    </div>
                 </div>
 
                 <div class="pt-2">
-                    <button type="submit" class="w-full py-3.5 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center space-x-2">
+                    <button type="button" onclick="submitBulk()" id="submitBtn" class="w-full py-3.5 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center space-x-2 disabled:bg-slate-300 disabled:shadow-none" disabled>
                         <i class="fas fa-paper-plane text-sm"></i>
-                        <span>Simpan Data</span>
+                        <span>Simpan Terpilih</span>
                     </button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -179,7 +190,11 @@
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
         }
 
-        // --- LIST LOGIC (Copied from scan_today) ---
+        let allNotScanned = [];
+        let filteredNotScanned = [];
+        let selectedIds = new Set(); // Track selected IDs
+
+        // --- LIST LOGIC ---
         async function updateData() {
             try {
                 const dateVal = document.getElementById('dateFilter').value;
@@ -225,39 +240,34 @@
            const processedIds = new Set();
 
            items.forEach((item, index) => {
-               const itemId = item.id ? String(item.id) : `${item.nama}-${item.waktu}`;
-               processedIds.add(itemId);
+                const itemId = item.id ? String(item.id) : `${item.nama}-${item.waktu}`;
+                processedIds.add(itemId);
 
-               let el = existingMap.get(itemId);
-               const number = index + 1;
+                let el = existingMap.get(itemId);
+                const number = index + 1;
 
-               if (!el) {
-                   el = document.createElement('div');
-                   el.className = 'scan-item px-3 py-1 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center animate__animated animate__fadeIn last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors';
-                   el.dataset.id = itemId;
-                   updateItemContent(el, item, number);
-                   // Initial render: append
-                   if (list.children.length === 0) {
-                        list.appendChild(el);
-                   } else {
-                       // Prepend if news
-                       list.insertBefore(el, list.firstChild);
-                   }
-               } else {
-                    if (el.classList.contains('animate__fadeIn')) {
-                       el.classList.remove('animate__animated', 'animate__fadeIn');
+                if (!el) {
+                    el = document.createElement('div');
+                    el.className = 'scan-item px-3 py-1 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center animate__animated animate__fadeIn last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors';
+                    el.dataset.id = itemId;
+                    updateItemContent(el, item, number);
+                    if (list.children.length === 0) {
+                         list.appendChild(el);
+                    } else {
+                        list.insertBefore(el, list.firstChild);
                     }
-                   updateItemContent(el, item, number);
-               }
-               
-               // Re-order if needed (simple check)
-               // This logic in scan_today was a bit complex, simplifying here: just ensure order
-               
-               const currentChild = list.children[index];
-               if (currentChild !== el) {
-                    if (currentChild) list.insertBefore(el, currentChild);
-                    else list.appendChild(el);
-               }
+                } else {
+                     if (el.classList.contains('animate__fadeIn')) {
+                        el.classList.remove('animate__animated', 'animate__fadeIn');
+                     }
+                    updateItemContent(el, item, number);
+                }
+                
+                const currentChild = list.children[index];
+                if (currentChild !== el) {
+                     if (currentChild) list.insertBefore(el, currentChild);
+                     else list.appendChild(el);
+                }
            });
 
            existingMap.forEach((el, id) => {
@@ -266,9 +276,9 @@
         }
 
         function updateItemContent(el, item, number) {
-             const signature = `${item.nama}|${item.waktu}|${item.nominal}|${number}`;
-             if (el.dataset.sig === signature) return;
-             el.dataset.sig = signature;
+              const signature = `${item.nama}|${item.waktu}|${item.nominal}|${number}`;
+              if (el.dataset.sig === signature) return;
+              el.dataset.sig = signature;
 
             const isSystem = (item.collector === 'System' || item.collector.toLowerCase() === 'system');
             
@@ -277,44 +287,139 @@
                 : 'text-slate-400 bg-slate-100 dark:bg-slate-700 border border-transparent';
             const badgeText = isSystem ? 'By System' : 'Berhasil';
 
-             el.innerHTML = `
-                 <div class="flex items-center gap-2 min-w-0">
-                     <div class="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center text-[10px] font-bold font-mono shrink-0">
-                         ${number}
-                     </div>
-                     <div class="min-w-0">
-                         <h4 class="font-bold text-slate-800 dark:text-white text-xs truncate leading-none mb-0.5">${item.nama}</h4>
-                         <div class="flex items-center gap-1 text-[9px] text-slate-400 leading-none">
-                             <span>${item.waktu}</span>
-                             <span class="w-0.5 h-0.5 rounded-full bg-slate-300"></span>
-                             <span class="truncate ${isSystem ? 'text-amber-500 font-medium' : ''}">${item.collector}</span>
-                         </div>
-                     </div>
-                 </div>
-                 <div class="text-right shrink-0">
-                     <div class="font-bold text-emerald-500 text-xs leading-none">${formatRupiah(item.nominal)}</div>
-                     <div class="text-[8px] font-bold mt-0.5 px-1 py-px rounded inline-block leading-none ${badgeClass}">
-                         ${badgeText}
-                     </div>
-                 </div>
-             `;
+              el.innerHTML = `
+                  <div class="flex items-center gap-2 min-w-0">
+                      <div class="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center text-[10px] font-bold font-mono shrink-0">
+                          ${number}
+                      </div>
+                      <div class="min-w-0">
+                          <h4 class="font-bold text-slate-800 dark:text-white text-xs truncate leading-none mb-0.5">${item.nama}</h4>
+                          <div class="flex items-center gap-1 text-[9px] text-slate-400 leading-none">
+                              <span>${item.waktu}</span>
+                              <span class="w-0.5 h-0.5 rounded-full bg-slate-300"></span>
+                              <span class="truncate ${isSystem ? 'text-amber-500 font-medium' : ''}">${item.collector}</span>
+                          </div>
+                      </div>
+                  </div>
+                  <div class="text-right shrink-0 flex items-center gap-2">
+                      <div class="text-right">
+                          <div class="font-bold text-emerald-500 text-xs leading-none">${formatRupiah(item.nominal)}</div>
+                          <div class="text-[8px] font-bold mt-0.5 px-1 py-px rounded inline-block leading-none ${badgeClass}">
+                              ${badgeText}
+                          </div>
+                      </div>
+                      <button onclick="deleteScan('${item.id}', '${item.nama}')" class="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors">
+                          <i class="fas fa-trash-alt text-xs"></i>
+                      </button>
+                  </div>
+              `;
         }
 
         // --- MODAL LOGIC ---
         const modal = document.getElementById('manualModal');
         const backdrop = document.getElementById('modalBackdrop');
         const content = document.getElementById('modalContent');
+        const residentList = document.getElementById('residentList');
+        const modalSearch = document.getElementById('modalSearch');
+        const inputDate = document.getElementById('inputDate');
         
-        function openModal() {
+        async function openModal() {
             modal.classList.remove('hidden');
-            // Animate in
             setTimeout(() => {
                 backdrop.classList.remove('opacity-0');
                 content.classList.remove('scale-90', 'opacity-0');
             }, 10);
             
-            // Sync Date
-            document.getElementById('inputDate').value = document.getElementById('dateFilter').value;
+            inputDate.value = document.getElementById('dateFilter').value;
+            selectedIds.clear(); // Clear on open
+            fetchNotScanned();
+        }
+
+        async function fetchNotScanned() {
+            residentList.innerHTML = '<div class="text-center py-10 text-slate-400 text-xs italic">Memuat daftar warga...</div>';
+            try {
+                const res = await fetch(`/scan/getNotScannedBulk?date=${inputDate.value}`);
+                const result = await res.json();
+                allNotScanned = result.data || [];
+                selectedIds.clear(); // Clear selection when date changes
+                applyFilter();
+            } catch (e) {
+                residentList.innerHTML = '<div class="text-center py-10 text-red-400 text-xs italic">Gagal memuat data</div>';
+            }
+        }
+
+        function applyFilter() {
+            const query = modalSearch.value.toLowerCase();
+            const clearBtn = document.getElementById('clearSearch');
+            
+            if (query.length > 0) {
+                clearBtn.classList.remove('hidden');
+                clearBtn.classList.add('flex');
+            } else {
+                clearBtn.classList.remove('flex');
+                clearBtn.classList.add('hidden');
+            }
+
+            filteredNotScanned = allNotScanned.filter(w => 
+                w.nama.toLowerCase().includes(query) || 
+                (w.value && w.value.toLowerCase().includes(query)) ||
+                (w.nikk && w.nikk.toLowerCase().includes(query))
+            );
+            renderResidentItems();
+        }
+
+        function renderResidentItems() {
+            if (filteredNotScanned.length === 0) {
+                residentList.innerHTML = '<div class="text-center py-10 text-slate-400 text-xs italic">Warga tidak ditemukan</div>';
+                return;
+            }
+
+            residentList.innerHTML = filteredNotScanned.map(w => `
+                <label class="flex items-center gap-3 p-3 bg-white dark:bg-slate-800 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors border border-transparent has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/30">
+                    <input type="checkbox" name="resident_ids" value="${w.value}" 
+                           ${selectedIds.has(w.value) ? 'checked' : ''} 
+                           onchange="handleCheckboxChange(this)" 
+                           class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:bg-slate-700 dark:border-slate-600">
+                    <div class="min-w-0">
+                        <div class="text-xs font-bold text-slate-800 dark:text-white leading-tight">${w.nama}</div>
+                        <div class="text-[9px] text-slate-400 leading-none mt-1">${w.value}</div>
+                    </div>
+                </label>
+            `).join('');
+            updateSelectedCount();
+        }
+
+        function handleCheckboxChange(cb) {
+            if (cb.checked) {
+                selectedIds.add(cb.value);
+            } else {
+                selectedIds.delete(cb.value);
+            }
+            updateSelectedCount();
+        }
+
+        function updateSelectedCount() {
+            const count = selectedIds.size;
+            document.getElementById('selectedCount').innerText = `${count} Terpilih`;
+            document.getElementById('submitBtn').disabled = count === 0;
+            
+            // Update Select All Btn Title (Check against filtered list)
+            const allCheckboxes = document.querySelectorAll('input[name="resident_ids"]');
+            const allInFilterChecked = Array.from(allCheckboxes).every(cb => cb.checked);
+            document.getElementById('selectAllBtn').innerText = (allInFilterChecked && allCheckboxes.length > 0) ? 'Batal Semua' : 'Pilih Semua';
+        }
+
+        function toggleSelectAll() {
+            const allCheckboxesInView = document.querySelectorAll('input[name="resident_ids"]');
+            const allCheckedInView = Array.from(allCheckboxesInView).every(cb => cb.checked);
+            const shouldSelect = !allCheckedInView;
+            
+            allCheckboxesInView.forEach(cb => {
+                cb.checked = shouldSelect;
+                if (shouldSelect) selectedIds.add(cb.value);
+                else selectedIds.delete(cb.value);
+            });
+            updateSelectedCount();
         }
 
         function closeModal() {
@@ -322,89 +427,73 @@
             content.classList.add('scale-90', 'opacity-0');
             setTimeout(() => {
                 modal.classList.add('hidden');
+                modalSearch.value = '';
+                selectedIds.clear();
             }, 300);
         }
 
-        // Close on backdrop click
         backdrop.addEventListener('click', closeModal);
+        modalSearch.addEventListener('input', applyFilter);
+        inputDate.addEventListener('change', fetchNotScanned);
 
-        // --- TOM SELECT & FORM LOGIC ---
-        let tSelect;
-        document.addEventListener('DOMContentLoaded', () => {
-             tSelect = new TomSelect('#code_id', {
-                valueField: 'value',
-                labelField: 'nama',
-                searchField: ['nama', 'value'],
-                create: false,
-                placeholder: 'Ketik Nama Warga...',
-                maxItems: 1,
-                load: function(query, callback) {
-                    if (!query.length) return callback();
-                    fetch('/scan/search_target?q=' + encodeURIComponent(query), { skipLoader: true })
-                        .then(response => response.json())
-                        .then(json => {
-                            callback(json);
-                        }).catch(() => {
-                            callback();
-                        });
-                },
-                render: {
-                    option: function(item, escape) {
-                        return `<div class="py-1">
-                                <span class="font-bold block text-sm">${escape(item.nama)}</span>
-                                <span class="text-xs text-slate-500 block">${escape(item.value)}</span>
-                            </div>`;
-                    },
-                    item: function(item, escape) {
-                        return `<div title="${escape(item.value)}">${escape(item.nama)}</div>`;
-                    }
-                }
+        document.getElementById('clearSearch').onclick = () => {
+            modalSearch.value = '';
+            applyFilter();
+            modalSearch.focus();
+        };
+
+        async function deleteScan(id, nama) {
+            const confirm = await Swal.fire({
+                title: 'Hapus Data?',
+                text: `Yakin ingin menghapus jimpitan ${nama}?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Ya, Hapus',
+                cancelButtonText: 'Batal'
             });
 
-            // Initial Load of Data
-            updateData();
-            // Polling
-            setInterval(updateData, 3000);
-        });
-
-        // Form Submit
-        const form = document.getElementById('manualForm');
-        form.onsubmit = async (e) => {
-            e.preventDefault();
-
-            const codeId = document.getElementById('code_id').value;
-            const date = document.getElementById('inputDate').value;
-            const alasan = document.getElementById('alasan').value;
-
-            if(!codeId) {
-                Swal.fire('Perhatian', 'Silakan pilih warga terlebih dahulu', 'warning');
-                return;
+            if (confirm.isConfirmed) {
+                Swal.fire({ title: 'Menghapus...', didOpen: () => Swal.showLoading() });
+                try {
+                    const formData = new FormData();
+                    formData.append('id', id);
+                    const res = await fetch('/scan/deleteScan', { method: 'POST', body: formData });
+                    const result = await res.json();
+                    if (result.status === 'success') {
+                        Swal.fire({ icon: 'success', title: 'Terhapus', timer: 1000, showConfirmButton: false });
+                        updateData();
+                    } else {
+                        Swal.fire('Gagal', result.message, 'error');
+                    }
+                } catch (e) {
+                    Swal.fire('Error', 'Gagal menghubungi server', 'error');
+                }
             }
+        }
 
-            // Get selected name
-            const selectedOption = tSelect.options[codeId];
-            const wargaName = selectedOption ? selectedOption.nama : 'Warga Terpilih';
+        async function submitBulk() {
+            if (selectedIds.size === 0) return;
 
-             // Process
-            const formData = new FormData(form);
-            
-            // Show Loading
             Swal.fire({
                 title: 'Menyimpan...',
                 timerProgressBar: true,
                 didOpen: () => Swal.showLoading()
             });
 
+            const formData = new FormData();
+            selectedIds.forEach(id => formData.append('code_ids[]', id));
+            formData.append('jimpitan_date', inputDate.value);
+            formData.append('alasan', 'Input Masal via Manual');
+
             try {
-                // Initial Request
-                const response = await fetch('/scan/storeManual', {
+                const response = await fetch('/scan/storeBatchManual', {
                     method: 'POST',
                     body: formData
                 });
                 const res = await response.json();
 
                 if (res.status === 'success') {
-                    // Standard Success (Inserted or Deleted)
                     await Swal.fire({
                         icon: 'success',
                         title: 'Berhasil',
@@ -413,91 +502,37 @@
                         showConfirmButton: false
                     });
                     closeModal();
-                    form.reset();
-                    tSelect.clear();
-                    
-                    // Force refresh data
                     updateData();
-                } else if (res.status === 'confirm_delete') {
-                    // Confirmation Flow for Deletion
-                    // Close Loading First
-                    Swal.close();
-
-                    const confirmResult = await Swal.fire({
-                        title: 'Data Sudah Ada',
-                        text: res.message,
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#d33',
-                        cancelButtonColor: '#3085d6',
-                        confirmButtonText: 'Ya, Hapus Data',
-                        cancelButtonText: 'Batal'
-                    });
-
-                    if (confirmResult.isConfirmed) {
-                        // Resend with Confirmation
-                        formData.append('confirm_delete', 'true');
-                        
-                        Swal.fire({
-                            title: 'Menghapus...',
-                            timerProgressBar: true,
-                            didOpen: () => Swal.showLoading()
-                        });
-
-                        const delResponse = await fetch('/scan/storeManual', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        const delRes = await delResponse.json();
-
-                        if (delRes.status === 'success') {
-                             await Swal.fire({
-                                icon: 'success',
-                                title: 'Dihapus',
-                                text: delRes.message,
-                                timer: 1500,
-                                showConfirmButton: false
-                            });
-                            closeModal();
-                            form.reset();
-                            tSelect.clear();
-                            updateData();
-                        } else {
-                            Swal.fire('Gagal', delRes.message, 'error');
-                        }
-                    }
-
                 } else {
                     Swal.fire('Gagal', res.message, 'error');
                 }
             } catch (err) {
-                console.error(err);
                 Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
             }
-        };
+        }
 
-        // Date Filter Logic
+        // --- PAGE LOGIC ---
+        document.addEventListener('DOMContentLoaded', () => {
+            updateData();
+            setInterval(updateData, 5000);
+        });
+
         document.getElementById('dateFilter').addEventListener('change', (e) => {
              const dateObj = new Date(e.target.value);
              const day = String(dateObj.getDate()).padStart(2, '0');
              const month = String(dateObj.getMonth() + 1).padStart(2, '0');
              const year = dateObj.getFullYear();
              document.getElementById('dateDisplay').innerText = `${day}/${month}/${year}`;
-             
-             // Also update modal date if it's open, or just let it sync on open
-             
              document.getElementById('scanList').innerHTML = '<div class="text-center py-10 text-slate-400 text-sm animate-pulse">Memuat data...</div>';
              updateData();
         });
 
-        // Dark Mode Logic
-        const themeToggle = document.getElementById('themeToggle');
         const html = document.documentElement;
-
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             html.classList.add('dark');
         }
 
+        const themeToggle = document.getElementById('themeToggle');
         if (themeToggle) {
             themeToggle.onclick = () => {
                 html.classList.toggle('dark');
