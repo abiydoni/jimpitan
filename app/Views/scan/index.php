@@ -156,8 +156,22 @@
         }
         // --- End Theme Logic ---
 
-        const beep = new Audio("data:audio/wav;base64,UklGRl9vT1JGVVRYV0FWRWZtdCAAEAAAAAEAAQB8AAAAQB8AAAEACABkYXRhY19vT1JC9vT1J/"); // Short embedded beep
+        const beep = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGFtZTMuMTAwA/+VAAAA... (FULL 30KB STRING HERE)"); 
+        beep.load();
         let isProcessing = false;
+
+        // Audio Priming to bypass Autoplay Policy
+        function primeAudio() {
+            beep.play().then(() => {
+                beep.pause();
+                beep.currentTime = 0;
+                console.log("Audio Context Unlocked");
+                document.removeEventListener('click', primeAudio);
+                document.removeEventListener('touchstart', primeAudio);
+            }).catch(e => console.log("Audio prime blocked:", e));
+        }
+        document.addEventListener('click', primeAudio);
+        document.addEventListener('touchstart', primeAudio);
 
         // Check for Secure Context (HTTPS or Localhost) first
         if (!window.isSecureContext) {
