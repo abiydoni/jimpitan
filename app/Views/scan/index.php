@@ -159,28 +159,41 @@
         let audioCtx;
         let isProcessing = false;
 
-        // "Tingggg" sound: High frequency synthetic beep
+        // "Triangle" musical instrument sound
         function playBeep() {
             try {
                 if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
                 
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
+                const now = audioCtx.currentTime;
                 
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(2500, audioCtx.currentTime); // Sharp & High (Ting)
+                // Main high-pitch tone
+                const osc1 = audioCtx.createOscillator();
+                const gain1 = audioCtx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(3500, now); // Sharp high frequency
+                gain1.gain.setValueAtTime(0.5, now);
+                gain1.gain.exponentialRampToValueAtTime(0.001, now + 1.5); // Longer decay for "ringing"
                 
-                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4); // 0.4s decay
+                // Metallic overtone (characteristic of a triangle)
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(5200, now); // Higher metallic ring
+                gain2.gain.setValueAtTime(0.3, now);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+
+                osc1.connect(gain1);
+                gain1.connect(audioCtx.destination);
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
                 
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.4);
+                osc1.start(now);
+                osc1.stop(now + 1.5);
+                osc2.start(now);
+                osc2.stop(now + 1.0);
             } catch (e) {
-                console.error("Synthetic beep failed:", e);
+                console.error("Triangle sound failed:", e);
             }
         }
 
